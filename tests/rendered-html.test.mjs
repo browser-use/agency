@@ -38,7 +38,7 @@ test("removes starter-only files and metadata", async () => {
 });
 
 test("keeps card decisions fast and actionable", async () => {
-  const [ui, ingest, tasks, state, action, attention, agentJobs] = await Promise.all([
+  const [ui, ingest, tasks, state, action, attention, agentJobs, database] = await Promise.all([
     readFile(new URL("../app/growth-radar.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/ideas/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/tasks/route.ts", import.meta.url), "utf8"),
@@ -46,6 +46,7 @@ test("keeps card decisions fast and actionable", async () => {
     readFile(new URL("../app/api/ideas/action/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/ideas/attention/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/agent-jobs/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
   ]);
   assert.match(ui, />\+ New Task<\/button>/);
   assert.match(ui, />General context</);
@@ -162,7 +163,9 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(agentJobs, /ticket_outcome AS ticketOutcome/);
   assert.match(agentJobs, /resolveTicketOutcome/);
   assert.match(agentJobs, /ideaStatusForOutcome/);
-  assert.match(agentJobs, /UPDATE ideas SET status = \?[\s\S]*WHERE id = \? AND status = 'working'/);
+  assert.match(agentJobs, /UPDATE ideas SET status = \?[\s\S]*WHERE id = \? AND status IN \('new', 'working'\)/);
+  assert.match(database, /WHEN 'completed' THEN 'done'/);
+  assert.match(database, /WHEN 'blocked' THEN 'working'/);
   assert.match(agentJobs, /status = 'running' AS reclaimed/);
   assert.match(agentJobs, /MAX_CONCURRENT_JOBS/);
   assert.match(agentJobs, /newer\.idea_id = job\.idea_id AND newer\.id > job\.id/);

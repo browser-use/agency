@@ -74,6 +74,33 @@ export async function ensureDatabase() {
   if (!jobNames.has("ticket_outcome")) {
     await db.prepare("ALTER TABLE agent_jobs ADD COLUMN ticket_outcome TEXT").run();
   }
+  // A replacement card can set an idea back to New before the agent posts its
+  // terminal outcome. Reconcile from the latest explicit marker so completed,
+  // review, and blocked remain card states instead of agent-run states. Never
+  // revive a card the user already dismissed.
+  await db.prepare(`
+    UPDATE ideas
+    SET status = CASE (
+      SELECT latest.ticket_outcome
+      FROM agent_jobs latest
+      WHERE latest.idea_id = ideas.id
+      ORDER BY latest.id DESC
+      LIMIT 1
+    )
+      WHEN 'completed' THEN 'done'
+      WHEN 'review' THEN 'new'
+      WHEN 'blocked' THEN 'working'
+      ELSE status
+    END
+    WHERE status IN ('new', 'working', 'done')
+      AND (
+        SELECT latest.ticket_outcome
+        FROM agent_jobs latest
+        WHERE latest.idea_id = ideas.id
+        ORDER BY latest.id DESC
+        LIMIT 1
+      ) IS NOT NULL
+  `).run();
   // Early Agency audits used the same decision fields as real user clicks. Mark
   // those known maintenance labels once so decision timing measures Magnus.
   await db.prepare(`

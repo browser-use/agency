@@ -72,11 +72,11 @@ export async function POST(request: Request) {
     db.prepare("UPDATE agent_jobs SET status = ?, result = ?, ticket_outcome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?")
       .bind(payload.status, payload.result?.slice(0, 20_000) ?? "", ticketOutcome, payload.id, job.status),
   ];
-  if (payload.status === "done" && job.action !== "no") {
+  if ((payload.status === "done" || payload.status === "failed") && job.action !== "no") {
     const ideaStatus = ideaStatusForOutcome(ticketOutcome);
     updates.push(db.prepare(`
       UPDATE ideas SET status = ?
-      WHERE id = ? AND status = 'working'
+      WHERE id = ? AND status IN ('new', 'working')
         AND NOT EXISTS (
           SELECT 1 FROM agent_jobs newer
           WHERE newer.idea_id = ? AND newer.id > ?
