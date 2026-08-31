@@ -46,6 +46,7 @@ export async function GET() {
         ELSE j.status
       END AS jobStatus,
       j.result AS jobResult,
+      j.ticket_outcome AS jobOutcome,
       j.button_label AS jobLabel,
       j.updated_at AS jobUpdatedAt,
       a.active_ms AS decisionActiveMs,
@@ -78,6 +79,23 @@ export async function GET() {
     WHERE status IN ('queued', 'running')
     GROUP BY 1
   `).bind(leaseWindow).all<{ status: string; total: number }>();
+  const completionStats = await db.prepare(`
+    WITH latest_jobs AS (
+      SELECT job.*
+      FROM agent_jobs job
+      WHERE NOT EXISTS (
+        SELECT 1 FROM agent_jobs newer
+        WHERE newer.idea_id = job.idea_id AND newer.id > job.id
+      )
+    )
+    SELECT
+      SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome = 'completed' THEN 1 ELSE 0 END) AS verified,
+      SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome IS NULL THEN 1 ELSE 0 END) AS legacy,
+      SUM(CASE WHEN latest_jobs.ticket_outcome = 'review' THEN 1 ELSE 0 END) AS reviewReady,
+      SUM(CASE WHEN i.status = 'rejected' THEN 1 ELSE 0 END) AS dismissed
+    FROM ideas i
+    LEFT JOIN latest_jobs ON latest_jobs.idea_id = i.id
+  `).first<{ verified: number | null; legacy: number | null; reviewReady: number | null; dismissed: number | null }>();
   const decisionRows = await db.prepare(`
     SELECT
       a.decision_action AS decisionAction,
@@ -129,6 +147,12 @@ export async function GET() {
     context,
     ideas: enrichedIdeas,
     jobs: { queued: jobCounts.queued ?? 0, running: jobCounts.running ?? 0 },
+    completionStats: {
+      verified: completionStats?.verified ?? 0,
+      legacy: completionStats?.legacy ?? 0,
+      reviewReady: completionStats?.reviewReady ?? 0,
+      dismissed: completionStats?.dismissed ?? 0,
+    },
     decisionMetrics: summarizeDecisionMetrics(metricRows),
   });
 }

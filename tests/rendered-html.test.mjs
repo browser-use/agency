@@ -85,6 +85,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /aria-label=\{`Done, \$\{laneCounts\.done\} tickets`\}/);
   assert.match(ui, /function summarizeJobResult\(result: string\)/);
   assert.match(ui, /`Done · \$\{activeJob\.label \|\| "Final step completed"\}`/);
+  assert.match(ui, /`Ready to review · \$\{activeJob\.label \|\| "Agency update"\}`/);
   assert.match(ui, />Full agent result<\/summary>/);
   assert.match(ui, /useState<Idea \| null>\(null\)/);
   assert.match(ui, /keepSelectedCard\(selection \? selection\.preferred : current, visible\)/);
@@ -119,6 +120,8 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(state, /a\.decided_at IS NULL AND EXISTS/);
   assert.match(state, /i\.dedupe_key AS dedupeKey/);
   assert.match(state, /summarizeDecisionMetrics/);
+  assert.match(state, /ticket_outcome = 'completed'/);
+  assert.match(state, /reviewReady/);
   assert.match(state, /LEFT JOIN card_attention/);
   assert.match(state, /ORDER BY i\.score DESC, i\.id DESC/);
   assert.match(ingest, /Every card needs a RISE estimate/);
@@ -130,6 +133,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /60_000/);
   assert.match(ui, /interactionAt - tracker\.lastInteractionAt > 60_000/);
   assert.match(ui, /Decision timing starts now/);
+  assert.match(ui, /Done \{data\.completionStats\.verified\} verified/);
   assert.match(ui, /Accept p50/);
   assert.match(ui, /Any action p50/);
   assert.match(ui, /decisionEstimateMs/);
@@ -155,7 +159,10 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(attention, /active_ms = card_attention\.active_ms \+ excluded\.active_ms/);
   assert.match(attention, /payload\.event === "interaction"/);
   assert.match(attention, /card_interactions/);
-  assert.match(agentJobs, /UPDATE ideas SET status = 'done'[\s\S]*WHERE id = \? AND status = 'working'/);
+  assert.match(agentJobs, /ticket_outcome AS ticketOutcome/);
+  assert.match(agentJobs, /resolveTicketOutcome/);
+  assert.match(agentJobs, /ideaStatusForOutcome/);
+  assert.match(agentJobs, /UPDATE ideas SET status = \?[\s\S]*WHERE id = \? AND status = 'working'/);
   assert.match(agentJobs, /status = 'running' AS reclaimed/);
   assert.match(agentJobs, /MAX_CONCURRENT_JOBS/);
   assert.match(agentJobs, /newer\.idea_id = job\.idea_id AND newer\.id > job\.id/);

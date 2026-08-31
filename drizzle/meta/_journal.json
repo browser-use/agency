@@ -43,6 +43,13 @@
       "when": 1788123785732,
       "tag": "0005_steady_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788136734618,
+      "tag": "0006_fluffy_shiver_man",
+      "breakpoints": true
     }
   ]
 }

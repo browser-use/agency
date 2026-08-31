@@ -71,6 +71,7 @@ button { cursor: pointer; }
 .radar-job details p { max-height: 260px; overflow: auto; margin: 8px 0 0; padding: 10px 11px; border: 1px solid rgba(17,17,17,.25); border-radius: 9px; background: rgba(255,255,255,.6); color: #252a26; line-height: 1.45; white-space: pre-wrap; }
 .radar-job.is-running { background: #cfe1ff; }
 .radar-job.is-done { background: #c9f3d8; }
+.radar-job.is-review { background: #e8e1ff; }
 .radar-job.is-failed { background: #ffd1cb; }
 .radar-empty { min-height: 520px; display: grid; place-items: center; border: 2px solid #111; border-radius: 26px; background: white; box-shadow: 9px 9px 0 #111; }
 .radar-empty strong { font-size: 2rem; }

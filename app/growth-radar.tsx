@@ -23,6 +23,7 @@ type Idea = {
   status: "new" | "working" | "done";
   jobId: number | null;
   jobStatus: "queued" | "running" | "done" | "failed" | null;
+  jobOutcome: "completed" | "review" | "blocked" | null;
   jobResult: string | null;
   jobLabel: string | null;
   jobUpdatedAt: string | null;
@@ -38,6 +39,7 @@ type RadarState = {
   context: { text: string; createdAt: string } | null;
   ideas: Idea[];
   jobs: { queued: number; running: number };
+  completionStats: { verified: number; legacy: number; reviewReady: number; dismissed: number };
   decisionMetrics: {
     tracked: number;
     accepted: number;
@@ -72,6 +74,7 @@ const emptyState: RadarState = {
   context: null,
   ideas: [],
   jobs: { queued: 0, running: 0 },
+  completionStats: { verified: 0, legacy: 0, reviewReady: 0, dismissed: 0 },
   decisionMetrics: {
     tracked: 0,
     accepted: 0,
@@ -247,6 +250,7 @@ export function GrowthRadar() {
   const activeJob = activeLiveState?.jobId ? {
     id: activeLiveState.jobId,
     status: activeLiveState.jobStatus,
+    outcome: activeLiveState.jobOutcome,
     result: activeLiveState.jobResult?.trim() ?? "",
     label: activeLiveState.jobLabel?.trim() ?? "",
   } : null;
@@ -558,19 +562,25 @@ export function GrowthRadar() {
             </section>
           )}
           {activeJob && (
-            <section className={`radar-job is-${activeJob.status ?? "unknown"}`} role="status">
+            <section className={`radar-job is-${activeJob.status === "done" && activeJob.outcome === "review" ? "review" : activeJob.status ?? "unknown"}`} role="status">
               <strong>{activeJob.status === "queued"
                 ? `Waiting · ${activeJob.label || `Job #${activeJob.id}`}`
                 : activeJob.status === "running"
                   ? `Working · ${activeJob.label || `Job #${activeJob.id}`}`
                   : activeJob.status === "failed"
                     ? `Blocked · ${activeJob.label || `Job #${activeJob.id}`}`
-                    : `Done · ${activeJob.label || "Final step completed"}`}</strong>
+                    : activeJob.outcome === "completed" || (!activeJob.outcome && activeLiveState?.status === "done")
+                      ? `Done · ${activeJob.label || "Final step completed"}`
+                      : `Ready to review · ${activeJob.label || "Agency update"}`}</strong>
               <span>{activeJob.status === "queued"
                 ? "Queued for Agency."
                 : activeJob.status === "running"
                   ? "The agent is doing the work now."
-                  : activeJobSummary || (activeJob.status === "failed" ? "The agent stopped without a note." : "The agent completed the work.")}</span>
+                  : activeJobSummary || (activeJob.status === "failed"
+                    ? "The agent stopped without a note."
+                    : activeJob.outcome === "completed"
+                      ? "The agent completed the final action."
+                      : "Agency updated the work for your review.")}</span>
               {activeJobHasMore && (
                 <details>
                   <summary>Full agent result</summary>
@@ -658,6 +668,7 @@ export function GrowthRadar() {
 
       <footer>
         <i /> {data.jobs.running ? `${data.jobs.running} running now` : data.jobs.queued ? `${data.jobs.queued} queued for the next Agency run` : "Agents ready"} · Private on this Mac
+        <> · Done {data.completionStats.verified} verified{data.completionStats.legacy > 0 ? ` · ${data.completionStats.legacy} legacy` : ""}{data.completionStats.reviewReady > 0 ? ` · ${data.completionStats.reviewReady} ready to review` : ""}</>
         {data.decisionMetrics.tracked > 0 && <> · Accept p50 {formatDuration(data.decisionMetrics.medianAcceptedActiveMs)} · Any action p50 {formatDuration(data.decisionMetrics.medianFirstActionMs)} · Effort error ±{formatDuration(data.decisionMetrics.medianEstimateErrorMs)}{data.decisionMetrics.parked > 0 ? ` · ${data.decisionMetrics.parked} parked` : ""}</>}
         {data.decisionMetrics.tracked === 0 && <> · Decision timing starts now</>}
       </footer>

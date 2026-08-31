@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { ensureDatabase } from "../../../db";
-import { canUpdateJob, jobLeaseWindow, MAX_CONCURRENT_JOBS, type StoredJobStatus } from "../../../lib/job-lifecycle";
+import { canUpdateJob, ideaStatusForOutcome, jobLeaseWindow, MAX_CONCURRENT_JOBS, resolveTicketOutcome, type StoredJobStatus, type TicketOutcome } from "../../../lib/job-lifecycle";
 
 function canUseQueue(request: Request) {
   const origin = request.headers.get("origin");
@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       instruction,
       user_feedback AS userFeedback,
       card_context AS cardContext,
+      ticket_outcome AS ticketOutcome,
       'queued' AS status,
       status = 'running' AS reclaimed,
       created_at AS createdAt,
@@ -52,8 +53,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   if (!canUseQueue(request)) return Response.json({ error: "Missing agent key" }, { status: 401 });
-  const payload = (await request.json()) as { id?: number; status?: "running" | "done" | "failed"; result?: string };
+  const payload = (await request.json()) as { id?: number; status?: "running" | "done" | "failed"; result?: string; ticketOutcome?: TicketOutcome };
   if (!payload.id || !["running", "done", "failed"].includes(payload.status ?? "")) return Response.json({ error: "Invalid job update" }, { status: 400 });
+  if (payload.ticketOutcome && !["completed", "review", "blocked"].includes(payload.ticketOutcome)) return Response.json({ error: "Invalid ticket outcome" }, { status: 400 });
+  if (payload.status === "done" && payload.ticketOutcome === "blocked") return Response.json({ error: "A done job cannot be blocked" }, { status: 400 });
+  if (payload.status === "failed" && payload.ticketOutcome && payload.ticketOutcome !== "blocked") return Response.json({ error: "A failed job must be blocked" }, { status: 400 });
   const db = await ensureDatabase();
   const job = await db.prepare("SELECT idea_id AS ideaId, action, status FROM agent_jobs WHERE id = ?").bind(payload.id).first<{ ideaId: number; action: string; status: StoredJobStatus }>();
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
@@ -63,20 +67,22 @@ export async function POST(request: Request) {
   if (!canUpdateJob(job.status, payload.status!)) {
     return Response.json({ error: `Job is already ${job.status}` }, { status: 409 });
   }
+  const ticketOutcome = resolveTicketOutcome(payload.status!, payload.ticketOutcome);
   const updates = [
-    db.prepare("UPDATE agent_jobs SET status = ?, result = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?")
-      .bind(payload.status, payload.result?.slice(0, 20_000) ?? "", payload.id, job.status),
+    db.prepare("UPDATE agent_jobs SET status = ?, result = ?, ticket_outcome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?")
+      .bind(payload.status, payload.result?.slice(0, 20_000) ?? "", ticketOutcome, payload.id, job.status),
   ];
   if (payload.status === "done" && job.action !== "no") {
+    const ideaStatus = ideaStatusForOutcome(ticketOutcome);
     updates.push(db.prepare(`
-      UPDATE ideas SET status = 'done'
+      UPDATE ideas SET status = ?
       WHERE id = ? AND status = 'working'
         AND NOT EXISTS (
           SELECT 1 FROM agent_jobs newer
           WHERE newer.idea_id = ? AND newer.id > ?
         )
-    `).bind(job.ideaId, job.ideaId, payload.id));
+    `).bind(ideaStatus, job.ideaId, job.ideaId, payload.id));
   }
   await db.batch(updates);
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, ticketOutcome, ideaStatus: ideaStatusForOutcome(ticketOutcome) });
 }

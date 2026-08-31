@@ -58,6 +58,7 @@ export const agentJobs = sqliteTable("agent_jobs", {
   cardContext: text("card_context").notNull(),
   status: text("status").notNull().default("queued"),
   result: text("result").notNull().default(""),
+  ticketOutcome: text("ticket_outcome"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

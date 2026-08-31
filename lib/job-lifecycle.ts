@@ -3,6 +3,7 @@ export const MAX_CONCURRENT_JOBS = 10;
 
 export type StoredJobStatus = "queued" | "running" | "done" | "failed";
 export type VisibleJobStatus = StoredJobStatus;
+export type TicketOutcome = "completed" | "review" | "blocked";
 
 export function jobLeaseWindow() {
   return `-${Math.floor(JOB_LEASE_MS / 1000)} seconds`;
@@ -25,4 +26,19 @@ export function canUpdateJob(
 ) {
   if (next === "running") return current === "queued" || current === "running";
   return current === "running";
+}
+
+export function resolveTicketOutcome(
+  jobStatus: Exclude<StoredJobStatus, "queued">,
+  requested?: TicketOutcome,
+): TicketOutcome | null {
+  if (jobStatus === "running") return null;
+  if (jobStatus === "failed") return "blocked";
+  return requested === "completed" ? "completed" : "review";
+}
+
+export function ideaStatusForOutcome(outcome: TicketOutcome | null) {
+  if (outcome === "completed") return "done";
+  if (outcome === "review") return "new";
+  return "working";
 }
