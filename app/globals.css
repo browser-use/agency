@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+:root { --ink: #111; --paper: #f5f3ed; --line: #d2cec3; }
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--font-geist-sans), Arial, sans-serif; }
+button, textarea { font: inherit; }
+button { cursor: pointer; }
+.radar-shell { width: min(100%, 900px); min-height: 100vh; margin: 0 auto; padding: 16px 20px 28px; }
+.radar-loading { min-height: 100vh; display: grid; place-items: center; font-size: 1.1rem; font-weight: 850; }
+.radar-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; min-height: 50px; }
+.radar-logo { display: inline-flex; align-items: center; gap: 9px; justify-self: start; padding: 0; border: 0; background: transparent; font-size: .82rem; font-weight: 950; letter-spacing: .13em; }
+.radar-logo span { width: 17px; height: 17px; border-radius: 5px; background: #111; box-shadow: inset -5px -5px 0 #6d5dfc; }
+.radar-header nav { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: #e8e5dd; }
+.radar-header nav button { min-height: 34px; padding: 0 12px; border: 0; border-radius: 999px; color: #6a665f; background: transparent; font-weight: 800; }
+.radar-header nav button.is-active { color: #111; background: white; box-shadow: 0 2px 7px rgba(0,0,0,.08); }
+.radar-header nav b { display: inline-grid; min-width: 19px; height: 19px; place-items: center; margin-left: 3px; border-radius: 99px; color: white; background: #111; font-size: .7rem; }
+.radar-tell { justify-self: end; min-height: 39px; padding: 0 16px; border: 0; border-radius: 999px; color: white; background: #111; font-weight: 850; }
+.radar-goal { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin: 12px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.6); text-align: left; }
+.radar-goal span { font-size: .67rem; font-weight: 950; letter-spacing: .1em; }
+.radar-goal strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+.radar-goal small { color: #6a665f; font-size: .72rem; font-weight: 850; }
+.radar-card-signals { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px; margin: 0 0 9px; }
+.radar-rise, .radar-decision-time { width: max-content; max-width: 100%; display: flex; align-items: center; gap: 9px; padding: 6px 9px 6px 11px; border: 1px solid #c9c3ee; border-radius: 999px; color: #4f43ae; background: #ece8ff; }
+.radar-rise strong { font-size: .76rem; letter-spacing: .04em; }
+.radar-rise span { color: #625d80; font-size: .68rem; font-weight: 800; }
+.radar-decision-time { border-color: #bdddc9; color: #226641; background: #e4f6ea; }
+.radar-decision-time strong { min-width: 2.8ch; font-size: .72rem; font-variant-numeric: tabular-nums; text-align: right; }
+.radar-decision-time span { color: #47705a; font-size: .68rem; font-weight: 800; }
+.radar-decision-time.is-live { border-color: #b9c8f4; color: #244e9b; background: #eaf0ff; }
+.radar-decision-time.is-live span { color: #526a9a; }
+.radar-update-waiting { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; padding: 10px 12px; border: 1px solid #d8c98e; border-radius: 12px; background: #fff8d8; color: #5b4a14; font-size: .78rem; font-weight: 750; }
+.radar-update-waiting button { flex: 0 0 auto; min-height: 34px; padding: 0 12px; border: 1px solid #7a661b; border-radius: 999px; background: #fff; color: #4b3d0e; font: 800 .72rem/1 system-ui; cursor: pointer; }
+.radar-update-waiting button:disabled { cursor: default; opacity: .55; }
+.radar-card-host { overflow: hidden; border-radius: 26px; background: white; box-shadow: 0 18px 60px rgba(20,18,13,.12); }
+.radar-card-host > div { width: 100%; display: block; }
+.radar-next { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; margin-top: 14px; }
+.radar-next button { min-height: 46px; padding: 0 18px; border: 1.5px solid #111; border-radius: 999px; background: white; font-weight: 850; }
+.radar-next button:last-child { justify-self: end; color: white; background: #111; }
+.radar-next span { color: #6a665f; font-size: .82rem; font-weight: 750; }
+.radar-context, .radar-task { padding: clamp(24px, 6vw, 55px); border: 2px solid #111; border-radius: 26px; background: #d9ff6a; box-shadow: 9px 9px 0 #111; }
+.radar-context p, .radar-task p { margin: 0 0 20px; font-size: clamp(2.5rem, 8vw, 5.8rem); line-height: .9; letter-spacing: -.065em; font-weight: 900; }
+.radar-context textarea, .radar-task textarea { width: 100%; min-height: 210px; padding: 17px; border: 1.5px solid #111; border-radius: 14px; resize: vertical; background: white; font-size: 1.05rem; line-height: 1.45; }
+.radar-task { background: #cfe1ff; }
+.radar-task label { display: grid; gap: 7px; }
+.radar-task label > span { font-size: .78rem; font-weight: 950; letter-spacing: .06em; text-transform: uppercase; }
+.radar-task label + label { margin-top: 14px; }
+.radar-task label.is-context textarea { min-height: 105px; font-size: .94rem; }
+.radar-context > div, .radar-task > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.radar-context button, .radar-task button { min-height: 46px; padding: 0 17px; border: 1.5px solid #111; border-radius: 12px; background: white; font-weight: 850; }
+.radar-context button.is-dark, .radar-task button.is-dark { color: white; background: #111; }
+.radar-context button:disabled, .radar-task button:disabled { cursor: not-allowed; opacity: .45; }
+.radar-inline-change { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; margin-top: 12px; padding: 10px; border: 1.5px solid #111; border-radius: 15px; background: white; }
+.radar-inline-change textarea { width: 100%; min-height: 58px; max-height: 170px; padding: 11px 13px; border: 0; border-radius: 9px; resize: vertical; background: #f0edf9; color: #111; line-height: 1.35; outline: none; }
+.radar-inline-change textarea:focus { box-shadow: inset 0 0 0 2px #6d5dfc; }
+.radar-inline-change textarea:disabled { color: #6a665f; background: #eceae4; }
+.radar-inline-actions { display: grid; grid-template-columns: auto auto; gap: 8px; }
+.radar-inline-change button { min-width: 122px; padding: 0 16px; border: 1.5px solid #111; border-radius: 10px; font-weight: 900; }
+.radar-inline-change button.is-skip { grid-column: 1 / -1; min-height: 38px; border-color: transparent; color: #6a665f; background: transparent; }
+.radar-inline-change button.is-skip:hover { color: #111; background: #efede7; }
+.radar-inline-change button.is-improve { color: #111; background: #dcd5ff; }
+.radar-inline-change button.is-improve span { margin-right: 3px; color: #5b49e8; }
+.radar-inline-change button.is-send { color: white; background: #111; }
+.radar-inline-change button:disabled { cursor: not-allowed; opacity: .35; }
+.radar-message { margin-top: 12px; padding: 13px 15px; border: 1.5px solid #111; border-radius: 13px; background: #c9f3d8; font-weight: 800; }
+.radar-job { display: grid; gap: 3px; margin-bottom: 12px; padding: 12px 15px; border: 2px solid #111; border-radius: 14px; background: #fff4b8; box-shadow: 4px 4px 0 #111; }
+.radar-job strong { font-size: .92rem; }
+.radar-job span { color: #514d45; font-size: .84rem; line-height: 1.35; }
+.radar-job details { width: fit-content; max-width: 100%; margin-top: 4px; color: #3e5647; font-size: .76rem; }
+.radar-job summary { cursor: pointer; font-weight: 850; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.radar-job details p { max-height: 260px; overflow: auto; margin: 8px 0 0; padding: 10px 11px; border: 1px solid rgba(17,17,17,.25); border-radius: 9px; background: rgba(255,255,255,.6); color: #252a26; line-height: 1.45; white-space: pre-wrap; }
+.radar-job.is-running { background: #cfe1ff; }
+.radar-job.is-done { background: #c9f3d8; }
+.radar-job.is-failed { background: #ffd1cb; }
+.radar-empty { min-height: 520px; display: grid; place-items: center; border: 2px solid #111; border-radius: 26px; background: white; box-shadow: 9px 9px 0 #111; }
+.radar-empty strong { font-size: 2rem; }
+footer { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 21px; color: #6a665f; font-size: .78rem; font-weight: 720; text-align: center; }
+footer i { width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: #19a76c; box-shadow: 0 0 0 5px #c9f3d8; }
+@media (max-width: 640px) {
+  .radar-shell { padding: 9px 10px 24px; }
+  .radar-header { grid-template-columns: 1fr auto; }
+  .radar-header nav { order: 3; grid-column: 1 / -1; justify-self: center; }
+  .radar-goal { grid-template-columns: 1fr auto; gap: 4px; }
+  .radar-goal span { grid-column: 1 / -1; }
+  .radar-card-host { border-radius: 20px; }
+  .radar-inline-change { grid-template-columns: 1fr; }
+  .radar-inline-actions { grid-template-columns: 1fr 1fr; }
+  .radar-inline-change button { min-height: 46px; }
+  .radar-next button { padding: 0 14px; }
+}

@@ -1,0 +1,74 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { buildDecisionTimeModel, calibratedDecisionTime, estimateDecisionTime } from "../lib/decision-time.ts";
+
+test("estimates one-line messages below broad PRs", () => {
+  const message = estimateDecisionTime({
+    headline: "Reply to Roman",
+    category: "X reply",
+    agentContext: JSON.stringify({ exactReply: "love this. what still sucks?" }),
+  });
+  const smallPr = estimateDecisionTime({
+    headline: "Merge PR #1",
+    cardHtml: "diff --git a/a.ts b/a.ts\n--- a/a.ts\n+++ b/a.ts\n-old\n+new",
+  });
+  const largePr = estimateDecisionTime({
+    headline: "Merge PR #2",
+    cardHtml: `diff --git a/a.ts b/a.ts\n${Array.from({ length: 320 }, (_, index) => index % 2 ? `+new ${index}` : `-old ${index}`).join("\n")}`,
+  });
+
+  assert.equal(message.kind, "message");
+  assert.ok(message.estimatedMs < smallPr.estimatedMs);
+  assert.ok(smallPr.estimatedMs < largePr.estimatedMs);
+  assert.match(largePr.reason, /320 changed lines/);
+});
+
+test("keeps explicit card estimates exact while learning a future factor", () => {
+  const card = {
+    headline: "Send the reply",
+    category: "Message",
+    agentContext: JSON.stringify({ exactReply: "ship it", decisionEstimateSeconds: 6 }),
+  };
+  assert.equal(estimateDecisionTime(card).baselineMs, 6_000);
+
+  const model = buildDecisionTimeModel(Array.from({ length: 20 }, () => ({ ...card, activeMs: 12_000 })));
+  const calibrated = calibratedDecisionTime(card, model);
+  assert.equal(calibrated.kind, "message");
+  assert.ok(model.message.factor > 1);
+  assert.equal(calibrated.estimatedMs, 6_000);
+  assert.equal(calibrated.learnedFactor, 1);
+});
+
+test("counts better in-card presentation as lower review effort", () => {
+  const plain = estimateDecisionTime({
+    headline: "Merge PR #3",
+    cardHtml: `diff --git a/a.ts b/a.ts\n${Array.from({ length: 80 }, (_, index) => index % 2 ? `+new ${index}` : `-old ${index}`).join("\n")}`,
+  });
+  const easy = estimateDecisionTime({
+    headline: "Merge PR #3",
+    cardHtml: `<details><summary>Color diff</summary><pre class="diff-add">diff --git a/a.ts b/a.ts\n${Array.from({ length: 80 }, (_, index) => index % 2 ? `+new ${index}` : `-old ${index}`).join("\n")}</pre></details>`,
+  });
+  const external = estimateDecisionTime({
+    headline: "Merge PR #3",
+    cardHtml: `<button data-radar-action="open">Open PR</button>${"scope ".repeat(400)}`,
+  });
+
+  assert.ok(easy.estimatedMs < plain.estimatedMs);
+  assert.ok(plain.estimatedMs < external.estimatedMs);
+  assert.match(easy.reason, /expandable color-coded inline diff/);
+});
+
+test("accepts effort seconds as the exact explicit estimate", () => {
+  const card = {
+    headline: "Send reply",
+    category: "Message",
+    agentContext: JSON.stringify({ effortSeconds: 20, effortReason: "inline exact reply" }),
+  };
+  const estimate = estimateDecisionTime(card);
+  const calibrated = calibratedDecisionTime(card, { pr: { factor: 2, samples: 20 }, message: { factor: 2, samples: 20 }, visual: { factor: 2, samples: 20 }, task: { factor: 2, samples: 20 } });
+
+  assert.equal(estimate.estimatedMs, 20_000);
+  assert.equal(estimate.reason, "inline exact reply");
+  assert.equal(calibrated.estimatedMs, 20_000);
+});
