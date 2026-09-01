@@ -241,9 +241,9 @@ export function GrowthRadar() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!selectedIdea) return;
     const url = new URL(window.location.href);
-    if (selectedIdea) url.searchParams.set("card", String(selectedIdea.id));
-    else url.searchParams.delete("card");
+    url.searchParams.set("card", String(selectedIdea.id));
     window.history.replaceState(null, "", url);
   }, [selectedIdea]);
 
