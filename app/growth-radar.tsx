@@ -212,6 +212,8 @@ export function GrowthRadar() {
   const [liveDecision, setLiveDecision] = useState({ key: "", activeMs: 0 });
   const liveDecisionByCardRef = useRef<Record<string, number>>({});
   const attentionTrackerRef = useRef<AttentionTracker | null>(null);
+  // `?card=<id>` opens one exact card on first load, whatever lane it sits in.
+  const deepLinkHandledRef = useRef(false);
 
   const load = useCallback(async (
     targetView: Idea["status"] = view,
@@ -219,11 +221,31 @@ export function GrowthRadar() {
   ) => {
     const response = await fetch("/api/state", { cache: "no-store" });
     const next = (await response.json()) as RadarState;
+    if (!deepLinkHandledRef.current) {
+      deepLinkHandledRef.current = true;
+      const requestedId = Number(new URLSearchParams(window.location.search).get("card"));
+      const requested = next.ideas.find((idea) => idea.id === requestedId);
+      if (requested) {
+        setData(next);
+        setView(requested.status);
+        setSelectedIdea(requested);
+        setLoading(false);
+        return;
+      }
+    }
     const visible = ideasForView(next.ideas, targetView).filter((idea) => idea.id !== selection?.excludeId);
     setData(next);
     setSelectedIdea((current) => keepSelectedCard(selection ? selection.preferred : current, visible));
     setLoading(false);
   }, [view]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (selectedIdea) url.searchParams.set("card", String(selectedIdea.id));
+    else url.searchParams.delete("card");
+    window.history.replaceState(null, "", url);
+  }, [selectedIdea]);
 
   useEffect(() => {
     const refresh = () => void load();
