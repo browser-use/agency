@@ -74,6 +74,13 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /void submitImprove\(\)/);
   assert.match(ui, /void submitSkip\(\)/);
   assert.match(ui, />Skip<\/button>/);
+  assert.match(ui, /cardShortcut\(\{/);
+  assert.match(ui, /event\.composedPath\(\)/);
+  assert.match(ui, /target\.matches\("input, textarea, select"\)/);
+  assert.match(ui, /if \(action === "skip"\)/);
+  assert.match(ui, /else if \(action === "improve"\)/);
+  assert.match(ui, /aria-keyshortcuts="S"/);
+  assert.match(ui, /aria-keyshortcuts="I"/);
   assert.match(ui, /Improve the actual work behind this card, not only the card wording/);
   assert.match(ui, /Do not send, post, publish, merge, deploy, contact anyone/);
   assert.match(ui, /event\.key !== "Enter" \|\| event\.shiftKey \|\| event\.nativeEvent\.isComposing/);

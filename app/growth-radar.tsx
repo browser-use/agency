@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cardDraftKey, cardHasChanged, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus";
+import { cardShortcut } from "../lib/card-shortcut";
 import { compareByRise } from "../lib/rise";
 
 type Idea = {
@@ -436,6 +437,31 @@ export function GrowthRadar() {
     }
   }, [active, feedbackSubmitting, sendToAgent]);
 
+  useEffect(() => {
+    if (!active || composer) return;
+    const shortcut = (event: KeyboardEvent) => {
+      const action = cardShortcut({
+        key: event.key,
+        editable: event.composedPath().some((target) => target instanceof HTMLElement
+          && (target.isContentEditable || target.matches("input, textarea, select"))),
+        repeat: event.repeat,
+        composing: event.isComposing,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+      });
+      if (action === "skip") {
+        event.preventDefault();
+        void submitSkip();
+      } else if (action === "improve") {
+        event.preventDefault();
+        void submitImprove();
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, [active, composer, submitImprove, submitSkip]);
+
   async function saveGeneralContext() {
     const text = contextDraft.trim();
     if (!text) return;
@@ -638,13 +664,16 @@ export function GrowthRadar() {
               <button
                 className="is-skip"
                 disabled={feedbackSubmitting}
+                aria-keyshortcuts="S"
+                title="Shortcut: S"
                 onClick={() => void submitSkip()}
               >Skip</button>
               <button
                 className="is-improve"
                 disabled={jobInFlight || feedbackSubmitting}
+                aria-keyshortcuts="I"
                 onClick={() => void submitImprove()}
-                title="Ask Agency to improve the finished work without more instructions"
+                title="Shortcut: I · ask Agency to improve the finished work without more instructions"
               ><span aria-hidden="true">✦</span> {improveLabel(active)}</button>
               <button
                 className="is-send"
