@@ -5,8 +5,28 @@ export function getD1() {
   return env.DB;
 }
 
+// Schema checks, migrations, and the status reconcile are idempotent but cost
+// ~1.5 s per call. Run them once per process and then at most once a minute;
+// every other request gets the handle straight back.
+const MAINTENANCE_INTERVAL_MS = 60_000;
+let lastMaintenanceAt = 0;
+let maintenance: Promise<void> | null = null;
+
 export async function ensureDatabase() {
   const db = getD1();
+  const now = Date.now();
+  if (!maintenance || now - lastMaintenanceAt > MAINTENANCE_INTERVAL_MS) {
+    lastMaintenanceAt = now;
+    maintenance = runMaintenance(db).catch((error) => {
+      maintenance = null;
+      throw error;
+    });
+  }
+  await maintenance;
+  return db;
+}
+
+async function runMaintenance(db: ReturnType<typeof getD1>) {
   await db.batch([
     db.prepare("CREATE TABLE IF NOT EXISTS contexts (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE TABLE IF NOT EXISTS ideas (id INTEGER PRIMARY KEY AUTOINCREMENT, headline TEXT NOT NULL, why_matters TEXT NOT NULL, impact TEXT NOT NULL, finished_work TEXT NOT NULL, primary_action TEXT NOT NULL, external_action TEXT NOT NULL, score INTEGER NOT NULL, rise_reach INTEGER NOT NULL DEFAULT 0, rise_impact INTEGER NOT NULL DEFAULT 0, rise_strategic_fit INTEGER NOT NULL DEFAULT 0, rise_ease INTEGER NOT NULL DEFAULT 0, decision_estimate_ms INTEGER NOT NULL DEFAULT 0, decision_estimate_reason TEXT NOT NULL DEFAULT '', version INTEGER NOT NULL DEFAULT 1, source_label TEXT NOT NULL, source_url TEXT NOT NULL, agent_name TEXT NOT NULL, preview_kind TEXT NOT NULL, preview_title TEXT NOT NULL, preview_body TEXT NOT NULL, preview_asset TEXT NOT NULL DEFAULT '', dedupe_key TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
@@ -122,5 +142,4 @@ export async function ensureDatabase() {
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_card_attention_decided ON card_attention(decided_at)").run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_card_interactions_card ON card_interactions(idea_id, idea_version, id)").run();
   await db.prepare("PRAGMA optimize").run();
-  return db;
 }
