@@ -39,6 +39,7 @@ export function resolveTicketOutcome(
 
 export function ideaStatusForOutcome(outcome: TicketOutcome | null) {
   if (outcome === "completed") return "done";
-  if (outcome === "review") return "new";
+  // A blocked job is a decision for the user (the card shows the blocker), not agent work in flight.
+  if (outcome === "review" || outcome === "blocked") return "new";
   return "working";
 }

@@ -89,7 +89,7 @@ export async function ensureDatabase() {
     )
       WHEN 'completed' THEN 'done'
       WHEN 'review' THEN 'new'
-      WHEN 'blocked' THEN 'working'
+      WHEN 'blocked' THEN 'new'
       ELSE status
     END
     WHERE status IN ('new', 'working', 'done')

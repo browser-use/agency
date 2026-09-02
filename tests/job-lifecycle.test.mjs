@@ -29,7 +29,7 @@ test("separates agent completion from ticket completion", () => {
   assert.equal(resolveTicketOutcome("running", "completed"), null);
   assert.equal(ideaStatusForOutcome("completed"), "done");
   assert.equal(ideaStatusForOutcome("review"), "new");
-  assert.equal(ideaStatusForOutcome("blocked"), "working");
+  assert.equal(ideaStatusForOutcome("blocked"), "new");
 });
 
 test("allows heartbeats but rejects terminal job resurrection", () => {
