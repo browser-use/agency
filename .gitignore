@@ -54,3 +54,12 @@ yarn-error.log*
 /qa-*.png
 /*-desktop.png
 /*-mobile-390.png
+
+# never publish local card assets, media, scratch, or scrape outputs
+/public/agent-assets/
+/public/*.mp4
+/output/
+/examples/
+/scripts/
+/*.txt
+/tsconfig.tsbuildinfo
