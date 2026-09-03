@@ -142,7 +142,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(state, /summarizeDecisionMetrics/);
   assert.match(state, /ticket_outcome = 'completed'/);
   assert.match(state, /reviewReady/);
-  assert.match(state, /THEN i\.score ELSE 0 END\) AS points/);
+  assert.match(state, /THEN CAST\(ROUND\(i\.score \/ 10\.0\) AS INTEGER\) ELSE 0 END\) AS points/);
   assert.match(state, /LEFT JOIN card_attention/);
   assert.match(state, /WHERE \(status = \? OR \(\? IS NOT NULL AND id = \?\)\) AND \(\? IS NULL OR id = \?\)/);
   assert.match(state, /ORDER BY score DESC, id DESC/);

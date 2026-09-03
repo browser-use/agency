@@ -77,7 +77,7 @@ export default function StatsPage() {
       </header>
 
       <section className="stats-tiles">
-        <div><b>{t.points}</b><span>points · {t.likedPoints} from decisions + {t.donePoints} from verified done</span></div>
+        <div><b>{t.points}</b><span>points · one verified ticket = its RISE score ÷ 10</span></div>
         <div><b>{t.doRate ?? "—"}%</b><span>Do rate · {t.do} do / {t.change} change / {t.no} skip</span></div>
         <div><b>{seconds(t.medianDoMs)}</b><span>median time to a Do · all decisions {seconds(t.medianActiveMs)}</span></div>
         <div><b>{t.parked}</b><span>parked over 30 min before deciding</span></div>
@@ -85,7 +85,7 @@ export default function StatsPage() {
 
       <section className="stats-block">
         <h2>By kind of work</h2>
-        <p className="stats-note">Points: Do +3, Change +1, Skip −1, verified completion +RISE/10. A high Do rate with a low median time is what a good lane looks like.</p>
+        <p className="stats-note">Points come from finished work only: a verified completed ticket is worth its RISE score ÷ 10. Do, Change and Skip are counted, not scored. A high Do rate with a low median time is what a good lane looks like.</p>
         <div className="stats-clusters">
           {stats.clusters.map((c) => (
             <article key={c.id} style={{ borderTopColor: COLORS[c.id] }}>
@@ -94,7 +94,7 @@ export default function StatsPage() {
               <dl>
                 <div><dt>Do rate</dt><dd>{c.doRate ?? "—"}%</dd></div>
                 <div><dt>median Do</dt><dd>{seconds(c.medianDoMs)}</dd></div>
-                <div><dt>points</dt><dd>{c.likedPoints + c.donePoints}</dd></div>
+                <div><dt>points</dt><dd>{c.donePoints}</dd></div>
                 <div><dt>open / done / skipped</dt><dd>{c.open} / {c.done} / {c.rejected}</dd></div>
               </dl>
             </article>

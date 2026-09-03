@@ -23,7 +23,8 @@ function median(values: number[]) {
   return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
-/** Points: what Magnus actually did with a card. Do = +3, Change = +1, Skip = -1, verified completion = +RISE/10. */
+/** Points come from finished work only: a verified completed ticket is worth its RISE score / 10.
+ *  Do/Change/Skip are tracked as counts, not points, so the header and the Done list always agree. */
 export const POINTS = { do: 3, change: 1, no: -1 } as const;
 
 function emptyBucket() {
@@ -111,7 +112,7 @@ export async function GET(request: Request) {
   const recent = decisions.results.slice(0, 40).map((r) => ({ ideaId: r.ideaId, headline: r.headline, action: r.decisionAction, activeMs: r.activeMs, decidedAt: r.decidedAt, cluster: clusterForCard(r) }));
   return Response.json({
     days,
-    total: { ...finish(total), likedPoints: total.likedPoints, donePoints, points: total.likedPoints + donePoints },
+    total: { ...finish(total), likedPoints: total.likedPoints, donePoints, points: donePoints },
     clusters,
     categories,
     days_series: [...byDay.entries()].toSorted(([a], [b]) => (a < b ? -1 : 1)).map(([day, d]) => ({ day, ...d })),
