@@ -172,7 +172,7 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
     const dock = dockRef.current;
     if (!host || !dock) return;
     const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
-    root.innerHTML = `<style>:host{display:block}*{box-sizing:border-box}[data-radar-action]{min-height:46px}[data-radar-action="open"]{display:inline-flex!important;align-items:center;gap:.38em}[data-radar-action="open"]::after{content:"↗";font-size:.8em;line-height:1;opacity:.68;transform:translateY(-.08em)}.radar-fallback-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.radar-fallback-actions button{min-height:46px;padding:0 16px;border:2px solid #111;border-radius:999px;background:#fff;color:#111;font:800 14px/1 system-ui;cursor:pointer}.radar-fallback-actions button:first-child{background:#111;color:#fff}</style>${idea.cardHtml}`;
+    root.innerHTML = `<style>:host{display:block;font-family:inherit}*{box-sizing:border-box}[data-radar-action]{min-height:44px;cursor:pointer}[data-radar-action="open"]{display:inline-flex!important;align-items:center;gap:.38em}[data-radar-action="open"]::after{content:"↗";font-size:.8em;line-height:1;opacity:.68;transform:translateY(-.08em)}.radar-fallback-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.radar-fallback-actions{padding:0 20px 20px}.radar-fallback-actions button{min-height:40px;padding:0 16px;border:1px solid #e4e1da;border-radius:999px;background:#fff;color:#16150f;font:600 14px/1 inherit;cursor:pointer}.radar-fallback-actions button:first-child{background:#16150f;color:#fff;border-color:#16150f}</style>${idea.cardHtml}`;
     root.querySelectorAll('[data-radar-action="change"], [data-radar-action="no"]').forEach((button) => button.remove());
     root.querySelectorAll<HTMLElement>('[data-radar-action="open"]').forEach((button) => {
       if (!button.title) button.title = "Opens a link";
@@ -755,7 +755,7 @@ export function GrowthRadar() {
           <span>DREAM</span>
           <strong>{data.context?.text || "Add what you care about."}</strong>
         </button>
-        {active && composer === null && (
+        {active && composer === null && view !== "done" && (
           <div className="radar-card-signals">
             <section
               className={`radar-decision-time${active.decisionAction ? "" : " is-live"}`}
@@ -803,11 +803,11 @@ export function GrowthRadar() {
           <p>New task</p>
           <label>
             <span>What should Agency do?</span>
-            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One quick task…" />
+            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Agency carries your dream with it." />
           </label>
           <label className="is-context">
-            <span>Things to Monitor/Stream</span>
-            <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What do you care about right now?" />
+            <span>Dream</span>
+            <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What you are aiming at." />
           </label>
           <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!taskDraft.trim()} onClick={queueTask}>Queue task</button></div>
         </section>
@@ -894,11 +894,9 @@ export function GrowthRadar() {
         <section className="radar-empty"><strong>{view === "new" ? "No new cards." : view === "working" ? "No agents working." : "Nothing done yet."}</strong></section>
       )}
 
-      <footer>
-        <i /> {data.jobs.running ? `${data.jobs.running} running now` : data.jobs.queued ? `${data.jobs.queued} queued for the next Agency run` : "Agents ready"} · Private on this Mac
-        <> · {data.completionStats.points.toLocaleString("en-US")} pts · Done {data.completionStats.verified} verified{data.completionStats.legacy > 0 ? ` · ${data.completionStats.legacy} legacy` : ""}{data.completionStats.reviewReady > 0 ? ` · ${data.completionStats.reviewReady} ready to review` : ""}</>
-        {data.decisionMetrics.tracked > 0 && <> · Accept p50 {formatDuration(data.decisionMetrics.medianAcceptedActiveMs)} · Any action p50 {formatDuration(data.decisionMetrics.medianFirstActionMs)} · Effort error ±{formatDuration(data.decisionMetrics.medianEstimateErrorMs)}{data.decisionMetrics.parked > 0 ? ` · ${data.decisionMetrics.parked} parked` : ""}</>}
-        {data.decisionMetrics.tracked === 0 && <> · Decision timing starts now</>}
+      <footer className="radar-footer">
+        <i /> {data.jobs.running ? `${data.jobs.running} agents working` : data.jobs.queued ? `${data.jobs.queued} queued` : "Agents ready"}
+        {data.decisionMetrics.tracked > 0 && <> · you decide in {formatDuration(data.decisionMetrics.medianAcceptedActiveMs)} on average</>}
       </footer>
     </main>
   );

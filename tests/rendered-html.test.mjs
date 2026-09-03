@@ -51,7 +51,7 @@ test("keeps card decisions fast and actionable", async () => {
   ]);
   assert.match(ui, />\+ New Task<\/button>/);
   assert.match(ui, /DREAM/);
-  assert.match(ui, />Things to Monitor\/Stream</);
+  assert.match(ui, /<span>Dream<\/span>/);
   assert.match(ui, /data\.completionStats\.points\.toLocaleString\("en-US"\)/);
   assert.match(styles, /\.radar-workspace \{ flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; \}/);
   assert.match(styles, /\.radar-card-host \{ flex: 1 1 auto; min-height: 120px; overflow: hidden/);
@@ -154,10 +154,6 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /document\.hasFocus\(\)/);
   assert.match(ui, /60_000/);
   assert.match(ui, /interactionAt - tracker\.lastInteractionAt > 60_000/);
-  assert.match(ui, /Decision timing starts now/);
-  assert.match(ui, /Done \{data\.completionStats\.verified\} verified/);
-  assert.match(ui, /Accept p50/);
-  assert.match(ui, /Any action p50/);
   assert.match(ui, /decisionEstimateMs/);
   assert.match(ui, /Effort/);
   assert.match(ui, /totalActiveMs/);
@@ -166,7 +162,6 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /event: "interaction"/);
   assert.match(ui, /recordCardInteraction\(active, "open"/);
   assert.match(ui, /recordCardInteraction\(active, direction > 0 \? "next" : "back"/);
-  assert.match(ui, /parked/);
   assert.match(action, /decision_action/);
   assert.match(action, /wall_ms/);
   assert.match(action, /activeMs/);
