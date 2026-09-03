@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cardDraftKey, cardHasChanged, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus";
 import { cardShortcut } from "../lib/card-shortcut";
-import { CLUSTERS, clusterForCard, type CardCluster } from "../lib/card-cluster";
+import { DEFAULT_TOPICS, clusterForCard, type Topic } from "../lib/card-cluster";
 import { compareByImpact, impactPoints } from "../lib/rise";
 
 type Idea = {
@@ -41,6 +41,7 @@ type Idea = {
 
 type RadarState = {
   context: { text: string; createdAt: string } | null;
+  topics: Topic[];
   ideas: Idea[];
   laneCounts: Record<Idea["status"], number>;
   jobs: { queued: number; running: number };
@@ -77,6 +78,7 @@ type AttentionTracker = {
 
 const emptyState: RadarState = {
   context: null,
+  topics: DEFAULT_TOPICS,
   ideas: [],
   laneCounts: { new: 0, working: 0, done: 0 },
   jobs: { queued: 0, running: 0 },
@@ -255,7 +257,7 @@ function dayLabel(key: string) {
   return new Date(`${key}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-function DoneList({ ideas, onAction, onInteraction }: { ideas: Idea[]; onAction: (idea: Idea, action: CardAction) => void; onInteraction: (idea: Idea, action: string, label: string) => void }) {
+function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; topics: Topic[]; onAction: (idea: Idea, action: CardAction) => void; onInteraction: (idea: Idea, action: string, label: string) => void }) {
   const [day, setDay] = useState<string>("all");
   const [openId, setOpenId] = useState<number | null>(null);
   const [cardHtml, setCardHtml] = useState<Record<number, string>>({});
@@ -295,7 +297,7 @@ function DoneList({ ideas, onAction, onInteraction }: { ideas: Idea[]; onAction:
             <h2>{dayLabel(key)} <span>{items.length} done · {items.reduce((sum, idea) => sum + pointsFor(idea), 0)} pts</span></h2>
             <ul>
               {items.map((idea) => {
-                const cluster = clusterForCard(idea);
+                const cluster = clusterForCard(idea, topics) || "none";
                 const open = openId === idea.id;
                 return (
                   <li key={idea.id} className={open ? "is-open" : ""}>
@@ -328,7 +330,7 @@ function DoneList({ ideas, onAction, onInteraction }: { ideas: Idea[]; onAction:
 export function GrowthRadar() {
   const [data, setData] = useState<RadarState>(emptyState);
   const [view, setView] = useState<"new" | "working" | "done">("new");
-  const [cluster, setCluster] = useState<CardCluster | "all">("all");
+  const [cluster, setCluster] = useState<string>("all");
   const [sort, setSort] = useState<SortMode>(readSortMode);
   const sortRef = useRef<SortMode>(sort);
   useEffect(() => {
@@ -421,19 +423,20 @@ export function GrowthRadar() {
 
   const laneIdeas = useMemo(() => ideasForView(data.ideas, view, sort), [data.ideas, view, sort]);
   const visibleIdeas = useMemo(
-    () => (cluster === "all" ? laneIdeas : laneIdeas.filter((idea) => clusterForCard(idea) === cluster)),
-    [laneIdeas, cluster],
+    () => (cluster === "all" ? laneIdeas : laneIdeas.filter((idea) => clusterForCard(idea, data.topics) === cluster)),
+    [laneIdeas, cluster, data.topics],
   );
   const clusterCounts = useMemo(() => {
-    const counts: Record<CardCluster, number> = { growth: 0, support: 0, fix: 0, product: 0 };
-    for (const idea of laneIdeas) counts[clusterForCard(idea)] += 1;
+    const counts: Record<string, number> = {};
+    for (const topic of data.topics) counts[topic.id] = 0;
+    for (const idea of laneIdeas) { const id = clusterForCard(idea, data.topics); if (id) counts[id] = (counts[id] ?? 0) + 1; }
     return counts;
-  }, [laneIdeas]);
-  function selectCluster(next: CardCluster | "all") {
+  }, [laneIdeas, data.topics]);
+  function selectCluster(next: string) {
     setComposer(null);
     recordCardInteraction(active, "lane", `cluster:${next}`);
     setCluster(next);
-    const nextVisible = next === "all" ? laneIdeas : laneIdeas.filter((idea) => clusterForCard(idea) === next);
+    const nextVisible = next === "all" ? laneIdeas : laneIdeas.filter((idea) => clusterForCard(idea, data.topics) === next);
     if (!active || !nextVisible.some((idea) => idea.id === active.id)) selectIdea(nextVisible[0] ?? null);
     setMessage("");
   }
@@ -750,6 +753,20 @@ export function GrowthRadar() {
 
 
   if (loading) return <main className="radar-loading">Opening Agency…</main>;
+  if (!data.context?.text?.trim()) {
+    return (
+      <main className="radar-shell radar-first-run">
+        <section className="radar-context">
+          <header>
+            <p>What&rsquo;s your dream right now?</p>
+            <small>Agency reads this before every wave. Say what you are aiming at, what it should keep watching (Slack channels, X, Reddit, email, repos, a customer), and what to leave alone. You can change it any time in Settings.</small>
+          </header>
+          <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="e.g. Browser Use becomes the default browser agent. Watch #a-customer-support, #social-mentions, X mentions of browser use, and our GitHub issues. Never send anything without asking me." />
+          <footer><div><button className="is-dark" disabled={!contextDraft.trim()} onClick={() => void submitTell()}>Start</button></div></footer>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="radar-shell">
@@ -777,7 +794,8 @@ export function GrowthRadar() {
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-side-actions">
-          <button className={`radar-tell${composer ? " is-open" : ""}`} onClick={() => (composer ? setComposer(null) : openNewTask())}>Dream</button>
+          <button className={`radar-tell${composer ? " is-open" : ""}`} onClick={() => (composer ? setComposer(null) : openNewTask())}>New task</button>
+          <Link className="radar-settings-link" href="/settings">Settings</Link>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
           {([["newest", "Newest"], ["score", "Score"], ["effort", "Effort"]] as const).map(([key, label]) => {
@@ -791,7 +809,7 @@ export function GrowthRadar() {
                   setComposer(null);
                   const next: SortMode = activeKey ? { key, dir: sort.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" };
                   setSort(next);
-                  const reordered = ideasForView(data.ideas, view, next).filter((idea) => cluster === "all" || clusterForCard(idea) === cluster);
+                  const reordered = ideasForView(data.ideas, view, next).filter((idea) => cluster === "all" || clusterForCard(idea, data.topics) === cluster);
                   selectIdea(reordered[0] ?? null);
                   recordCardInteraction(active, "lane", `sort:${next.key}:${next.dir}`);
                 }}
@@ -800,9 +818,9 @@ export function GrowthRadar() {
           })}
         </div>
         <button className={cluster === "all" ? "is-active" : ""} onClick={() => selectCluster("all")}>All <b>{laneIdeas.length}</b></button>
-        {CLUSTERS.map((item) => (
-          <button key={item.id} className={`is-${item.id}${cluster === item.id ? " is-active" : ""}`} title={item.hint} onClick={() => selectCluster(item.id)}>
-            {item.label} <b>{clusterCounts[item.id]}</b>
+        {data.topics.map((item) => (
+          <button key={item.id} className={cluster === item.id ? "is-active" : ""} title={item.hint} onClick={() => selectCluster(item.id)}>
+            {item.label} <b>{clusterCounts[item.id] ?? 0}</b>
           </button>
         ))}
       </nav>
@@ -810,19 +828,16 @@ export function GrowthRadar() {
       {composer === "task" ? (
         <section className="radar-task">
           <label className="is-once">
-            <span>Do it once</span>
+            <span>New task</span>
             <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Agency carries your dream with it." />
           </label>
-          <label className="is-context">
-            <span>My dream · what Agency always watches</span>
-            <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What you are aiming at." />
-          </label>
           <footer>
-            <button className="is-dark" disabled={!taskDraft.trim() && !contextDraft.trim()} onClick={() => void submitTell()}>Save</button>
+            <Link className="radar-settings-link" href="/settings">Edit my dream and topics in Settings</Link>
+            <button className="is-dark" disabled={!taskDraft.trim()} onClick={() => void submitTell()}>Send</button>
           </footer>
         </section>
       ) : view === "done" ? (
-        <DoneList ideas={visibleIdeas} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />
+        <DoneList ideas={visibleIdeas} topics={data.topics} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />
       ) : active ? (
         <section className="radar-workspace">
           {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}

@@ -1,5 +1,5 @@
 import { ensureDatabase } from "../../../db";
-import { CLUSTERS, clusterForCard, type CardCluster } from "../../../lib/card-cluster";
+import { clusterForCard, parseTopicRow, type Topic } from "../../../lib/card-cluster";
 import { impactPoints } from "../../../lib/rise";
 import { PARKED_DECISION_MS } from "../../../lib/decision-metrics";
 
@@ -34,6 +34,8 @@ function emptyBucket() {
 
 export async function GET(request: Request) {
   const db = await ensureDatabase();
+  const topicRows = await db.prepare("SELECT id, label, hint, keywords FROM topics ORDER BY position, created_at").all<{ id: string; label: string; hint: string; keywords: string }>();
+  const topics: Topic[] = topicRows.results.map(parseTopicRow);
   const days = Math.max(1, Math.min(365, Number(new URL(request.url).searchParams.get("days")) || 30));
   const since = `-${days} days`;
   const decisions = await db.prepare(`
@@ -53,16 +55,14 @@ export async function GET(request: Request) {
     WHERE i.card_html != '' AND i.status IN ('new','working','done','rejected')
   `).all<CardRow>();
 
-  const byCluster: Record<CardCluster, ReturnType<typeof emptyBucket> & { open: number; done: number; rejected: number; donePoints: number }> = {
-    growth: { ...emptyBucket(), open: 0, done: 0, rejected: 0, donePoints: 0 },
-    support: { ...emptyBucket(), open: 0, done: 0, rejected: 0, donePoints: 0 },
-    fix: { ...emptyBucket(), open: 0, done: 0, rejected: 0, donePoints: 0 },
-    product: { ...emptyBucket(), open: 0, done: 0, rejected: 0, donePoints: 0 },
-  };
+  type ClusterBucket = ReturnType<typeof emptyBucket> & { open: number; done: number; rejected: number; donePoints: number };
+  const byCluster: Record<string, ClusterBucket> = {};
+  const bucketFor = (id: string) => (byCluster[id] ??= { ...emptyBucket(), open: 0, done: 0, rejected: 0, donePoints: 0 });
+  for (const topic of topics) bucketFor(topic.id);
   const byDay = new Map<string, { do: number; change: number; no: number; points: number }>();
   const total = emptyBucket();
   for (const row of decisions.results) {
-    const bucket = byCluster[clusterForCard(row)];
+    const bucket = bucketFor(clusterForCard(row, topics));
     const active = Number(row.activeMs ?? 0);
     const wall = Number(row.wallMs ?? 0);
     for (const target of [bucket, total]) {
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
   }
   let donePoints = 0;
   for (const card of cards.results) {
-    const bucket = byCluster[clusterForCard(card)];
+    const bucket = bucketFor(clusterForCard(card, topics));
     if (card.status === "done") {
       bucket.done += 1;
       if (card.outcome === "completed") {
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     const { activeTimes, doTimes, ...rest } = b;
     return { ...rest, medianActiveMs: median(activeTimes), medianDoMs: median(doTimes), decided: b.do + b.change + b.no, doRate: b.do + b.change + b.no ? Math.round((100 * b.do) / (b.do + b.change + b.no)) : null };
   };
-  const clusters = CLUSTERS.map((c) => ({ id: c.id, label: c.label, hint: c.hint, ...finish(byCluster[c.id]), open: byCluster[c.id].open, done: byCluster[c.id].done, rejected: byCluster[c.id].rejected, donePoints: byCluster[c.id].donePoints }));
+  const clusters = topics.map((c) => ({ id: c.id, label: c.label, hint: c.hint, ...finish(byCluster[c.id]), open: byCluster[c.id].open, done: byCluster[c.id].done, rejected: byCluster[c.id].rejected, donePoints: byCluster[c.id].donePoints }));
   // What he likes: category-level do-rate over the window (min 3 decisions), best and worst.
   const byCategory = new Map<string, { do: number; change: number; no: number }>();
   for (const row of decisions.results) {
@@ -110,7 +110,7 @@ export async function GET(request: Request) {
     .map(([name, c]) => ({ name, ...c, decided: c.do + c.change + c.no, doRate: Math.round((100 * c.do) / (c.do + c.change + c.no)) }))
     .filter((c) => c.decided >= 3)
     .toSorted((a, b) => b.doRate - a.doRate || b.decided - a.decided);
-  const recent = decisions.results.slice(0, 40).map((r) => ({ ideaId: r.ideaId, headline: r.headline, action: r.decisionAction, activeMs: r.activeMs, decidedAt: r.decidedAt, cluster: clusterForCard(r) }));
+  const recent = decisions.results.slice(0, 40).map((r) => ({ ideaId: r.ideaId, headline: r.headline, action: r.decisionAction, activeMs: r.activeMs, decidedAt: r.decidedAt, cluster: clusterForCard(r, topics) }));
   return Response.json({
     days,
     total: { ...finish(total), likedPoints: total.likedPoints, donePoints, points: donePoints },

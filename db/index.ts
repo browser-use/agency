@@ -36,7 +36,16 @@ async function runMaintenance(db: ReturnType<typeof getD1>) {
     db.prepare("CREATE TABLE IF NOT EXISTS card_interactions (id INTEGER PRIMARY KEY AUTOINCREMENT, idea_id INTEGER NOT NULL, idea_version INTEGER NOT NULL, action TEXT NOT NULL, label TEXT NOT NULL DEFAULT '', active_ms INTEGER NOT NULL DEFAULT 0, wall_ms INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_ideas_dedupe_key ON ideas(dedupe_key)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_ideas_status_score ON ideas(status, score DESC)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS topics (id TEXT PRIMARY KEY, label TEXT NOT NULL, hint TEXT NOT NULL DEFAULT '', keywords TEXT NOT NULL DEFAULT '', position INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
   ]);
+  // Seed the four original topics once; after that the user and agents own the list.
+  await db.prepare(`
+    INSERT OR IGNORE INTO topics (id, label, hint, keywords, position) VALUES
+      ('growth', 'Growth', 'posts, replies, outreach, integrations', 'growth,distribution,x reply,x post,reddit,quote,social,case study,demo,launch,hackathon,integration,hype,press,newsletter,community,mention,linkedin,hn,show hn,awesome,template,default', 1),
+      ('support', 'Support', 'customer and ticket replies', 'support,pylon,customer,refund,billing,churn,outreach,onboarding,ticket,priority customer,named customer,customer support,support ops', 2),
+      ('fix', 'Fixes', 'PRs, bugs, reliability, speed', 'fix,fixes,bug,reliab,reliability,regression,merge,pr,pull request,observab,logging,alert,installer,docker,restart,performance,startup,handoff,security,oss,contributor,conflict,blocked', 3),
+      ('product', 'Product', 'features, decisions, stats, Agency', 'product,pitch,feature,decision,stats,agency,pricing,roadmap,analytics,usage,scaling user,what to build,design', 4)
+  `).run();
   const columns = await db.prepare("PRAGMA table_info(ideas)").all<{ name: string }>();
   const names = new Set(columns.results.map((column: { name: string }) => column.name));
   if (!names.has("project")) {

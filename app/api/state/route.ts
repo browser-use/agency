@@ -1,4 +1,5 @@
 import { ensureDatabase } from "../../../db";
+import { parseTopicRow } from "../../../lib/card-cluster";
 import { summarizeDecisionMetrics } from "../../../lib/decision-metrics";
 import { buildDecisionTimeModel, calibratedDecisionTime, type DecisionCardInput } from "../../../lib/decision-time";
 import { jobLeaseWindow } from "../../../lib/job-lifecycle";
@@ -71,6 +72,7 @@ export async function GET(request: Request) {
   const requestedOnlyId = Number(url.searchParams.get("only"));
   const onlyId = Number.isInteger(requestedOnlyId) && requestedOnlyId > 0 ? requestedOnlyId : null;
   const context = await db.prepare("SELECT text, created_at AS createdAt FROM contexts ORDER BY id DESC LIMIT 1").first();
+  const topicRows = await db.prepare("SELECT id, label, hint, keywords FROM topics ORDER BY position, created_at").all<{ id: string; label: string; hint: string; keywords: string }>();
   const ideas = await db.prepare(`
     WITH visible_ideas AS (
       SELECT
@@ -195,6 +197,7 @@ export async function GET(request: Request) {
   const laneCounts = Object.fromEntries(laneRows.results.map((row) => [row.status, row.total]));
   return Response.json({
     context,
+    topics: topicRows.results.map(parseTopicRow),
     ideas: enrichedIdeas,
     laneCounts: {
       new: laneCounts.new ?? 0,
