@@ -110,12 +110,6 @@ function decisionLabel(action: Idea["decisionAction"]) {
   return "Changed";
 }
 
-function decisionKindLabel(kind: Idea["decisionKind"]) {
-  if (kind === "pr") return "PR review";
-  if (kind === "message") return "message";
-  if (kind === "visual") return "visual check";
-  return "card";
-}
 
 type SortMode = "score" | "newest";
 const SORT_KEY = "radar-sort";
@@ -342,7 +336,7 @@ export function GrowthRadar() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [liveDecision, setLiveDecision] = useState({ key: "", activeMs: 0 });
+  const [, setLiveDecision] = useState({ key: "", activeMs: 0 });
   const liveDecisionByCardRef = useRef<Record<string, number>>({});
   const attentionTrackerRef = useRef<AttentionTracker | null>(null);
   const loadRequestRef = useRef(0);
@@ -452,9 +446,6 @@ export function GrowthRadar() {
   const attentionIdeaVersion = active?.version ?? null;
   const attentionDecisionAction = active?.decisionAction ?? null;
   const attentionInitialActiveMs = Number(active?.decisionActiveMs ?? 0);
-  const liveDecisionMs = active && liveDecision.key === cardDraftKey(active)
-    ? liveDecision.activeMs
-    : attentionInitialActiveMs;
 
   const takePendingActiveMs = useCallback((id: number, version: number, flush = true) => {
     const tracker = attentionTrackerRef.current;
@@ -739,6 +730,7 @@ export function GrowthRadar() {
       <header className="radar-header">
         <div className="radar-bar-left">
           <button className="radar-logo" onClick={() => selectView("new")} aria-label="Agency"><span /></button>
+          <button className="radar-tell" onClick={openNewTask}>New task</button>
           <nav aria-label="Agency queue">
             <button aria-label={`New, ${laneCounts.new} tickets`} className={view === "new" ? "is-active" : ""} onClick={() => selectView("new")}>New <b>{laneCounts.new}</b></button>
             <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
@@ -750,24 +742,13 @@ export function GrowthRadar() {
             <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.5l1.9 4.1 4.4.5-3.3 3 .9 4.4L8 11.3l-3.9 2.2.9-4.4-3.3-3 4.4-.5z" fill="currentColor"/></svg>
             Dream
           </button>
+          {active && composer === null && view !== "done" && (
+            <span className="radar-score" title={`This card scores ${impactPoints(active)} of 10. Finishing it earns ${impactPoints(active)} points.`} aria-label={`Score ${impactPoints(active)} of 10`}><b>{impactPoints(active)}</b></span>
+          )}
           <Link className="radar-points" href="/stats" aria-label={`${data.completionStats.points} points, ${data.completionStats.pointsToday} today. Open stats.`} title="Points from finished work. Opens stats."><b>{data.completionStats.points.toLocaleString("en-US")}</b><span>pts</span>{data.completionStats.pointsToday > 0 && <em>+{data.completionStats.pointsToday.toLocaleString("en-US")} today</em>}</Link>
-          <button className="radar-tell" onClick={openNewTask}>New task</button>
         </div>
       </header>
 
-      {active && composer === null && view !== "done" && (
-        <div className="radar-card-signals">
-          <span className="radar-rise" title={`Impact ${impactPoints(active)} of 10 decides the order and the points. Reach ${active.riseReach}, fit ${active.riseStrategicFit}, readiness ${active.riseEase} of 25.`} aria-label={`Impact ${impactPoints(active)} out of 10.`}>
-            <b className="radar-impact">{impactPoints(active)}</b>
-            <i>impact</i>
-          </span>
-          <span className={`radar-decision-time${active.decisionAction ? "" : " is-live"}`} title={active.decisionAction ? `You decided after ${formatDuration(active.decisionActiveMs)} active, ${formatDuration(active.decisionWallMs)} elapsed. Estimate was ${formatDuration(active.decisionEstimateMs)}.` : `Estimated ${formatDuration(active.decisionEstimateMs)} to decide, based on ${active.decisionEstimateReason}, calibrated against your recent ${decisionKindLabel(active.decisionKind)} decisions.`}>
-            <strong>{active.decisionAction ? `${decisionLabel(active.decisionAction)} in ${formatDuration(active.decisionActiveMs)}` : formatDuration(liveDecisionMs)}</strong>
-            <i>{active.decisionAction ? "" : `of ~${formatDuration(active.decisionEstimateMs)}`}</i>
-          </span>
-          {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}
-        </div>
-      )}
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-sort" role="group" aria-label="Sort">
@@ -811,6 +792,7 @@ export function GrowthRadar() {
         <DoneList ideas={visibleIdeas} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />
       ) : active ? (
         <section className="radar-workspace">
+          {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}
           {hasIncomingUpdate && (
             <section className="radar-update-waiting" role="status">
               <span>{feedback.trim()

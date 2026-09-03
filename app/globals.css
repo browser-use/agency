@@ -188,7 +188,7 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-decision-time strong { color: var(--ink-2); font-weight: 600; font-variant-numeric: tabular-nums; }
 .radar-decision-time.is-live strong { color: var(--accent); }
 .radar-impact { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 6px; background: var(--accent); color: white; font-size: .78rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-.radar-working { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.radar-working { flex: 0 0 auto; width: max-content; margin: 0 0 8px; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: .74rem; font-weight: 600; }
 
 /* Workspace: the agent's HTML sits directly on the page, no panel behind it */
 .radar-workspace { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
@@ -218,3 +218,5 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-inline-change button.is-send:hover { background: #2b2a22; }
 .radar-inline-change button:disabled { opacity: .3; }
 .radar-message { flex: 0 0 auto; max-height: 52px; overflow: auto; margin-top: 8px; padding: 8px 12px; border-radius: var(--r); background: var(--ok-soft); color: var(--ok); font-size: .78rem; font-weight: 600; }
+
+.radar-score { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 9px; background: var(--accent); color: white; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
