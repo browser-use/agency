@@ -21,6 +21,8 @@ type NewCard = {
   dedupeKey?: string;
 };
 
+const MAX_CARD_HTML_LENGTH = 250_000;
+
 function canIngest(request: Request) {
   const origin = request.headers.get("origin");
   if (origin) return origin === new URL(request.url).origin;
@@ -48,8 +50,8 @@ export async function POST(request: Request) {
   const headline = card.headline?.trim() ?? "";
   const cardHtml = card.cardHtml?.trim() ?? "";
   const dedupeKey = card.dedupeKey?.trim() ?? "";
-  if (!project || !category || !headline || !dedupeKey || cardHtml.length < 80 || cardHtml.length > 100_000) {
-    return Response.json({ error: "Card needs project, category, headline, dedupeKey, and 80–100000 characters of HTML." }, { status: 400 });
+  if (!project || !category || !headline || !dedupeKey || cardHtml.length < 80 || cardHtml.length > MAX_CARD_HTML_LENGTH) {
+    return Response.json({ error: "Card needs project, category, headline, dedupeKey, and 80–250000 characters of HTML." }, { status: 400 });
   }
   if (unsafeHtml(cardHtml)) return Response.json({ error: "Card HTML contains an unsafe element or attribute." }, { status: 400 });
   if (!/data-radar-action\s*=\s*["']do["']/i.test(cardHtml)) {
