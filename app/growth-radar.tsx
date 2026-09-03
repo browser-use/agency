@@ -760,12 +760,18 @@ export function GrowthRadar() {
             <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
             <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
         </nav>
-        <Link className="radar-scores" href="/stats" title="This card · today · all time. Opens stats.">
-          <span><b>{active && composer === null && view !== "done" ? impactPoints(active) : "–"}</b><i>score</i></span>
-          <span><b>{active && composer === null && view !== "done" ? formatDuration(active.decisionEstimateMs) : "–"}</b><i>effort</i></span>
-          <span className="is-today"><b>{data.completionStats.pointsToday.toLocaleString("en-US")}</b><i>today</i></span>
-          <span><b>{data.completionStats.points.toLocaleString("en-US")}</b><i>total</i></span>
-        </Link>
+        <div className="radar-header-right">
+          {active && composer === null && view !== "done" && (
+            <span className="radar-card-chips" title={`This card: score ${impactPoints(active)} of 10, about ${formatDuration(active.decisionEstimateMs)} to decide.`}>
+              <span><b>{impactPoints(active)}</b><i>score</i></span>
+              <span><b>{formatDuration(active.decisionEstimateMs)}</b><i>effort</i></span>
+            </span>
+          )}
+          <Link className="radar-scores" href="/stats" title="Points today and all time. Opens stats.">
+            <span className="is-today"><b>{data.completionStats.pointsToday.toLocaleString("en-US")}</b><i>today</i></span>
+            <span><b>{data.completionStats.points.toLocaleString("en-US")}</b><i>total</i></span>
+          </Link>
+        </div>
       </header>
 
 
