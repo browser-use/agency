@@ -785,6 +785,8 @@ export function GrowthRadar() {
                   setComposer(null);
                   const next: SortMode = activeKey ? { key, dir: sort.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" };
                   setSort(next);
+                  const reordered = ideasForView(data.ideas, view, next).filter((idea) => cluster === "all" || clusterForCard(idea) === cluster);
+                  selectIdea(reordered[0] ?? null);
                   recordCardInteraction(active, "lane", `sort:${next.key}:${next.dir}`);
                 }}
               >{label}{activeKey && <i aria-label={sort.dir === "desc" ? "descending" : "ascending"}>{sort.dir === "desc" ? "↓" : "↑"}</i>}</button>
