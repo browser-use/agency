@@ -745,12 +745,12 @@ export function GrowthRadar() {
             <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
           </nav>
         </div>
-        <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text || "Add what you care about."}>
-          <span>Dream</span>
-          <strong>{data.context?.text || "Add what you care about."}</strong>
-        </button>
         <div className="radar-header-actions">
-          <Link className="radar-points" href="/stats" aria-label={`${data.completionStats.points} points, ${data.completionStats.pointsToday} today. Open stats.`} title="Points from finished work. Opens stats."><b>{data.completionStats.points.toLocaleString("en-US")}</b><em>+{data.completionStats.pointsToday.toLocaleString("en-US")} today</em></Link>
+          <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text ? "Open your dream" : "Add what you care about."}>
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.5l1.9 4.1 4.4.5-3.3 3 .9 4.4L8 11.3l-3.9 2.2.9-4.4-3.3-3 4.4-.5z" fill="currentColor"/></svg>
+            Dream
+          </button>
+          <Link className="radar-points" href="/stats" aria-label={`${data.completionStats.points} points, ${data.completionStats.pointsToday} today. Open stats.`} title="Points from finished work. Opens stats."><b>{data.completionStats.points.toLocaleString("en-US")}</b><span>pts</span>{data.completionStats.pointsToday > 0 && <em>+{data.completionStats.pointsToday.toLocaleString("en-US")} today</em>}</Link>
           <button className="radar-tell" onClick={openNewTask}>New task</button>
         </div>
       </header>
@@ -849,7 +849,7 @@ export function GrowthRadar() {
                 aria-label="Skip this card"
                 title="Skip · S"
                 onClick={() => void submitSkip()}
-              ><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg></button>
+              ><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none"/></svg></button>
               <button
                 className="is-improve"
                 disabled={jobInFlight || feedbackSubmitting}

@@ -181,21 +181,24 @@ export function buildDecisionTimeModel(samples: DecisionSample[]): DecisionTimeM
     const values = ratios[kind];
     const observed = median(values);
     if (observed === null || values.length < 3) return [kind, { factor: 1, samples: values.length }];
-    const weight = values.length / (values.length + 20);
-    const factor = 1 + (clamp(observed, 0.75, 2) - 1) * weight;
+    // Magnus's real decisions run ~3x the naive baselines. Let the learned factor
+    // reach that instead of clamping at 2x, and trust it after a dozen samples.
+    const weight = values.length / (values.length + 8);
+    const factor = 1 + (clamp(observed, 0.5, 5) - 1) * weight;
     return [kind, { factor, samples: values.length }];
   })) as DecisionTimeModel;
 }
 
 export function calibratedDecisionTime(card: DecisionCardInput, model: DecisionTimeModel = EMPTY_MODEL): DecisionEstimate {
   const baseline = estimateDecisionTime(card);
-  if (explicitEstimate(card, safeContext(card.agentContext))) {
-    return { ...baseline, learnedFactor: 1 };
-  }
+  // An agent's own effort guess is calibrated too: history shows agents underestimate as much as the
+  // baselines do. An explicit estimate keeps its own scale (a stated 30-minute review is not capped).
   const learned = model[baseline.kind] ?? EMPTY_MODEL[baseline.kind];
+  const explicit = explicitEstimate(card, safeContext(card.agentContext));
+  const scaled = baseline.baselineMs * learned.factor;
   return {
     ...baseline,
-    estimatedMs: roundSeconds(clamp(baseline.baselineMs * learned.factor, MIN_ESTIMATE_MS, MAX_ESTIMATE_MS)),
+    estimatedMs: roundSeconds(explicit ? Math.max(MIN_ESTIMATE_MS, scaled) : clamp(scaled, MIN_ESTIMATE_MS, MAX_ESTIMATE_MS)),
     learnedFactor: learned.factor,
   };
 }

@@ -24,7 +24,7 @@ test("estimates one-line messages below broad PRs", () => {
   assert.match(largePr.reason, /320 changed lines/);
 });
 
-test("keeps explicit card estimates exact while learning a future factor", () => {
+test("calibrates explicit card estimates with the learned factor", () => {
   const card = {
     headline: "Send the reply",
     category: "Message",
@@ -36,8 +36,9 @@ test("keeps explicit card estimates exact while learning a future factor", () =>
   const calibrated = calibratedDecisionTime(card, model);
   assert.equal(calibrated.kind, "message");
   assert.ok(model.message.factor > 1);
-  assert.equal(calibrated.estimatedMs, 6_000);
-  assert.equal(calibrated.learnedFactor, 1);
+  // Agents underestimate as much as the baselines do, so an explicit guess is calibrated too.
+  assert.ok(calibrated.estimatedMs > 6_000);
+  assert.equal(calibrated.learnedFactor, model.message.factor);
 });
 
 test("counts better in-card presentation as lower review effort", () => {
@@ -59,7 +60,7 @@ test("counts better in-card presentation as lower review effort", () => {
   assert.match(easy.reason, /expandable color-coded inline diff/);
 });
 
-test("accepts effort seconds as the exact explicit estimate", () => {
+test("accepts effort seconds as the baseline and calibrates it", () => {
   const card = {
     headline: "Send reply",
     category: "Message",
@@ -70,7 +71,7 @@ test("accepts effort seconds as the exact explicit estimate", () => {
 
   assert.equal(estimate.estimatedMs, 20_000);
   assert.equal(estimate.reason, "inline exact reply");
-  assert.equal(calibrated.estimatedMs, 20_000);
+  assert.equal(calibrated.estimatedMs, 40_000);
 });
 
 test("does not shorten an explicit 30-minute PR review to the heuristic cap", () => {
@@ -81,13 +82,15 @@ test("does not shorten an explicit 30-minute PR review to the heuristic cap", ()
   };
   assert.equal(estimateDecisionTime(card).estimatedMs, 1_800_000);
   assert.equal(calibratedDecisionTime(card).estimatedMs, 1_800_000);
+  const doubled = { pr: { factor: 2, samples: 20 }, message: { factor: 2, samples: 20 }, visual: { factor: 2, samples: 20 }, task: { factor: 2, samples: 20 } };
+  assert.equal(calibratedDecisionTime(card, doubled).estimatedMs, 3_600_000);
 });
 
 test("keeps exact short and long context estimates without changing heuristics", () => {
   for (const effortSeconds of [3, 20, 1_800, 3_600]) {
     const card = { agentContext: JSON.stringify({ effortSeconds }) };
     assert.equal(estimateDecisionTime(card).estimatedMs, effortSeconds * 1_000);
-    assert.equal(calibratedDecisionTime(card).estimatedMs, effortSeconds * 1_000);
+    assert.equal(calibratedDecisionTime(card).estimatedMs, Math.max(5_000, effortSeconds * 1_000));
   }
   const fallback = estimateDecisionTime({ headline: "Merge PR #1", cardHtml: "large scope ".repeat(10_000) });
   assert.ok(fallback.estimatedMs <= 180_000);
