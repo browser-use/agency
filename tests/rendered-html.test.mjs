@@ -49,15 +49,15 @@ test("keeps card decisions fast and actionable", async () => {
     readFile(new URL("../app/api/agent-jobs/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(ui, />\+ New Task<\/button>/);
-  assert.match(ui, /DREAM/);
+  assert.match(ui, />New task<\/button>/);
+  assert.match(ui, /<span>Dream<\/span>/);
   assert.match(ui, /<span>Dream<\/span>/);
   assert.match(ui, /data\.completionStats\.points\.toLocaleString\("en-US"\)/);
   assert.match(styles, /\.radar-workspace \{ flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; \}/);
   assert.match(styles, /\.radar-card-host \{ flex: 1 1 auto; min-height: 120px; overflow: hidden/);
   assert.match(styles, /\.radar-agent-card-scroll \{ flex: 1 1 auto; min-height: 0; overflow: auto/);
   assert.match(styles, /\.radar-card-action-dock \{ flex: 0 0 58px/);
-  assert.match(styles, /\.radar-inline-change \{ flex: 0 0 58px; height: 58px/);
+  assert.match(styles, /\.radar-inline-change \{ flex: 0 0 auto; min-height: 58px/);
   assert.match(styles, /\.radar-inline-change textarea \{[^}]*resize: none/);
   assert.match(ui, />Queue task<\/button>/);
   assert.match(ui, /fetch\("\/api\/tasks"/);
@@ -72,7 +72,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.doesNotMatch(ui, /missingChange|changeRequest/);
   assert.ok(ui.includes("root.querySelectorAll('[data-radar-action=\"change\"], [data-radar-action=\"no\"]')"));
   assert.match(ui, /Add context or say what to change/);
-  assert.match(ui, />Send<\/button>/);
+  assert.match(ui, /aria-label="Send"/);
   assert.match(ui, /sendToAgent\(\s*target,\s*"change"/);
   assert.match(ui, /function improveLabel\(idea: Idea\)/);
   assert.doesNotMatch(ui, /post\|launch\|tweet/);
@@ -82,7 +82,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /Improve card/);
   assert.match(ui, /void submitImprove\(\)/);
   assert.match(ui, /void submitSkip\(\)/);
-  assert.match(ui, />Skip<\/button>/);
+  assert.match(ui, /aria-label="Skip this card"/);
   assert.match(ui, /cardShortcut\(\{/);
   assert.match(ui, /event\.composedPath\(\)/);
   assert.match(ui, /target\.matches\("input, textarea, select"\)/);

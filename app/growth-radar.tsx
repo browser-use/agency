@@ -737,53 +737,37 @@ export function GrowthRadar() {
   return (
     <main className="radar-shell">
       <header className="radar-header">
-        <button className="radar-logo" onClick={() => selectView("new")}><span />AGENCY</button>
-        <nav aria-label="Agency queue">
-          <button aria-label={`New, ${laneCounts.new} tickets`} className={view === "new" ? "is-active" : ""} onClick={() => selectView("new")}>New <b>{laneCounts.new}</b></button>
-          <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
-          <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
-        </nav>
+        <div className="radar-bar-left">
+          <button className="radar-logo" onClick={() => selectView("new")} aria-label="Agency"><span /></button>
+          <nav aria-label="Agency queue">
+            <button aria-label={`New, ${laneCounts.new} tickets`} className={view === "new" ? "is-active" : ""} onClick={() => selectView("new")}>New <b>{laneCounts.new}</b></button>
+            <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
+            <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
+          </nav>
+        </div>
+        <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text || "Add what you care about."}>
+          <span>Dream</span>
+          <strong>{data.context?.text || "Add what you care about."}</strong>
+        </button>
         <div className="radar-header-actions">
-          <span className="radar-points" aria-label={`${data.completionStats.points} points earned from verified completed tickets, ${data.completionStats.pointsToday} today`} title="Sum of RISE scores from verified completed tickets · today = verified since midnight Pacific"><b>{data.completionStats.points.toLocaleString("en-US")}</b> pts<em>+{data.completionStats.pointsToday.toLocaleString("en-US")} today</em></span>
-          <Link className="radar-stats-link" href="/stats">Stats</Link>
-          <button className="radar-tell" onClick={openNewTask}>+ New Task</button>
+          <Link className="radar-points" href="/stats" aria-label={`${data.completionStats.points} points, ${data.completionStats.pointsToday} today. Open stats.`} title="Points from finished work. Opens stats."><b>{data.completionStats.points.toLocaleString("en-US")}</b><em>+{data.completionStats.pointsToday.toLocaleString("en-US")} today</em></Link>
+          <button className="radar-tell" onClick={openNewTask}>New task</button>
         </div>
       </header>
 
-      <div className="radar-topline">
-        <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text || "Add what you care about."}>
-          <span>DREAM</span>
-          <strong>{data.context?.text || "Add what you care about."}</strong>
-        </button>
-        {active && composer === null && view !== "done" && (
-          <div className="radar-card-signals">
-            <section
-              className={`radar-decision-time${active.decisionAction ? "" : " is-live"}`}
-              aria-label={active.decisionAction
-                ? `${decisionLabel(active.decisionAction)} after ${formatDuration(active.decisionActiveMs)} active. Effort ${formatDuration(active.decisionEstimateMs)}.`
-                : `${formatDuration(liveDecisionMs)} active. Effort ${formatDuration(active.decisionEstimateMs)}. ${active.decisionEstimateReason}.`}
-              title={active.decisionAction
-                ? `Effort ${formatDuration(active.decisionEstimateMs)}. Active time counts recent interaction; elapsed time includes breaks.`
-                : `Effort is the predicted number of seconds you need. Based on ${active.decisionEstimateReason}, then tuned against recent ${decisionKindLabel(active.decisionKind)} decisions.`}
-            >
-              <strong>{active.decisionAction
-                ? `${decisionLabel(active.decisionAction)} · ${formatDuration(active.decisionActiveMs)}`
-                : formatDuration(liveDecisionMs)}</strong>
-              <span>{active.decisionAction
-                ? `Effort ${formatDuration(active.decisionEstimateMs)} · ${formatDuration(active.decisionWallMs)} elapsed`
-                : `Effort ${formatDuration(active.decisionEstimateMs)} · ${decisionKindLabel(active.decisionKind)}`}</span>
-            </section>
-            <section
-              className="radar-rise"
-              aria-label={`Impact ${impactPoints(active)} out of 10. Reach ${active.riseReach}, impact ${active.riseImpact}, strategic fit ${active.riseStrategicFit}, execution readiness ${active.riseEase} of 25.`}
-              title="Impact 0-10 decides the order and the points. Reach, strategic fit and execution readiness are shown for context."
-            >
-              <b className="radar-impact">{impactPoints(active)}</b>
-              <span>impact<i>R {active.riseReach} · S {active.riseStrategicFit} · E {active.riseEase}</i></span>
-            </section>
-          </div>
-        )}
-      </div>
+      {active && composer === null && view !== "done" && (
+        <div className="radar-card-signals">
+          <span className="radar-rise" title="Impact 0-10 decides the order and the points. Reach, strategic fit and execution readiness are context." aria-label={`Impact ${impactPoints(active)} out of 10. Reach ${active.riseReach}, strategic fit ${active.riseStrategicFit}, execution readiness ${active.riseEase} of 25.`}>
+            <b className="radar-impact">{impactPoints(active)}</b>
+            <i>impact · R {active.riseReach} · S {active.riseStrategicFit} · E {active.riseEase}</i>
+          </span>
+          <span className={`radar-decision-time${active.decisionAction ? "" : " is-live"}`} title={active.decisionAction ? `Effort ${formatDuration(active.decisionEstimateMs)}. Active time counts recent interaction; elapsed includes breaks.` : `Effort is the predicted seconds you need, based on ${active.decisionEstimateReason}, tuned against recent ${decisionKindLabel(active.decisionKind)} decisions.`}>
+            <strong>{active.decisionAction ? `${decisionLabel(active.decisionAction)} · ${formatDuration(active.decisionActiveMs)}` : formatDuration(liveDecisionMs)}</strong>
+            <i>{active.decisionAction ? `effort ${formatDuration(active.decisionEstimateMs)} · ${formatDuration(active.decisionWallMs)} elapsed` : `effort ${formatDuration(active.decisionEstimateMs)} · ${decisionKindLabel(active.decisionKind)}`}</i>
+          </span>
+          {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}
+        </div>
+      )}
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-sort" role="group" aria-label="Sort">
@@ -837,9 +821,6 @@ export function GrowthRadar() {
               </button>
             </section>
           )}
-          {jobInFlight && (
-            <p className="radar-working" role="status">Agency is working on this card.</p>
-          )}
           <section className="radar-card-host">
             <AgentCard idea={active} actionable={!jobInFlight} onAction={handleCardAction} onInteraction={(action, label) => recordCardInteraction(active, action, label)} />
           </section>
@@ -848,8 +829,9 @@ export function GrowthRadar() {
             <textarea
               aria-label="Change this card"
               value={feedback}
+              rows={1}
               disabled={jobInFlight || feedbackSubmitting}
-              onChange={(event) => updateFeedback(event.target.value)}
+              onChange={(event) => { updateFeedback(event.target.value); event.target.style.height = "auto"; event.target.style.height = `${Math.min(event.target.scrollHeight, 180)}px`; }}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
                 event.preventDefault();
@@ -864,9 +846,10 @@ export function GrowthRadar() {
                 className="is-skip"
                 disabled={feedbackSubmitting}
                 aria-keyshortcuts="S"
-                title="Shortcut: S"
+                aria-label="Skip this card"
+                title="Skip · S"
                 onClick={() => void submitSkip()}
-              >Skip</button>
+              ><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg></button>
               <button
                 className="is-improve"
                 disabled={jobInFlight || feedbackSubmitting}
@@ -877,8 +860,10 @@ export function GrowthRadar() {
               <button
                 className="is-send"
                 disabled={jobInFlight || feedbackSubmitting || !feedback.trim()}
+                aria-label="Send"
+                title="Send · Enter"
                 onClick={() => void submitFeedback()}
-              >Send</button>
+              ><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></button>
             </div>
           </section>
 
