@@ -538,16 +538,14 @@ export function GrowthRadar() {
       setMessage("That did not reach the agent. Try once more.");
       return false;
     }
-    const receipt = (await response.json()) as { jobId?: number };
+    await response.json().catch(() => undefined);
     const targetDraftKey = cardDraftKey(target);
     setFeedbackDrafts((current) => {
       const next = { ...current };
       delete next[targetDraftKey];
       return next;
     });
-    setMessage(action === "no"
-      ? "Skipped. This card is closed and the decision was saved."
-      : `Job #${receipt.jobId ?? "?"} is queued with the full card. This card moved to Working. Here is the next new card.`);
+    setMessage("");
     const targetView = action === "no" ? view : "new";
     const nextSelection = targetView === view
       ? nextCardAfterRemoval(target.id, visibleIdeas)
@@ -666,11 +664,10 @@ export function GrowthRadar() {
     }
     if (task) {
       await queueTask();
-      if (dreamChanged) setMessage((current) => `${current} Dream saved.`);
       return;
     }
     setComposer(null);
-    setMessage(dreamChanged ? "Dream saved." : "");
+    setMessage("");
     await load();
   }
 
@@ -686,12 +683,12 @@ export function GrowthRadar() {
       setMessage("That task did not reach Agency. Try once more.");
       return;
     }
-    const receipt = (await response.json()) as { jobId?: number };
+    await response.json().catch(() => undefined);
     setComposer(null);
     setTaskDraft("");
     setView("new");
     selectIdea(null);
-    setMessage(`Task #${receipt.jobId ?? "?"} is queued. Agency has the full task and your general context.`);
+    setMessage("");
     await load("new");
   }
 

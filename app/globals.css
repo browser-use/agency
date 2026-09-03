@@ -66,7 +66,8 @@ a { color: inherit; text-decoration: none; }
 .radar-context, .radar-task { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; overflow: auto; padding: clamp(22px, 4vw, 40px); border-radius: var(--r-lg); background: var(--panel); box-shadow: var(--shadow); }
 .radar-context, .radar-task { width: min(100%, 720px); margin: 0 auto; }
 .radar-context header, .radar-task header { justify-items: center; text-align: center; }
-.radar-task label.is-context textarea { min-height: 160px; }
+.radar-task label.is-context textarea { min-height: 260px; }
+.radar-task label:not(.is-context) textarea { min-height: 120px; }
 .radar-context footer, .radar-task footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .radar-context footer span, .radar-task footer span { color: var(--ink-3); font-size: .76rem; font-weight: 500; }
 .radar-context footer div, .radar-task footer div { display: flex; gap: 8px; margin-left: auto; }
