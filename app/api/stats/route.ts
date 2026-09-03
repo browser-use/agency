@@ -1,5 +1,6 @@
 import { ensureDatabase } from "../../../db";
 import { CLUSTERS, clusterForCard, type CardCluster } from "../../../lib/card-cluster";
+import { impactPoints } from "../../../lib/rise";
 import { PARKED_DECISION_MS } from "../../../lib/decision-metrics";
 
 type DecisionRow = {
@@ -14,7 +15,7 @@ type DecisionRow = {
   decidedAt: string;
   score: number;
 };
-type CardRow = { id: number; category: string; project: string; headline: string; status: string; score: number; outcome: string | null; createdAt: string };
+type CardRow = { id: number; category: string; project: string; headline: string; status: string; score: number; riseImpact: number; outcome: string | null; createdAt: string };
 
 function median(values: number[]) {
   if (!values.length) return null;
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
       SELECT job.* FROM agent_jobs job
       WHERE NOT EXISTS (SELECT 1 FROM agent_jobs newer WHERE newer.idea_id = job.idea_id AND newer.id > job.id)
     )
-    SELECT i.id, i.category, i.project, i.headline, i.status, i.score, latest_jobs.ticket_outcome AS outcome, i.created_at AS createdAt
+    SELECT i.id, i.category, i.project, i.headline, i.status, i.score, i.rise_impact AS riseImpact, latest_jobs.ticket_outcome AS outcome, i.created_at AS createdAt
     FROM ideas i LEFT JOIN latest_jobs ON latest_jobs.idea_id = i.id
     WHERE i.card_html != '' AND i.status IN ('new','working','done','rejected')
   `).all<CardRow>();
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
     if (card.status === "done") {
       bucket.done += 1;
       if (card.outcome === "completed") {
-        const pts = Math.round(card.score / 10);
+        const pts = impactPoints(card);
         bucket.donePoints += pts;
         donePoints += pts;
       }

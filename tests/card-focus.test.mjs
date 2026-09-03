@@ -16,10 +16,10 @@ test("a replacement version does not replace the selected snapshot", () => {
   assert.equal(cardHasChanged(selected, replacement), true);
 });
 
-test("a card that leaves the lane cannot remain pinned", () => {
+test("polling keeps the selected card pinned even if it leaves the lane", () => {
   const selected = { id: 7, version: 2, status: "new" };
   const next = { id: 8, version: 1, status: "new" };
-  assert.equal(keepSelectedCard(selected, [next]), next);
+  assert.equal(keepSelectedCard(selected, [next]), selected);
 });
 
 test("an action advances to the following untouched card without jumping to the first", () => {

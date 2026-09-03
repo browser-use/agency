@@ -123,7 +123,8 @@ export function estimateDecisionTime(card: DecisionCardInput): Omit<DecisionEsti
   const opensElsewhere = /data-radar-action\s*=\s*["']open["']/i.test(html);
 
   if (explicit) {
-    const baselineMs = roundSeconds(clamp(explicit, MIN_ESTIMATE_MS, MAX_ESTIMATE_MS));
+    // Heuristic bounds must not shorten an explicit human review estimate.
+    const baselineMs = Math.max(1_000, roundSeconds(explicit));
     return { kind, baselineMs, estimatedMs: baselineMs, reason: explicitReason || "card estimate" };
   }
 

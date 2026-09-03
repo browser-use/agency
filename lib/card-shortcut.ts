@@ -1,4 +1,4 @@
-export type CardShortcut = "skip" | "improve";
+export type CardShortcut = "skip" | "improve" | "previous" | "next";
 
 type CardShortcutInput = {
   key: string;
@@ -15,5 +15,7 @@ export function cardShortcut(input: CardShortcutInput): CardShortcut | null {
   const key = input.key.toLowerCase();
   if (key === "s") return "skip";
   if (key === "i") return "improve";
+  if (key === "arrowleft") return "previous";
+  if (key === "arrowright") return "next";
   return null;
 }

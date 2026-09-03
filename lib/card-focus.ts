@@ -6,7 +6,7 @@ export type VersionedCard = {
 
 export function keepSelectedCard<T extends { id: number }>(selected: T | null, visible: T[]): T | null {
   if (!selected) return visible[0] ?? null;
-  return visible.some((card) => card.id === selected.id) ? selected : visible[0] ?? null;
+  return selected;
 }
 
 export function nextCardAfterRemoval<T extends { id: number }>(removedId: number, visible: T[]): T | null {

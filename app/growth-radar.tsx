@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cardDraftKey, cardHasChanged, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus";
 import { cardShortcut } from "../lib/card-shortcut";
 import { CLUSTERS, clusterForCard, type CardCluster } from "../lib/card-cluster";
-import { compareByRise } from "../lib/rise";
+import { compareByImpact, impactPoints } from "../lib/rise";
 
 type Idea = {
   id: number;
@@ -134,7 +134,7 @@ function compareByNewest(left: Idea, right: Idea) {
 }
 
 function ideasForView(ideas: Idea[], view: Idea["status"], sort: SortMode = "score") {
-  return ideas.filter((idea) => idea.status === view).toSorted(sort === "newest" ? compareByNewest : compareByRise);
+  return ideas.filter((idea) => idea.status === view).toSorted(sort === "newest" ? compareByNewest : compareByImpact);
 }
 
 function summarizeJobResult(result: string) {
@@ -275,7 +275,7 @@ function DoneList({ ideas, onAction, onInteraction }: { ideas: Idea[]; onAction:
     return [...map.entries()].toSorted(([a], [b]) => (a === "earlier" ? 1 : b === "earlier" ? -1 : a < b ? 1 : -1));
   }, [ideas]);
   const shown = day === "all" ? groups : groups.filter(([key]) => key === day);
-  const pointsFor = (idea: Idea) => (idea.jobOutcome === "completed" ? Math.round(idea.score / 10) : 0);
+  const pointsFor = (idea: Idea) => (idea.jobOutcome === "completed" ? impactPoints(idea) : 0);
   return (
     <section className="radar-done">
       <nav className="radar-done-days" aria-label="Filter done by day">
@@ -775,11 +775,11 @@ export function GrowthRadar() {
             </section>
             <section
               className="radar-rise"
-              aria-label={`RISE score ${active.score} out of 100. Reach ${active.riseReach}, impact ${active.riseImpact}, strategic fit ${active.riseStrategicFit}, execution readiness ${active.riseEase}.`}
-              title="RISE = Reach · Impact · Strategic fit · Execution readiness"
+              aria-label={`Impact ${impactPoints(active)} out of 10. Reach ${active.riseReach}, impact ${active.riseImpact}, strategic fit ${active.riseStrategicFit}, execution readiness ${active.riseEase} of 25.`}
+              title="Impact 0-10 decides the order and the points. Reach, strategic fit and execution readiness are shown for context."
             >
-              <strong>RISE {active.score}</strong>
-              <span>R {active.riseReach} · I {active.riseImpact} · S {active.riseStrategicFit} · E {active.riseEase}</span>
+              <b className="radar-impact">{impactPoints(active)}</b>
+              <span>impact<i>R {active.riseReach} · S {active.riseStrategicFit} · E {active.riseEase}</i></span>
             </section>
           </div>
         )}
@@ -813,9 +813,15 @@ export function GrowthRadar() {
         </section>
       ) : composer === "context" ? (
         <section className="radar-context">
-          <p>Things to Monitor/Stream</p>
-          <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="Your goal, project, people, or focus…" />
-          <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!contextDraft.trim()} onClick={saveGeneralContext}>Save stream</button></div>
+          <header>
+            <p>Dream</p>
+            <small>What you are aiming at, in your words. Agents read this before every wave.</small>
+          </header>
+          <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="e.g. Browser Use is the default browser agent everywhere. 300k sessions a week." />
+          <footer>
+            <span>{contextDraft.trim().length.toLocaleString("en-US")} characters{contextDraft.trim().length > 800 ? " · long enough that agents skim it" : ""}</span>
+            <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!contextDraft.trim()} onClick={saveGeneralContext}>Save dream</button></div>
+          </footer>
         </section>
       ) : view === "done" ? (
         <DoneList ideas={visibleIdeas} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />

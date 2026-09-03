@@ -72,3 +72,23 @@ test("accepts effort seconds as the exact explicit estimate", () => {
   assert.equal(estimate.reason, "inline exact reply");
   assert.equal(calibrated.estimatedMs, 20_000);
 });
+
+test("does not shorten an explicit 30-minute PR review to the heuristic cap", () => {
+  const card = {
+    headline: "Review the API-key spend PR",
+    decisionEstimateMs: 1_800_000,
+    decisionEstimateReason: "Magnus estimated at least 30 minutes",
+  };
+  assert.equal(estimateDecisionTime(card).estimatedMs, 1_800_000);
+  assert.equal(calibratedDecisionTime(card).estimatedMs, 1_800_000);
+});
+
+test("keeps exact short and long context estimates without changing heuristics", () => {
+  for (const effortSeconds of [3, 20, 1_800, 3_600]) {
+    const card = { agentContext: JSON.stringify({ effortSeconds }) };
+    assert.equal(estimateDecisionTime(card).estimatedMs, effortSeconds * 1_000);
+    assert.equal(calibratedDecisionTime(card).estimatedMs, effortSeconds * 1_000);
+  }
+  const fallback = estimateDecisionTime({ headline: "Merge PR #1", cardHtml: "large scope ".repeat(10_000) });
+  assert.ok(fallback.estimatedMs <= 180_000);
+});

@@ -167,8 +167,8 @@ export async function GET(request: Request) {
     )
     SELECT
       SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome = 'completed' THEN 1 ELSE 0 END) AS verified,
-      SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome = 'completed' THEN CAST(ROUND(i.score / 10.0) AS INTEGER) ELSE 0 END) AS points,
-      SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome = 'completed' AND date(latest_jobs.updated_at, '-7 hours') = date('now', '-7 hours') THEN CAST(ROUND(i.score / 10.0) AS INTEGER) ELSE 0 END) AS pointsToday,
+      SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome = 'completed' THEN CAST(ROUND(i.rise_impact / 2.5) AS INTEGER) ELSE 0 END) AS points,
+      SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome = 'completed' AND date(latest_jobs.updated_at, '-7 hours') = date('now', '-7 hours') THEN CAST(ROUND(i.rise_impact / 2.5) AS INTEGER) ELSE 0 END) AS pointsToday,
       SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome = 'completed' AND date(latest_jobs.updated_at, '-7 hours') = date('now', '-7 hours') THEN 1 ELSE 0 END) AS verifiedToday,
       SUM(CASE WHEN i.status = 'done' AND latest_jobs.ticket_outcome IS NULL THEN 1 ELSE 0 END) AS legacy,
       SUM(CASE WHEN latest_jobs.ticket_outcome = 'review' THEN 1 ELSE 0 END) AS reviewReady,

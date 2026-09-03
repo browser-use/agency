@@ -73,5 +73,15 @@ export async function POST(request: Request) {
   const db = await ensureDatabase();
   const result = await db.prepare("INSERT INTO ideas (project, category, headline, why_matters, impact, finished_work, primary_action, secondary_action, external_action, card_html, agent_context, score, rise_reach, rise_impact, rise_strategic_fit, rise_ease, decision_estimate_ms, decision_estimate_reason, source_label, source_url, agent_name, preview_kind, preview_title, preview_body, preview_asset, dedupe_key) VALUES (?, ?, ?, '', '', '', '', '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'html', '', '', '', ?) ON CONFLICT(dedupe_key) DO UPDATE SET project=excluded.project, category=excluded.category, headline=excluded.headline, card_html=excluded.card_html, agent_context=excluded.agent_context, score=excluded.score, rise_reach=excluded.rise_reach, rise_impact=excluded.rise_impact, rise_strategic_fit=excluded.rise_strategic_fit, rise_ease=excluded.rise_ease, decision_estimate_ms=excluded.decision_estimate_ms, decision_estimate_reason=excluded.decision_estimate_reason, source_label=excluded.source_label, source_url=excluded.source_url, agent_name=excluded.agent_name, version=ideas.version+1, status='new', created_at=CURRENT_TIMESTAMP RETURNING id, version")
     .bind(project, category, headline, cardHtml, context, score, rise.reach, rise.impact, rise.strategicFit, rise.ease, decisionEstimate.estimatedMs, decisionEstimate.reason, card.sourceLabel?.trim() ?? "", card.sourceUrl?.trim() ?? "", card.agentName?.trim() ?? "Agency", dedupeKey).first();
+  // A replacement card answers a blocked job: mark that job as review so the
+  // startup reconcile does not drag the fresh card back to Working forever.
+  const replacedId = (result as { id?: number } | null)?.id;
+  if (replacedId) {
+    await db.prepare(`
+      UPDATE agent_jobs SET ticket_outcome = 'review', updated_at = CURRENT_TIMESTAMP
+      WHERE ticket_outcome = 'blocked' AND status = 'failed'
+        AND id = (SELECT MAX(id) FROM agent_jobs WHERE idea_id = ?)
+    `).bind(replacedId).run();
+  }
   return Response.json({ ok: true, idea: result }, { status: 201 });
 }

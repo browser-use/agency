@@ -51,3 +51,18 @@ export function normalizeRise(
 export function compareByRise<T extends { score: number; id: number }>(left: T, right: T) {
   return right.score - left.score || right.id - left.id;
 }
+
+/** What the user sees and scores by: impact on a 0-10 scale.
+ *  Agents still estimate RISE 0-25 per component; impact is the half that decides
+ *  whether a card is worth a click, so it is the only number on the card and the
+ *  only thing a finished ticket is worth in points. */
+export function impactPoints(card: { riseImpact?: number | null }) {
+  const raw = Number(card.riseImpact ?? 0);
+  if (!Number.isFinite(raw)) return 0;
+  return Math.max(0, Math.min(10, Math.round(raw / 2.5)));
+}
+
+/** Sort by impact first, then by the full RISE total, then newest. */
+export function compareByImpact<T extends { riseImpact?: number | null; score: number; id: number }>(left: T, right: T) {
+  return impactPoints(right) - impactPoints(left) || right.score - left.score || right.id - left.id;
+}

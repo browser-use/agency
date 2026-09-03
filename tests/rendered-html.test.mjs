@@ -95,7 +95,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /event\.key !== "Enter" \|\| event\.shiftKey \|\| event\.nativeEvent\.isComposing/);
   assert.match(ui, /void submitFeedback\(\)/);
   assert.match(ui, /Shift\+Enter adds a line/);
-  assert.match(ui, /toSorted\(sort === "newest" \? compareByNewest : compareByRise\)/);
+  assert.match(ui, /toSorted\(sort === "newest" \? compareByNewest : compareByImpact\)/);
   assert.match(ui, /ideasForView\(data\.ideas, view, sort\)/);
   assert.match(ui, /const laneCounts = data\.laneCounts/);
   assert.match(ui, /Done <b>\{laneCounts\.done\}<\/b>/);
@@ -116,7 +116,6 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /cardDraftKey\(active\)/);
   assert.match(ui, /This card changed while you were reading\. Your draft is still saved here/);
   assert.match(ui, /It will not replace what you are reading/);
-  assert.match(ui, /RISE \{active\.score\}/);
   assert.match(ui, /Reach \$\{active\.riseReach\}/);
   assert.doesNotMatch(ui, /setActiveIndex/);
   assert.match(ui, /const onActionRef = useRef\(onAction\)/);
@@ -142,7 +141,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(state, /summarizeDecisionMetrics/);
   assert.match(state, /ticket_outcome = 'completed'/);
   assert.match(state, /reviewReady/);
-  assert.match(state, /THEN CAST\(ROUND\(i\.score \/ 10\.0\) AS INTEGER\) ELSE 0 END\) AS points/);
+  assert.match(state, /THEN CAST\(ROUND\(i\.rise_impact \/ 2\.5\) AS INTEGER\) ELSE 0 END\) AS points/);
   assert.match(state, /LEFT JOIN card_attention/);
   assert.match(state, /WHERE \(status = \? OR \(\? IS NOT NULL AND id = \?\)\) AND \(\? IS NULL OR id = \?\)/);
   assert.match(state, /ORDER BY score DESC, id DESC/);
