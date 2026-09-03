@@ -33,12 +33,12 @@ function dayLabel(day: string) {
 
 /** Points per day as bars, decisions as a thin line of dots underneath. */
 function PointsByDay({ rows }: { rows: Stats["days_series"] }) {
-  const w = 900, h = 180, pad = 8, gap = 6;
+  const w = 900, h = 180, pad = 26, gap = 6;
   const max = Math.max(1, ...rows.map((r) => r.points));
   const bw = Math.max(8, (w - gap * (rows.length - 1)) / Math.max(rows.length, 1));
   const today = new Date().toLocaleDateString("en-CA");
   return (
-    <svg viewBox={`0 0 ${w} ${h + 46}`} width="100%" role="img" aria-label="Points earned per day">
+    <svg viewBox={`0 0 ${w} ${h + pad + 46}`} width="100%" role="img" aria-label="Points earned per day">
       {[0.5, 1].map((f) => <line key={f} x1={0} x2={w} y1={pad + h - h * f} y2={pad + h - h * f} stroke="currentColor" strokeOpacity=".08" />)}
       {rows.map((r, i) => {
         const x = i * (bw + gap);
