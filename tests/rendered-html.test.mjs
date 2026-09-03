@@ -89,7 +89,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /aria-keyshortcuts="S"/);
   assert.match(ui, /aria-keyshortcuts="I"/);
   assert.match(ui, /Improve the actual work behind this card, not only the card wording/);
-  assert.match(ui, /Do not send, post, publish, merge, deploy, contact anyone/);
+  assert.match(ui, /do not send, post, publish, merge, deploy, or contact anyone/);
   assert.match(ui, /event\.key !== "Enter" \|\| event\.shiftKey \|\| event\.nativeEvent\.isComposing/);
   assert.match(ui, /void submitFeedback\(\)/);
   assert.match(ui, /Shift\+Enter adds a line/);
