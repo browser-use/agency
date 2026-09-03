@@ -593,7 +593,7 @@ export function GrowthRadar() {
         target,
         "change",
         "New context",
-        "The user replied to this card. Read the note as an instruction from him, not as a comment. If it contains the message to send, an edit like 'one sentence shorter', or a go-ahead like 'send it', 'post it', 'merge it', 'open the PR', that IS the approval: apply the edit, re-verify the card's own gates (recipient, live thread, nothing already sent, checks green), and perform the action once, then mark the card done. Ask again only if the note changes the destination, audience, cost, or meaning, or is genuinely ambiguous. If the note is context or a correction without a go-ahead, rebuild the card with it, re-estimate the score (0-10) and effort (seconds), and push the replacement under the same dedupe key. Re-read the current Agency skill and the full stored card context first.",
+        "The user replied to this card.",
         note,
       );
     } finally {
