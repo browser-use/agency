@@ -44,11 +44,16 @@ a { color: inherit; text-decoration: none; }
 .radar-sort button.is-active { color: var(--ink); background: var(--panel); box-shadow: 0 1px 2px rgba(22,21,15,.08); }
 @media (min-width: 1260px) {
   .radar-clusters { position: fixed; left: calc(50% - 490px - 190px); top: 66px; width: 170px; flex-direction: column; align-items: stretch; gap: 4px; padding: 0; background: transparent; border: 0; }
-  .radar-clusters::before { content: "Filter"; margin: 0 0 6px 10px; color: var(--ink-3); font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .radar-clusters::before { content: "Filter"; order: 1; margin: 6px 0 6px 10px; color: var(--ink-3); font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .radar-side-actions { order: 0; }
+  .radar-sort, .radar-clusters > button { order: 2; }
   .radar-clusters > button { justify-content: space-between; min-height: 34px; border-color: transparent; background: transparent; }
   .radar-clusters > button:hover { background: #edebe6; }
   .radar-sort { width: 100%; margin: 0 0 8px; }
   .radar-sort button { flex: 1; }
+  .radar-side-actions { flex-direction: column; align-items: stretch; gap: 6px; margin-bottom: 18px; }
+  .radar-side-actions .radar-goal, .radar-side-actions .radar-tell, .radar-side-actions .radar-score { width: 100%; justify-content: flex-start; }
+  .radar-side-actions .radar-tell { justify-content: center; }
 }
 
 /* Back / next: small, quiet */
@@ -160,7 +165,7 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 }
 
 /* ===== Top bar: one row. wordmark · lanes · dream · points · new task ===== */
-.radar-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.radar-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
 .radar-bar-left { display: flex; align-items: center; gap: 12px; }
 .radar-logo { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--ink); }
 .radar-logo span { width: 12px; height: 12px; border-radius: 3px; background: var(--accent); }
@@ -173,11 +178,11 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-goal:hover { color: var(--ink); background: #eceae4; }
 .radar-goal svg { color: var(--accent); }
 .radar-header-actions { display: flex; align-items: center; gap: 8px; }
-.radar-points { display: inline-flex; align-items: baseline; gap: 5px; min-height: 36px; padding: 0 12px; border-radius: 999px; color: var(--ink-2); font-size: .84rem; font-weight: 600; white-space: nowrap; transition: background .15s, color .15s; }
+.radar-points { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 6px 0 12px; border-radius: 999px; color: var(--ink-2); font-size: .84rem; font-weight: 600; white-space: nowrap; transition: background .15s, color .15s; }
 .radar-points:hover { color: var(--ink); background: #eceae4; }
 .radar-points b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 .radar-points span { color: var(--ink-3); font-size: .74rem; }
-.radar-points em { margin-left: 4px; padding: 2px 8px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-style: normal; font-size: .72rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.radar-points em { display: inline-flex; align-items: center; height: 24px; margin-left: 2px; padding: 0 9px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-style: normal; font-size: .72rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .radar-tell { min-height: 36px; padding: 0 16px; border-radius: 999px; color: white; background: var(--ink); font-size: .84rem; font-weight: 600; white-space: nowrap; }
 .radar-tell:hover { background: #2b2a22; }
 
@@ -219,4 +224,8 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-inline-change button:disabled { opacity: .3; }
 .radar-message { flex: 0 0 auto; max-height: 52px; overflow: auto; margin-top: 8px; padding: 8px 12px; border-radius: var(--r); background: var(--ok-soft); color: var(--ok); font-size: .78rem; font-weight: 600; }
 
-.radar-score { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 9px; background: var(--accent); color: white; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.radar-side-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
+.radar-tell { min-height: 34px; padding: 0 14px; border-radius: 999px; color: white; background: var(--ink); font-size: .82rem; font-weight: 600; white-space: nowrap; }
+.radar-score { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 4px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--ink-3); font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.radar-score b { display: inline-grid; place-items: center; min-width: 26px; height: 26px; border-radius: 8px; background: var(--accent); color: white; font-size: .86rem; font-weight: 800; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.radar-score i { font-style: normal; }
