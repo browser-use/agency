@@ -593,7 +593,7 @@ export function GrowthRadar() {
         target,
         "change",
         "New context",
-        "Use the user's new context to revise or follow up on this card. Re-read the current Agency skill and use the full stored card context. Complete every safe private step, re-estimate all four RISE components, push the finished replacement so the host can rank it, and stop at the exact outside-action boundary.",
+        "The user replied to this card. Read the note as an instruction from him, not as a comment. If it contains the message to send, an edit like 'one sentence shorter', or a go-ahead like 'send it', 'post it', 'merge it', 'open the PR', that IS the approval: apply the edit, re-verify the card's own gates (recipient, live thread, nothing already sent, checks green), and perform the action once, then mark the card done. Ask again only if the note changes the destination, audience, cost, or meaning, or is genuinely ambiguous. If the note is context or a correction without a go-ahead, rebuild the card with it, re-estimate the score (0-10) and effort (seconds), and push the replacement under the same dedupe key. Re-read the current Agency skill and the full stored card context first.",
         note,
       );
     } finally {
@@ -610,7 +610,7 @@ export function GrowthRadar() {
         active,
         "change",
         improveLabel(active),
-        "Improve the actual work behind this card, not only the card wording. Re-read the current Agency and no-ai-slop skills, the full stored card context, Things to Monitor/Stream, and the user's accepted, changed, and rejected history. Critique the artifact against strong comparable work, then complete every safe private revision. For visuals, designs, videos, demos, pages, or launch assets, inspect the real output at desktop and 390 px and fix weak composition, hierarchy, polish, and clarity. For launch or social copy, preserve verified facts and the user's voice, make it shorter and more human, and keep the complete exact post visible. Re-estimate all four RISE components and push one materially better replacement so the host can rank it. Do not send, post, publish, merge, deploy, contact anyone, or return a cosmetic rewrite.",
+        "Improve the actual work behind this card, not only the card wording. Re-read the current Agency and no-ai-slop skills, the full stored card context, his dream, and the user's accepted, changed, and rejected history. Critique the artifact against strong comparable work, then complete every safe private revision. For visuals, designs, videos, demos, pages, or launch assets, inspect the real output at desktop and 390 px and fix weak composition, hierarchy, polish, and clarity. For launch or social copy, preserve verified facts and the user's voice, make it shorter and more human, and keep the complete exact post visible. Re-estimate the score (0-10) and effort (seconds) and push one materially better replacement under the same dedupe key. Improve never authorizes an outward action: do not send, post, publish, merge, deploy, or contact anyone, and do not return a cosmetic rewrite.",
       );
     } finally {
       setFeedbackSubmitting(false);
