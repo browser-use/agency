@@ -155,7 +155,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /60_000/);
   assert.match(ui, /interactionAt - tracker\.lastInteractionAt > 60_000/);
   assert.match(ui, /decisionEstimateMs/);
-  assert.match(ui, /Effort/);
+  assert.match(ui, /Estimated \$\{formatDuration\(active\.decisionEstimateMs\)\} to decide/);
   assert.match(ui, /totalActiveMs/);
   assert.match(ui, /takePendingActiveMs\(id, version, false\), 1_000/);
   assert.match(ui, /attentionDecisionAction/);

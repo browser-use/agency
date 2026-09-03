@@ -757,13 +757,13 @@ export function GrowthRadar() {
 
       {active && composer === null && view !== "done" && (
         <div className="radar-card-signals">
-          <span className="radar-rise" title="Impact 0-10 decides the order and the points. Reach, strategic fit and execution readiness are context." aria-label={`Impact ${impactPoints(active)} out of 10. Reach ${active.riseReach}, strategic fit ${active.riseStrategicFit}, execution readiness ${active.riseEase} of 25.`}>
+          <span className="radar-rise" title={`Impact ${impactPoints(active)} of 10 decides the order and the points. Reach ${active.riseReach}, fit ${active.riseStrategicFit}, readiness ${active.riseEase} of 25.`} aria-label={`Impact ${impactPoints(active)} out of 10.`}>
             <b className="radar-impact">{impactPoints(active)}</b>
-            <i>impact · R {active.riseReach} · S {active.riseStrategicFit} · E {active.riseEase}</i>
+            <i>impact</i>
           </span>
-          <span className={`radar-decision-time${active.decisionAction ? "" : " is-live"}`} title={active.decisionAction ? `Effort ${formatDuration(active.decisionEstimateMs)}. Active time counts recent interaction; elapsed includes breaks.` : `Effort is the predicted seconds you need, based on ${active.decisionEstimateReason}, tuned against recent ${decisionKindLabel(active.decisionKind)} decisions.`}>
-            <strong>{active.decisionAction ? `${decisionLabel(active.decisionAction)} · ${formatDuration(active.decisionActiveMs)}` : formatDuration(liveDecisionMs)}</strong>
-            <i>{active.decisionAction ? `effort ${formatDuration(active.decisionEstimateMs)} · ${formatDuration(active.decisionWallMs)} elapsed` : `effort ${formatDuration(active.decisionEstimateMs)} · ${decisionKindLabel(active.decisionKind)}`}</i>
+          <span className={`radar-decision-time${active.decisionAction ? "" : " is-live"}`} title={active.decisionAction ? `You decided after ${formatDuration(active.decisionActiveMs)} active, ${formatDuration(active.decisionWallMs)} elapsed. Estimate was ${formatDuration(active.decisionEstimateMs)}.` : `Estimated ${formatDuration(active.decisionEstimateMs)} to decide, based on ${active.decisionEstimateReason}, calibrated against your recent ${decisionKindLabel(active.decisionKind)} decisions.`}>
+            <strong>{active.decisionAction ? `${decisionLabel(active.decisionAction)} in ${formatDuration(active.decisionActiveMs)}` : formatDuration(liveDecisionMs)}</strong>
+            <i>{active.decisionAction ? "" : `of ~${formatDuration(active.decisionEstimateMs)}`}</i>
           </span>
           {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}
         </div>
