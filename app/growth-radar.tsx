@@ -111,15 +111,18 @@ function decisionLabel(action: Idea["decisionAction"]) {
 }
 
 
-type SortMode = "score" | "newest";
-const SORT_KEY = "radar-sort";
+type SortKey = "newest" | "score" | "effort";
+type SortMode = { key: SortKey; dir: "desc" | "asc" };
+const SORT_KEY = "radar-sort-v2";
+const DEFAULT_SORT: SortMode = { key: "score", dir: "desc" };
 
 function readSortMode(): SortMode {
   try {
-    return typeof window !== "undefined" && window.localStorage.getItem(SORT_KEY) === "newest" ? "newest" : "score";
-  } catch {
-    return "score";
-  }
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem(SORT_KEY) : null;
+    const parsed = raw ? (JSON.parse(raw) as Partial<SortMode>) : null;
+    if (parsed && (parsed.key === "newest" || parsed.key === "score" || parsed.key === "effort") && (parsed.dir === "asc" || parsed.dir === "desc")) return { key: parsed.key, dir: parsed.dir };
+  } catch { /* private mode */ }
+  return DEFAULT_SORT;
 }
 
 // Newest = the card an agent created or replaced most recently (created_at resets on every replacement).
@@ -127,8 +130,16 @@ function compareByNewest(left: Idea, right: Idea) {
   return (right.createdAt ?? "").localeCompare(left.createdAt ?? "") || right.id - left.id;
 }
 
-function ideasForView(ideas: Idea[], view: Idea["status"], sort: SortMode = "score") {
-  return ideas.filter((idea) => idea.status === view).toSorted(sort === "newest" ? compareByNewest : compareByImpact);
+// Effort = the calibrated seconds Magnus needs to decide; ascending is "start with the quick ones".
+function compareByEffort(left: Idea, right: Idea) {
+  return left.decisionEstimateMs - right.decisionEstimateMs || right.id - left.id;
+}
+
+function ideasForView(ideas: Idea[], view: Idea["status"], sort: SortMode = DEFAULT_SORT) {
+  const compare = sort.key === "newest" ? compareByNewest : sort.key === "effort" ? compareByEffort : compareByImpact;
+  const sorted = ideas.filter((idea) => idea.status === view).toSorted(compare);
+  // "desc" is each key's natural order (newest first, highest score first, quickest first); "asc" flips it.
+  return sort.dir === "asc" ? sorted.reverse() : sorted;
 }
 
 function summarizeJobResult(result: string) {
@@ -322,7 +333,7 @@ export function GrowthRadar() {
   const sortRef = useRef<SortMode>(sort);
   useEffect(() => {
     sortRef.current = sort;
-    try { window.localStorage.setItem(SORT_KEY, sort); } catch { /* private mode */ }
+    try { window.localStorage.setItem(SORT_KEY, JSON.stringify(sort)); } catch { /* private mode */ }
   }, [sort]);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   // Poll responses may resolve after the user has already moved to another card.
@@ -750,7 +761,8 @@ export function GrowthRadar() {
             <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
         </nav>
         <Link className="radar-scores" href="/stats" title="This card · today · all time. Opens stats.">
-          <span><b>{active && composer === null && view !== "done" ? impactPoints(active) : "–"}</b><i>card</i></span>
+          <span><b>{active && composer === null && view !== "done" ? impactPoints(active) : "–"}</b><i>score</i></span>
+          <span><b>{active && composer === null && view !== "done" ? formatDuration(active.decisionEstimateMs) : "–"}</b><i>effort</i></span>
           <span className="is-today"><b>{data.completionStats.pointsToday.toLocaleString("en-US")}</b><i>today</i></span>
           <span><b>{data.completionStats.points.toLocaleString("en-US")}</b><i>total</i></span>
         </Link>
@@ -762,8 +774,22 @@ export function GrowthRadar() {
           <button className={`radar-tell${composer ? " is-open" : ""}`} onClick={() => (composer ? setComposer(null) : openNewTask())}>Dream</button>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
-          <button className={sort === "newest" ? "is-active" : ""} onClick={() => { setComposer(null); setSort("newest"); recordCardInteraction(active, "lane", "sort:newest"); }}>Newest</button>
-          <button className={sort === "score" ? "is-active" : ""} onClick={() => { setComposer(null); setSort("score"); recordCardInteraction(active, "lane", "sort:score"); }}>Score</button>
+          {([["newest", "Newest"], ["score", "Score"], ["effort", "Effort"]] as const).map(([key, label]) => {
+            const activeKey = sort.key === key;
+            return (
+              <button
+                key={key}
+                className={activeKey ? "is-active" : ""}
+                title={activeKey ? "Click again to flip the direction" : `Sort by ${label.toLowerCase()}`}
+                onClick={() => {
+                  setComposer(null);
+                  const next: SortMode = activeKey ? { key, dir: sort.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" };
+                  setSort(next);
+                  recordCardInteraction(active, "lane", `sort:${next.key}:${next.dir}`);
+                }}
+              >{label}{activeKey && <i aria-label={sort.dir === "desc" ? "descending" : "ascending"}>{sort.dir === "desc" ? "↓" : "↑"}</i>}</button>
+            );
+          })}
         </div>
         <button className={cluster === "all" ? "is-active" : ""} onClick={() => selectCluster("all")}>All <b>{laneIdeas.length}</b></button>
         {CLUSTERS.map((item) => (

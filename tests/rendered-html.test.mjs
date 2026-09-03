@@ -93,7 +93,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /event\.key !== "Enter" \|\| event\.shiftKey \|\| event\.nativeEvent\.isComposing/);
   assert.match(ui, /void submitFeedback\(\)/);
   assert.match(ui, /Shift\+Enter adds a line/);
-  assert.match(ui, /toSorted\(sort === "newest" \? compareByNewest : compareByImpact\)/);
+  assert.match(ui, /sort\.key === "newest" \? compareByNewest : sort\.key === "effort" \? compareByEffort : compareByImpact/);
   assert.match(ui, /ideasForView\(data\.ideas, view, sort\)/);
   assert.match(ui, /const laneCounts = data\.laneCounts/);
   assert.match(ui, /Done <b>\{laneCounts\.done\}<\/b>/);
