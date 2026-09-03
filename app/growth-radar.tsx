@@ -729,13 +729,15 @@ export function GrowthRadar() {
     <main className="radar-shell">
       <header className="radar-header">
         <div className="radar-bar-left">
-          <button className="radar-logo" onClick={() => selectView("new")} aria-label="Agency"><span /></button>
-          <nav aria-label="Agency queue">
+          {active && composer === null && view !== "done"
+            ? <span className="radar-score" title={`This card scores ${impactPoints(active)} of 10. Finishing it earns ${impactPoints(active)} points.`} aria-label={`Score ${impactPoints(active)} of 10`}>{impactPoints(active)}<i>/10</i></span>
+            : <span className="radar-score is-empty" aria-hidden="true" />}
+        </div>
+        <nav aria-label="Agency queue">
             <button aria-label={`New, ${laneCounts.new} tickets`} className={view === "new" ? "is-active" : ""} onClick={() => selectView("new")}>New <b>{laneCounts.new}</b></button>
             <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
             <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
-          </nav>
-        </div>
+        </nav>
         <div className="radar-header-actions">
           <Link className="radar-points" href="/stats" aria-label={`${data.completionStats.points} points, ${data.completionStats.pointsToday} today. Open stats.`} title="Points from finished work. Opens stats."><b>{data.completionStats.points.toLocaleString("en-US")}</b><span>pts</span>{data.completionStats.pointsToday > 0 && <em>+{data.completionStats.pointsToday.toLocaleString("en-US")} today</em>}</Link>
         </div>
@@ -744,14 +746,8 @@ export function GrowthRadar() {
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-side-actions">
-          <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text ? "Open your dream" : "Add what you care about."}>
-            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.5l1.9 4.1 4.4.5-3.3 3 .9 4.4L8 11.3l-3.9 2.2.9-4.4-3.3-3 4.4-.5z" fill="currentColor"/></svg>
-            Dream
-          </button>
           <button className="radar-tell" onClick={openNewTask}>New task</button>
-          {active && composer === null && view !== "done" && (
-            <span className="radar-score" title={`This card scores ${impactPoints(active)} of 10. Finishing it earns ${impactPoints(active)} points.`} aria-label={`Score ${impactPoints(active)} of 10`}><b>{impactPoints(active)}</b><i>score</i></span>
-          )}
+          <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text ? "Open your dream" : "Add what you care about."}>Dream</button>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
           <button className={sort === "newest" ? "is-active" : ""} onClick={() => { setSort("newest"); recordCardInteraction(active, "lane", "sort:newest"); }}>Newest</button>
