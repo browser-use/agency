@@ -742,12 +742,10 @@ export function GrowthRadar() {
             <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
             <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
         </nav>
-        <Link className="radar-scores" href="/stats" title="Points today. Then this card's score and your all-time total. Opens stats.">
-          <span className="radar-scores-today"><b>{data.completionStats.pointsToday.toLocaleString("en-US")}</b><i>today</i></span>
-          <span className="radar-scores-rest">
-            {active && composer === null && view !== "done" && <em><b>{impactPoints(active)}</b> this card</em>}
-            <em><b>{data.completionStats.points.toLocaleString("en-US")}</b> total</em>
-          </span>
+        <Link className="radar-scores" href="/stats" title="This card · today · all time. Opens stats.">
+          <span><b>{active && composer === null && view !== "done" ? impactPoints(active) : "–"}</b><i>card</i></span>
+          <span className="is-today"><b>{data.completionStats.pointsToday.toLocaleString("en-US")}</b><i>today</i></span>
+          <span><b>{data.completionStats.points.toLocaleString("en-US")}</b><i>total</i></span>
         </Link>
       </header>
 

@@ -177,14 +177,13 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-header nav button.is-active b { color: var(--ink-2); }
 .radar-goal { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: 999px; color: var(--ink-2); font-size: .82rem; font-weight: 600; transition: background .15s, color .15s; }
 .radar-goal:hover { color: var(--ink); background: #eceae4; }
-.radar-scores { justify-self: end; display: inline-flex; align-items: center; gap: 12px; height: 40px; padding: 0 14px 0 6px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); transition: border-color .15s; }
+.radar-scores { justify-self: end; display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 6px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); transition: border-color .15s; }
 .radar-scores:hover { border-color: var(--line-2); }
-.radar-scores-today { display: inline-flex; align-items: baseline; gap: 5px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); }
-.radar-scores-today b { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.radar-scores-today i { font-style: normal; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.radar-scores-rest { display: inline-flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: .74rem; font-weight: 600; }
-.radar-scores-rest em { font-style: normal; }
-.radar-scores-rest b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.radar-scores > span { display: inline-flex; align-items: baseline; gap: 5px; height: 30px; padding: 0 12px; border-radius: 999px; color: var(--ink-2); }
+.radar-scores > span.is-today { background: var(--ok-soft); color: var(--ok); }
+.radar-scores b { font-size: .95rem; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.radar-scores > span:not(.is-today) b { color: var(--ink); }
+.radar-scores i { font-style: normal; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .8; }
 .radar-tell { min-height: 36px; padding: 0 16px; border-radius: 999px; color: white; background: var(--ink); font-size: .84rem; font-weight: 600; white-space: nowrap; }
 .radar-tell:hover { background: #2b2a22; }
 
