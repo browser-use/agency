@@ -728,26 +728,24 @@ export function GrowthRadar() {
   return (
     <main className="radar-shell">
       <header className="radar-header">
-        <div className="radar-bar-left">
-          {active && composer === null && view !== "done"
-            ? <span className="radar-score" title={`This card scores ${impactPoints(active)} of 10. Finishing it earns ${impactPoints(active)} points.`} aria-label={`Score ${impactPoints(active)} of 10`}>{impactPoints(active)}<i>/10</i></span>
-            : <span className="radar-score is-empty" aria-hidden="true" />}
-        </div>
+        <div className="radar-bar-left" aria-hidden="true" />
         <nav aria-label="Agency queue">
             <button aria-label={`New, ${laneCounts.new} tickets`} className={view === "new" ? "is-active" : ""} onClick={() => selectView("new")}>New <b>{laneCounts.new}</b></button>
             <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
             <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
         </nav>
-        <div className="radar-header-actions">
-          <Link className="radar-points" href="/stats" aria-label={`${data.completionStats.points} points, ${data.completionStats.pointsToday} today. Open stats.`} title="Points from finished work. Opens stats."><b>{data.completionStats.points.toLocaleString("en-US")}</b><span>pts</span>{data.completionStats.pointsToday > 0 && <em>+{data.completionStats.pointsToday.toLocaleString("en-US")} today</em>}</Link>
-        </div>
+        <Link className="radar-scores" href="/stats" title="This card · today · all time. Opens stats.">
+          <span className={`radar-scores-card${active && composer === null && view !== "done" ? "" : " is-empty"}`}><b>{active && composer === null && view !== "done" ? impactPoints(active) : "–"}</b><i>card</i></span>
+          <span><b>{data.completionStats.pointsToday.toLocaleString("en-US")}</b><i>today</i></span>
+          <span><b>{data.completionStats.points.toLocaleString("en-US")}</b><i>total</i></span>
+        </Link>
       </header>
 
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-side-actions">
           <button className="radar-tell" onClick={openNewTask}>New task</button>
-          <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text ? "Open your dream" : "Add what you care about."}>Dream</button>
+          <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text ? "Open your dream" : "Add what you care about."}>My dream</button>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
           <button className={sort === "newest" ? "is-active" : ""} onClick={() => { setSort("newest"); recordCardInteraction(active, "lane", "sort:newest"); }}>Newest</button>
@@ -777,7 +775,7 @@ export function GrowthRadar() {
       ) : composer === "context" ? (
         <section className="radar-context">
           <header>
-            <p>Dream</p>
+            <p>My dream</p>
             <small>What you are aiming at, in your words. Agents read this before every wave.</small>
           </header>
           <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="e.g. Browser Use is the default browser agent everywhere. 300k sessions a week." />
