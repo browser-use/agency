@@ -52,8 +52,7 @@ a { color: inherit; text-decoration: none; }
   .radar-sort { width: 100%; margin: 0 0 8px; }
   .radar-sort button { flex: 1; }
   .radar-side-actions { flex-direction: column; align-items: stretch; gap: 6px; margin-bottom: 18px; }
-  .radar-side-actions .radar-goal, .radar-side-actions .radar-tell { width: 100%; justify-content: flex-start; }
-  .radar-side-actions .radar-tell { justify-content: center; }
+  .radar-side-actions .radar-tell { width: 100%; justify-content: center; }
 }
 
 /* Back / next: small, quiet */
@@ -65,22 +64,20 @@ a { color: inherit; text-decoration: none; }
 
 /* Composers: dream and new task, one white panel */
 .radar-context, .radar-task { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; overflow: auto; padding: clamp(22px, 4vw, 40px); border-radius: var(--r-lg); background: var(--panel); box-shadow: var(--shadow); }
-.radar-context { width: min(100%, 720px); margin: 0 auto; text-align: center; }
-.radar-context header { justify-items: center; }
-.radar-context textarea { text-align: left; }
-.radar-context footer { justify-content: center; }
-.radar-context footer div { margin-left: 0; }
-.radar-context header, .radar-task > p { display: grid; gap: 6px; }
-.radar-context header p, .radar-task > p { margin: 0; font-size: clamp(1.5rem, 3.4vw, 2.1rem); line-height: 1.05; letter-spacing: -.03em; font-weight: 700; }
-.radar-context header small { color: var(--ink-3); font-size: .84rem; font-weight: 500; }
+.radar-context, .radar-task { width: min(100%, 720px); margin: 0 auto; }
+.radar-context header, .radar-task header { justify-items: center; text-align: center; }
+.radar-task label.is-context textarea { min-height: 160px; }
+.radar-context footer, .radar-task footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.radar-context footer span, .radar-task footer span { color: var(--ink-3); font-size: .76rem; font-weight: 500; }
+.radar-context footer div, .radar-task footer div { display: flex; gap: 8px; margin-left: auto; }
+.radar-context header, .radar-task header { display: grid; gap: 6px; }
+.radar-context header p, .radar-task header p { margin: 0; font-size: clamp(1.5rem, 3.4vw, 2.1rem); line-height: 1.05; letter-spacing: -.03em; font-weight: 700; }
+.radar-context header small, .radar-task header small { color: var(--ink-3); font-size: .84rem; font-weight: 500; }
 .radar-context textarea, .radar-task textarea { flex: 1 1 auto; width: 100%; min-height: 200px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--r); background: #fbfaf8; font-size: .96rem; line-height: 1.6; resize: none; }
 .radar-context textarea:focus, .radar-task textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,79,233,.12); }
 .radar-task label { display: grid; gap: 8px; }
 .radar-task label > span { color: var(--ink-3); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .radar-task label.is-context textarea { min-height: 96px; font-size: .9rem; }
-.radar-context footer, .radar-task > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.radar-context footer span { color: var(--ink-3); font-size: .76rem; font-weight: 500; }
-.radar-context footer div, .radar-task > div { display: flex; gap: 8px; margin-left: auto; }
 .radar-context button, .radar-task button { min-height: 38px; padding: 0 16px; border-radius: 999px; color: var(--ink-2); font-weight: 600; }
 .radar-context button:hover, .radar-task button:hover { background: #edebe6; color: var(--ink); }
 .radar-context button.is-dark, .radar-task button.is-dark { color: white; background: var(--ink); }

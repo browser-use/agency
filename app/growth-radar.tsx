@@ -655,12 +655,22 @@ export function GrowthRadar() {
     return () => window.removeEventListener("keydown", shortcut);
   }, [active, composer, submitImprove, submitSkip]);
 
-  async function saveGeneralContext() {
-    const text = contextDraft.trim();
-    if (!text) return;
-    await fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
+
+  // One panel, one button: a task is queued if typed, and the dream is saved if it changed.
+  async function submitTell() {
+    const task = taskDraft.trim();
+    const dream = contextDraft.trim();
+    const dreamChanged = dream && dream !== (data.context?.text ?? "").trim();
+    if (dreamChanged) {
+      await fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: dream }) });
+    }
+    if (task) {
+      await queueTask();
+      if (dreamChanged) setMessage((current) => `${current} Dream saved.`);
+      return;
+    }
     setComposer(null);
-    setMessage("Things to Monitor/Stream saved.");
+    setMessage(dreamChanged ? "Dream saved." : "");
     await load();
   }
 
@@ -723,11 +733,6 @@ export function GrowthRadar() {
     setComposer("task");
   }
 
-  function openGeneralContext() {
-    recordCardInteraction(active, "context", "Things to Monitor/Stream");
-    setContextDraft(data.context?.text ?? "");
-    setComposer("context");
-  }
 
   if (loading) return <main className="radar-loading">Opening Agency…</main>;
 
@@ -752,8 +757,7 @@ export function GrowthRadar() {
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-side-actions">
-          <button className="radar-tell" onClick={openNewTask}>New task</button>
-          <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text ? "Open your dream" : "Add what you care about."}>My dream</button>
+          <button className="radar-tell" onClick={openNewTask}>Tell Agency</button>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
           <button className={sort === "newest" ? "is-active" : ""} onClick={() => { setSort("newest"); recordCardInteraction(active, "lane", "sort:newest"); }}>Newest</button>
@@ -769,27 +773,21 @@ export function GrowthRadar() {
 
       {composer === "task" ? (
         <section className="radar-task">
-          <p>New task</p>
+          <header>
+            <p>Tell Agency</p>
+            <small>One thing to do now, and the dream it keeps watching. Either one is fine on its own.</small>
+          </header>
           <label>
-            <span>What should Agency do?</span>
-            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Agency carries your dream with it." />
+            <span>Do this once</span>
+            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Leave empty to only update the dream." />
           </label>
           <label className="is-context">
-            <span>Dream</span>
+            <span>My dream · what Agency always watches</span>
             <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What you are aiming at." />
           </label>
-          <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!taskDraft.trim()} onClick={queueTask}>Queue task</button></div>
-        </section>
-      ) : composer === "context" ? (
-        <section className="radar-context">
-          <header>
-            <p>My dream</p>
-            <small>What you are aiming at, in your words. Agents read this before every wave.</small>
-          </header>
-          <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="e.g. Browser Use is the default browser agent everywhere. 300k sessions a week." />
           <footer>
-            <span>{contextDraft.trim().length.toLocaleString("en-US")} characters{contextDraft.trim().length > 800 ? " · long enough that agents skim it" : ""}</span>
-            <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!contextDraft.trim()} onClick={saveGeneralContext}>Save dream</button></div>
+            <span>{contextDraft.trim().length.toLocaleString("en-US")} characters in the dream{contextDraft.trim().length > 800 ? " · long enough that agents skim it" : ""}</span>
+            <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!taskDraft.trim() && !contextDraft.trim()} onClick={() => void submitTell()}>{taskDraft.trim() ? "Queue task" : "Save dream"}</button></div>
           </footer>
         </section>
       ) : view === "done" ? (
