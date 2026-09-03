@@ -190,6 +190,7 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-scores i { font-style: normal; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .8; }
 .radar-tell { min-height: 36px; padding: 0 16px; border-radius: 999px; color: white; background: var(--ink); font-size: .84rem; font-weight: 600; white-space: nowrap; }
 .radar-tell:hover { background: #2b2a22; }
+.radar-tell.is-open { background: var(--panel); color: var(--ink); border: 1px solid var(--line-2); }
 
 /* Signals: a quiet row under the bar, only when a card is open */
 .radar-card-signals { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; min-height: 22px; padding: 0 4px; color: var(--ink-3); font-size: .74rem; font-weight: 500; }

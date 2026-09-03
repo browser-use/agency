@@ -57,7 +57,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(styles, /\.radar-card-action-dock \{ flex: 0 0 58px/);
   assert.match(styles, /\.radar-inline-change \{ flex: 0 0 auto; min-height: 58px/);
   assert.match(styles, /\.radar-inline-change textarea \{[^}]*resize: none/);
-  assert.match(ui, /\{taskDraft\.trim\(\) \? "Send it off" : "Save dream"\}/);
+  assert.match(ui, />Save<\/button>/);
   assert.match(ui, /fetch\("\/api\/tasks"/);
   assert.doesNotMatch(ui, /\+ New Context/);
   assert.match(ui, /setView\("new"\)/);

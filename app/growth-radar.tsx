@@ -419,6 +419,7 @@ export function GrowthRadar() {
     return counts;
   }, [laneIdeas]);
   function selectCluster(next: CardCluster | "all") {
+    setComposer(null);
     recordCardInteraction(active, "lane", `cluster:${next}`);
     setCluster(next);
     const nextVisible = next === "all" ? laneIdeas : laneIdeas.filter((idea) => clusterForCard(idea) === next);
@@ -619,6 +620,11 @@ export function GrowthRadar() {
   useEffect(() => {
     if (!active || composer) return;
     const shortcut = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && composer) {
+        event.preventDefault();
+        setComposer(null);
+        return;
+      }
       const action = cardShortcut({
         key: event.key,
         editable: event.composedPath().some((target) => target instanceof HTMLElement
@@ -703,6 +709,7 @@ export function GrowthRadar() {
   }
 
   function selectView(next: "new" | "working" | "done") {
+    setComposer(null);
     recordCardInteraction(active, "lane", next);
     setView(next);
     selectIdea(null);
@@ -752,11 +759,11 @@ export function GrowthRadar() {
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-side-actions">
-          <button className="radar-tell" onClick={openNewTask}>Dream</button>
+          <button className={`radar-tell${composer ? " is-open" : ""}`} onClick={() => (composer ? setComposer(null) : openNewTask())}>Dream</button>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
-          <button className={sort === "newest" ? "is-active" : ""} onClick={() => { setSort("newest"); recordCardInteraction(active, "lane", "sort:newest"); }}>Newest</button>
-          <button className={sort === "score" ? "is-active" : ""} onClick={() => { setSort("score"); recordCardInteraction(active, "lane", "sort:score"); }}>Score</button>
+          <button className={sort === "newest" ? "is-active" : ""} onClick={() => { setComposer(null); setSort("newest"); recordCardInteraction(active, "lane", "sort:newest"); }}>Newest</button>
+          <button className={sort === "score" ? "is-active" : ""} onClick={() => { setComposer(null); setSort("score"); recordCardInteraction(active, "lane", "sort:score"); }}>Score</button>
         </div>
         <button className={cluster === "all" ? "is-active" : ""} onClick={() => selectCluster("all")}>All <b>{laneIdeas.length}</b></button>
         {CLUSTERS.map((item) => (
@@ -777,8 +784,7 @@ export function GrowthRadar() {
             <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What you are aiming at." />
           </label>
           <footer>
-            <button onClick={() => setComposer(null)}>Cancel</button>
-            <button className="is-dark" disabled={!taskDraft.trim() && !contextDraft.trim()} onClick={() => void submitTell()}>{taskDraft.trim() ? "Send it off" : "Save dream"}</button>
+            <button className="is-dark" disabled={!taskDraft.trim() && !contextDraft.trim()} onClick={() => void submitTell()}>Save</button>
           </footer>
         </section>
       ) : view === "done" ? (
