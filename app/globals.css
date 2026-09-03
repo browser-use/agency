@@ -2,26 +2,30 @@
 
 :root { --ink: #111; --paper: #f5f3ed; --line: #d2cec3; }
 * { box-sizing: border-box; }
-html, body { min-height: 100%; }
-body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--font-geist-sans), Arial, sans-serif; }
+html, body { height: 100%; min-height: 100%; }
+body { margin: 0; overflow: hidden; color: var(--ink); background: var(--paper); font-family: var(--font-geist-sans), Arial, sans-serif; }
 button, textarea { font: inherit; }
 button { cursor: pointer; }
-.radar-shell { width: min(100%, 900px); min-height: 100vh; margin: 0 auto; padding: 16px 20px 28px; }
+.radar-shell { width: min(100%, 980px); height: 100dvh; min-height: 0; display: flex; flex-direction: column; margin: 0 auto; overflow: hidden; padding: 10px 20px 10px; }
 .radar-loading { min-height: 100vh; display: grid; place-items: center; font-size: 1.1rem; font-weight: 850; }
-.radar-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; min-height: 50px; }
+.radar-header { flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; min-height: 44px; }
 .radar-logo { display: inline-flex; align-items: center; gap: 9px; justify-self: start; padding: 0; border: 0; background: transparent; font-size: .82rem; font-weight: 950; letter-spacing: .13em; }
 .radar-logo span { width: 17px; height: 17px; border-radius: 5px; background: #111; box-shadow: inset -5px -5px 0 #6d5dfc; }
 .radar-header nav { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: #e8e5dd; }
 .radar-header nav button { min-height: 34px; padding: 0 12px; border: 0; border-radius: 999px; color: #6a665f; background: transparent; font-weight: 800; }
 .radar-header nav button.is-active { color: #111; background: white; box-shadow: 0 2px 7px rgba(0,0,0,.08); }
 .radar-header nav b { display: inline-grid; min-width: 19px; height: 19px; place-items: center; margin-left: 3px; border-radius: 99px; color: white; background: #111; font-size: .7rem; }
-.radar-tell { justify-self: end; min-height: 39px; padding: 0 16px; border: 0; border-radius: 999px; color: white; background: #111; font-weight: 850; }
-.radar-goal { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin: 12px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.6); text-align: left; }
-.radar-goal span { font-size: .67rem; font-weight: 950; letter-spacing: .1em; }
-.radar-goal strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+.radar-header-actions { justify-self: end; display: flex; align-items: center; gap: 8px; }
+.radar-points { display: inline-flex; align-items: baseline; gap: 4px; min-height: 35px; padding: 8px 11px; border: 1px solid #c9c3ee; border-radius: 999px; color: #5448b5; background: #ece8ff; font-size: .68rem; font-weight: 900; white-space: nowrap; }
+.radar-points b { color: #30277e; font-size: .86rem; font-variant-numeric: tabular-nums; }
+.radar-tell { min-height: 39px; padding: 0 16px; border: 0; border-radius: 999px; color: white; background: #111; font-weight: 850; }
+.radar-topline { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 6px; }
+.radar-goal { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 8px; max-width: 52%; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.6); text-align: left; }
+.radar-goal span { flex: 0 0 auto; font-size: .62rem; font-weight: 950; letter-spacing: .12em; color: #5448b5; }
+.radar-goal strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; font-weight: 750; color: #4d4a44; }
 .radar-goal small { color: #6a665f; font-size: .72rem; font-weight: 850; }
-.radar-card-signals { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px; margin: 0 0 9px; }
-.radar-rise, .radar-decision-time { width: max-content; max-width: 100%; display: flex; align-items: center; gap: 9px; padding: 6px 9px 6px 11px; border: 1px solid #c9c3ee; border-radius: 999px; color: #4f43ae; background: #ece8ff; }
+.radar-card-signals { flex: 0 0 auto; display: flex; justify-content: flex-end; align-items: center; flex-wrap: nowrap; gap: 6px; margin: 0; }
+.radar-rise, .radar-decision-time { width: max-content; max-width: 100%; display: flex; align-items: center; gap: 7px; padding: 4px 8px 4px 10px; border: 1px solid #c9c3ee; border-radius: 999px; color: #4f43ae; background: #ece8ff; }
 .radar-rise strong { font-size: .76rem; letter-spacing: .04em; }
 .radar-rise span { color: #625d80; font-size: .68rem; font-weight: 800; }
 .radar-decision-time { border-color: #bdddc9; color: #226641; background: #e4f6ea; }
@@ -29,16 +33,23 @@ button { cursor: pointer; }
 .radar-decision-time span { color: #47705a; font-size: .68rem; font-weight: 800; }
 .radar-decision-time.is-live { border-color: #b9c8f4; color: #244e9b; background: #eaf0ff; }
 .radar-decision-time.is-live span { color: #526a9a; }
-.radar-update-waiting { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; padding: 10px 12px; border: 1px solid #d8c98e; border-radius: 12px; background: #fff8d8; color: #5b4a14; font-size: .78rem; font-weight: 750; }
+.radar-workspace { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.radar-update-waiting { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; max-height: 56px; overflow: auto; margin: 0 0 6px; padding: 6px 12px; border: 1px solid #d8c98e; border-radius: 12px; background: #fff8d8; color: #5b4a14; font-size: .78rem; font-weight: 750; }
 .radar-update-waiting button { flex: 0 0 auto; min-height: 34px; padding: 0 12px; border: 1px solid #7a661b; border-radius: 999px; background: #fff; color: #4b3d0e; font: 800 .72rem/1 system-ui; cursor: pointer; }
 .radar-update-waiting button:disabled { cursor: default; opacity: .55; }
-.radar-card-host { overflow: hidden; border-radius: 26px; background: white; box-shadow: 0 18px 60px rgba(20,18,13,.12); }
-.radar-card-host > div { width: 100%; display: block; }
-.radar-next { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; margin-top: 14px; }
-.radar-next button { min-height: 46px; padding: 0 18px; border: 1.5px solid #111; border-radius: 999px; background: white; font-weight: 850; }
+.radar-card-host { flex: 1 1 auto; min-height: 120px; overflow: hidden; border-radius: 26px; background: white; box-shadow: 0 18px 60px rgba(20,18,13,.12); }
+.radar-card-host > div { width: 100%; height: 100%; min-height: 0; display: block; }
+.radar-agent-card { display: flex!important; flex-direction: column; }
+.radar-agent-card-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.radar-card-action-dock { flex: 0 0 58px; display: flex; align-items: stretch; justify-content: flex-end; gap: 8px; padding: 7px 10px; overflow-x: auto; border-top: 1px solid #dedad1; background: rgba(255,255,255,.96); box-shadow: 0 -10px 30px rgba(20,18,13,.08); }
+.radar-card-action-dock[hidden] { display: none; }
+.radar-card-action-dock button { min-width: min(100%, 230px); min-height: 44px; padding: 0 17px; border: 1.5px solid #111; border-radius: 12px; color: white; background: #111; font-size: .8rem; font-weight: 900; }
+.radar-card-action-dock button:disabled { cursor: not-allowed; opacity: .4; }
+.radar-next { flex: 0 0 40px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; margin-top: 8px; }
+.radar-next button { min-height: 38px; padding: 0 16px; border: 1.5px solid #111; border-radius: 999px; background: white; font-weight: 850; }
 .radar-next button:last-child { justify-self: end; color: white; background: #111; }
 .radar-next span { color: #6a665f; font-size: .82rem; font-weight: 750; }
-.radar-context, .radar-task { padding: clamp(24px, 6vw, 55px); border: 2px solid #111; border-radius: 26px; background: #d9ff6a; box-shadow: 9px 9px 0 #111; }
+.radar-context, .radar-task { flex: 1 1 auto; min-height: 0; overflow: auto; padding: clamp(24px, 6vw, 55px); border: 2px solid #111; border-radius: 26px; background: #d9ff6a; box-shadow: 9px 9px 0 #111; }
 .radar-context p, .radar-task p { margin: 0 0 20px; font-size: clamp(2.5rem, 8vw, 5.8rem); line-height: .9; letter-spacing: -.065em; font-weight: 900; }
 .radar-context textarea, .radar-task textarea { width: 100%; min-height: 210px; padding: 17px; border: 1.5px solid #111; border-radius: 14px; resize: vertical; background: white; font-size: 1.05rem; line-height: 1.45; }
 .radar-task { background: #cfe1ff; }
@@ -50,20 +61,20 @@ button { cursor: pointer; }
 .radar-context button, .radar-task button { min-height: 46px; padding: 0 17px; border: 1.5px solid #111; border-radius: 12px; background: white; font-weight: 850; }
 .radar-context button.is-dark, .radar-task button.is-dark { color: white; background: #111; }
 .radar-context button:disabled, .radar-task button:disabled { cursor: not-allowed; opacity: .45; }
-.radar-inline-change { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; margin-top: 12px; padding: 10px; border: 1.5px solid #111; border-radius: 15px; background: white; }
-.radar-inline-change textarea { width: 100%; min-height: 58px; max-height: 170px; padding: 11px 13px; border: 0; border-radius: 9px; resize: vertical; background: #f0edf9; color: #111; line-height: 1.35; outline: none; }
+.radar-inline-change { flex: 0 0 58px; height: 58px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; margin-top: 7px; padding: 5px; overflow: hidden; border: 1.5px solid #111; border-radius: 15px; background: white; }
+.radar-inline-change textarea { width: 100%; height: 46px; min-height: 46px; max-height: 46px; padding: 12px 12px; overflow: auto; border: 0; border-radius: 9px; resize: none; background: #f0edf9; color: #111; line-height: 1.35; outline: none; }
 .radar-inline-change textarea:focus { box-shadow: inset 0 0 0 2px #6d5dfc; }
 .radar-inline-change textarea:disabled { color: #6a665f; background: #eceae4; }
-.radar-inline-actions { display: grid; grid-template-columns: auto auto; gap: 8px; }
-.radar-inline-change button { min-width: 122px; padding: 0 16px; border: 1.5px solid #111; border-radius: 10px; font-weight: 900; }
-.radar-inline-change button.is-skip { grid-column: 1 / -1; min-height: 38px; border-color: transparent; color: #6a665f; background: transparent; }
+.radar-inline-actions { display: grid; grid-template-columns: repeat(3, auto); gap: 7px; }
+.radar-inline-change button { min-width: 92px; min-height: 46px; padding: 0 12px; border: 1.5px solid #111; border-radius: 9px; font-size: .74rem; font-weight: 900; }
+.radar-inline-change button.is-skip { border-color: transparent; color: #6a665f; background: transparent; }
 .radar-inline-change button.is-skip:hover { color: #111; background: #efede7; }
 .radar-inline-change button.is-improve { color: #111; background: #dcd5ff; }
 .radar-inline-change button.is-improve span { margin-right: 3px; color: #5b49e8; }
 .radar-inline-change button.is-send { color: white; background: #111; }
 .radar-inline-change button:disabled { cursor: not-allowed; opacity: .35; }
-.radar-message { margin-top: 12px; padding: 13px 15px; border: 1.5px solid #111; border-radius: 13px; background: #c9f3d8; font-weight: 800; }
-.radar-job { display: grid; gap: 3px; margin-bottom: 12px; padding: 12px 15px; border: 2px solid #111; border-radius: 14px; background: #fff4b8; box-shadow: 4px 4px 0 #111; }
+.radar-message { flex: 0 0 auto; max-height: 58px; overflow: auto; margin-top: 8px; padding: 10px 13px; border: 1.5px solid #111; border-radius: 13px; background: #c9f3d8; font-size: .82rem; font-weight: 800; }
+.radar-job { flex: 0 0 auto; display: grid; gap: 2px; max-height: 76px; overflow: auto; margin-bottom: 7px; padding: 7px 12px; border: 2px solid #111; border-radius: 14px; background: #fff4b8; box-shadow: 4px 4px 0 #111; }
 .radar-job strong { font-size: .92rem; }
 .radar-job span { color: #514d45; font-size: .84rem; line-height: 1.35; }
 .radar-job details { width: fit-content; max-width: 100%; margin-top: 4px; color: #3e5647; font-size: .76rem; }
@@ -73,19 +84,123 @@ button { cursor: pointer; }
 .radar-job.is-done { background: #c9f3d8; }
 .radar-job.is-review { background: #e8e1ff; }
 .radar-job.is-failed { background: #ffd1cb; }
-.radar-empty { min-height: 520px; display: grid; place-items: center; border: 2px solid #111; border-radius: 26px; background: white; box-shadow: 9px 9px 0 #111; }
+.radar-empty { flex: 1 1 auto; min-height: 0; display: grid; place-items: center; border: 2px solid #111; border-radius: 26px; background: white; box-shadow: 9px 9px 0 #111; }
 .radar-empty strong { font-size: 2rem; }
-footer { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 21px; color: #6a665f; font-size: .78rem; font-weight: 720; text-align: center; }
+footer { flex: 0 0 auto; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 8px; color: #6a665f; font-size: .72rem; font-weight: 720; text-align: center; }
 footer i { width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: #19a76c; box-shadow: 0 0 0 5px #c9f3d8; }
 @media (max-width: 640px) {
-  .radar-shell { padding: 9px 10px 24px; }
+  .radar-shell { padding: 8px 10px 10px; }
   .radar-header { grid-template-columns: 1fr auto; }
   .radar-header nav { order: 3; grid-column: 1 / -1; justify-self: center; }
-  .radar-goal { grid-template-columns: 1fr auto; gap: 4px; }
-  .radar-goal span { grid-column: 1 / -1; }
+  .radar-header-actions { gap: 5px; }
+  .radar-points { padding: 7px 9px; }
+  .radar-tell { padding: 0 12px; }
+  .radar-goal { grid-template-columns: auto minmax(0, 1fr) auto; gap: 7px; padding-block: 8px; }
+  .radar-goal span { grid-column: auto; font-size: .58rem; }
+  .radar-job { max-height: 72px; padding-block: 8px; }
+  .radar-card-signals { flex-wrap: nowrap; gap: 5px; }
+  .radar-rise, .radar-decision-time { min-width: 0; flex: 1 1 0; gap: 5px; padding-inline: 7px; white-space: nowrap; }
+  .radar-rise strong, .radar-decision-time strong { font-size: .68rem; }
+  .radar-rise span, .radar-decision-time span { overflow: hidden; text-overflow: ellipsis; font-size: .6rem; }
   .radar-card-host { border-radius: 20px; }
-  .radar-inline-change { grid-template-columns: 1fr; }
-  .radar-inline-actions { grid-template-columns: 1fr 1fr; }
-  .radar-inline-change button { min-height: 46px; }
+  .radar-card-action-dock { flex-basis: 54px; padding: 5px 7px; }
+  .radar-card-action-dock button { width: 100%; min-width: 0; }
+  .radar-inline-change { flex-basis: 130px; height: 130px; grid-template-columns: 1fr; }
+  .radar-inline-change textarea { height: 58px; min-height: 58px; max-height: 58px; }
+  .radar-inline-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .radar-inline-change button { min-width: 0; min-height: 46px; padding: 0 8px; font-size: .72rem; }
   .radar-next button { padding: 0 14px; }
 }
+
+/* Cluster filter: chip row on small screens, docked left panel on wide screens */
+.radar-clusters { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 9px; }
+.radar-clusters button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.7); color: #4d4a44; font-size: .74rem; font-weight: 850; }
+.radar-clusters button b { display: inline-grid; min-width: 18px; height: 18px; place-items: center; border-radius: 99px; background: #e8e5dd; color: #111; font-size: .66rem; }
+.radar-clusters button.is-active { border-color: #111; background: #111; color: white; }
+.radar-clusters button.is-active b { background: white; color: #111; }
+.radar-clusters button.is-growth.is-active { background: #c2410c; border-color: #c2410c; }
+.radar-clusters button.is-support.is-active { background: #1d4ed8; border-color: #1d4ed8; }
+.radar-clusters button.is-fix.is-active { background: #15803d; border-color: #15803d; }
+.radar-clusters button.is-product.is-active { background: #6d28d9; border-color: #6d28d9; }
+.radar-stats-link { display: inline-flex; align-items: center; min-height: 35px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; color: #111; background: rgba(255,255,255,.7); font-size: .74rem; font-weight: 850; text-decoration: none; }
+@media (max-width: 640px) {
+  .radar-clusters { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .radar-clusters::-webkit-scrollbar { display: none; }
+  .radar-clusters button { flex: 0 0 auto; }
+}
+@media (min-width: 1240px) {
+  .radar-clusters { position: fixed; left: calc(50% - 450px - 196px); top: 92px; width: 176px; flex-direction: column; align-items: stretch; gap: 6px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.7); }
+  .radar-clusters::before { content: "FILTER"; margin: 0 0 4px 4px; color: #6a665f; font-size: .62rem; font-weight: 950; letter-spacing: .12em; }
+  .radar-clusters button { justify-content: space-between; min-height: 36px; }
+}
+
+/* Stats page */
+.stats-shell { height: 100dvh; overflow: auto; width: min(100%, 980px); margin: 0 auto; padding: 18px 20px 60px; }
+.stats-header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; margin-bottom: 18px; }
+.stats-header h1 { margin: 0; font-size: 1.35rem; letter-spacing: -.02em; }
+.stats-back { color: #111; font-weight: 850; text-decoration: none; }
+.stats-header nav { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: #e8e5dd; }
+.stats-header nav button { min-height: 30px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; color: #6a665f; font-weight: 800; }
+.stats-header nav button.is-active { color: #111; background: white; }
+.stats-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.stats-tiles div { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.7); }
+.stats-tiles b { font-size: 1.7rem; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stats-tiles span { color: #6a665f; font-size: .74rem; font-weight: 750; line-height: 1.3; }
+.stats-block { margin-bottom: 22px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.7); }
+.stats-block h2 { margin: 0 0 8px; font-size: 1rem; }
+.stats-note { margin: 0 0 12px; color: #6a665f; font-size: .78rem; }
+.stats-clusters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.stats-clusters article { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-top: 4px solid #111; border-radius: 12px; background: white; }
+.stats-clusters header { display: grid; gap: 2px; }
+.stats-clusters header span { color: #6a665f; font-size: .7rem; }
+.stats-clusters dl { display: grid; gap: 4px; margin: 0; font-size: .74rem; }
+.stats-clusters dl div { display: flex; justify-content: space-between; gap: 8px; }
+.stats-clusters dt { color: #6a665f; }
+.stats-clusters dd { margin: 0; font-weight: 850; font-variant-numeric: tabular-nums; }
+.stats-legend { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: #6a665f; font-size: .74rem; }
+.stats-legend i { width: 10px; height: 10px; border-radius: 3px; margin-left: 10px; }
+.stats-two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.stats-two table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.stats-two th { text-align: left; color: #6a665f; font-weight: 800; padding: 4px 6px; }
+.stats-two td { padding: 5px 6px; border-top: 1px solid #ecebe6; font-variant-numeric: tabular-nums; }
+.stats-recent { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 520px; overflow: auto; }
+.stats-recent li { display: grid; grid-template-columns: 10px 1fr; gap: 8px; align-items: start; font-size: .78rem; }
+.stats-recent i { width: 10px; height: 10px; margin-top: 4px; border-radius: 3px; }
+.stats-recent a { color: #111; font-weight: 800; text-decoration: none; }
+.stats-recent span { display: block; color: #6a665f; font-size: .7rem; }
+@media (max-width: 760px) { .stats-tiles, .stats-clusters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stats-two { grid-template-columns: 1fr; } .stats-header { grid-template-columns: 1fr auto; } .stats-header h1 { grid-column: 1 / -1; } }
+
+/* Done: per-day list of headings, expandable */
+.radar-done { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.radar-done-days { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.radar-done-days button { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.7); color: #4d4a44; font-size: .72rem; font-weight: 850; }
+.radar-done-days button b { display: inline-grid; min-width: 17px; height: 17px; place-items: center; border-radius: 99px; background: #e8e5dd; color: #111; font-size: .64rem; }
+.radar-done-days button.is-active { border-color: #111; background: #111; color: white; }
+.radar-done-days button.is-active b { background: white; color: #111; }
+.radar-done-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding-right: 4px; }
+.radar-done-day { margin-bottom: 14px; }
+.radar-done-day h2 { position: sticky; top: 0; z-index: 1; display: flex; align-items: baseline; gap: 10px; margin: 0 0 6px; padding: 6px 4px; background: var(--paper); font-size: .8rem; font-weight: 950; letter-spacing: .04em; text-transform: uppercase; }
+.radar-done-day h2 span { color: #6a665f; font-size: .7rem; font-weight: 750; letter-spacing: 0; text-transform: none; }
+.radar-done-day ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.radar-done-row { width: 100%; display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.75); text-align: left; }
+.radar-done-row:hover { border-color: #111; }
+.radar-done-row i { width: 10px; height: 10px; border-radius: 3px; background: #6d28d9; }
+.radar-done-row i.is-growth { background: #c2410c; } .radar-done-row i.is-support { background: #1d4ed8; } .radar-done-row i.is-fix { background: #15803d; }
+.radar-done-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .86rem; }
+.radar-done-row span { color: #6a665f; font-size: .7rem; font-weight: 750; white-space: nowrap; }
+.radar-done-row em { min-width: 2.2em; color: #15803d; font-style: normal; font-weight: 900; font-variant-numeric: tabular-nums; text-align: right; }
+li.is-open .radar-done-row { border-color: #111; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.radar-done-card { max-height: 70vh; overflow: auto; border: 1px solid #111; border-top: 0; border-radius: 0 0 12px 12px; background: white; }
+.radar-done-result { margin: 0; padding: 10px 14px; border-bottom: 1px solid #ecebe6; color: #3e5647; font-size: .78rem; line-height: 1.4; }
+.radar-done-empty { padding: 30px; text-align: center; color: #6a665f; font-weight: 800; }
+@media (max-width: 640px) { .radar-done-row { grid-template-columns: 8px minmax(0, 1fr) auto; } .radar-done-row span { display: none; } }
+
+.radar-points em { margin-left: 6px; padding-left: 8px; border-left: 1px solid #c9c3ee; color: #1f7a3e; font-style: normal; font-size: .7rem; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) { .radar-topline { flex-wrap: wrap; } .radar-goal { max-width: 100%; } .radar-card-signals { width: 100%; justify-content: flex-start; flex-wrap: wrap; } }
+.radar-tell { white-space: nowrap; }
+.radar-header-actions { flex-wrap: nowrap; }
+.radar-points { padding: 6px 9px; }
+.radar-stats-link { white-space: nowrap; }
+
+.radar-working { flex: 0 0 auto; margin: 0 0 6px; padding: 5px 11px; border: 1px solid #b9c8f4; border-radius: 999px; background: #eaf0ff; color: #244e9b; font-size: .72rem; font-weight: 800; width: max-content; }

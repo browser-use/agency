@@ -38,8 +38,9 @@ test("removes starter-only files and metadata", async () => {
 });
 
 test("keeps card decisions fast and actionable", async () => {
-  const [ui, ingest, tasks, state, action, attention, agentJobs, database] = await Promise.all([
+  const [ui, styles, ingest, tasks, state, action, attention, agentJobs, database] = await Promise.all([
     readFile(new URL("../app/growth-radar.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/api/ideas/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/tasks/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/state/route.ts", import.meta.url), "utf8"),
@@ -49,7 +50,15 @@ test("keeps card decisions fast and actionable", async () => {
     readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
   ]);
   assert.match(ui, />\+ New Task<\/button>/);
-  assert.match(ui, />General context</);
+  assert.match(ui, /DREAM/);
+  assert.match(ui, />Things to Monitor\/Stream</);
+  assert.match(ui, /data\.completionStats\.points\.toLocaleString\("en-US"\)/);
+  assert.match(styles, /\.radar-workspace \{ flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; \}/);
+  assert.match(styles, /\.radar-card-host \{ flex: 1 1 auto; min-height: 120px; overflow: hidden/);
+  assert.match(styles, /\.radar-agent-card-scroll \{ flex: 1 1 auto; min-height: 0; overflow: auto/);
+  assert.match(styles, /\.radar-card-action-dock \{ flex: 0 0 58px/);
+  assert.match(styles, /\.radar-inline-change \{ flex: 0 0 58px; height: 58px/);
+  assert.match(styles, /\.radar-inline-change textarea \{[^}]*resize: none/);
   assert.match(ui, />Queue task<\/button>/);
   assert.match(ui, /fetch\("\/api\/tasks"/);
   assert.doesNotMatch(ui, /\+ New Context/);
@@ -86,20 +95,23 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /event\.key !== "Enter" \|\| event\.shiftKey \|\| event\.nativeEvent\.isComposing/);
   assert.match(ui, /void submitFeedback\(\)/);
   assert.match(ui, /Shift\+Enter adds a line/);
-  assert.match(ui, /toSorted\(compareByRise\)/);
-  assert.match(ui, /ideasForView\(data\.ideas, view\)/);
-  assert.match(ui, /const laneCounts = useMemo/);
+  assert.match(ui, /toSorted\(sort === "newest" \? compareByNewest : compareByRise\)/);
+  assert.match(ui, /ideasForView\(data\.ideas, view, sort\)/);
+  assert.match(ui, /const laneCounts = data\.laneCounts/);
   assert.match(ui, /Done <b>\{laneCounts\.done\}<\/b>/);
   assert.match(ui, /aria-label=\{`Done, \$\{laneCounts\.done\} tickets`\}/);
   assert.match(ui, /function summarizeJobResult\(result: string\)/);
-  assert.match(ui, /`Done · \$\{activeJob\.label \|\| "Final step completed"\}`/);
-  assert.match(ui, /`Ready to review · \$\{activeJob\.label \|\| "Agency update"\}`/);
-  assert.match(ui, />Full agent result<\/summary>/);
   assert.match(ui, /useState<Idea \| null>\(null\)/);
-  assert.match(ui, /keepSelectedCard\(selection \? selection\.preferred : current, visible\)/);
+  assert.match(ui, /const selectedIdeaRef = useRef<Idea \| null>\(null\)/);
+  assert.match(ui, /const loadRequestRef = useRef\(0\)/);
+  assert.match(ui, /stateUrl\.searchParams\.set\("view", targetView\)/);
+  assert.match(ui, /if \(requestId !== loadRequestRef\.current\) return/);
+  assert.match(ui, /window\.setTimeout\(refresh, document\.hidden \? 30000 : 10000\)/);
+  assert.match(ui, /const anchor = selection \? selection\.preferred : selectedIdeaRef\.current/);
+  assert.match(ui, /selectIdea\(keepSelectedCard\(anchor, visible\)\)/);
   assert.match(ui, /nextCardAfterRemoval\(target\.id, visibleIdeas\)/);
   assert.match(ui, /excludeId: target\.id/);
-  assert.match(ui, /setSelectedIdea\(visibleIdeas\[nextIndex\]\)/);
+  assert.match(ui, /selectIdea\(visibleIdeas\[nextIndex\]\)/);
   assert.match(ui, /feedbackDrafts/);
   assert.match(ui, /cardDraftKey\(active\)/);
   assert.match(ui, /This card changed while you were reading\. Your draft is still saved here/);
@@ -130,8 +142,11 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(state, /summarizeDecisionMetrics/);
   assert.match(state, /ticket_outcome = 'completed'/);
   assert.match(state, /reviewReady/);
+  assert.match(state, /THEN i\.score ELSE 0 END\) AS points/);
   assert.match(state, /LEFT JOIN card_attention/);
-  assert.match(state, /ORDER BY i\.score DESC, i\.id DESC/);
+  assert.match(state, /WHERE \(status = \? OR \(\? IS NOT NULL AND id = \?\)\) AND \(\? IS NULL OR id = \?\)/);
+  assert.match(state, /ORDER BY score DESC, id DESC/);
+  assert.match(state, /laneCounts/);
   assert.match(ingest, /Every card needs a RISE estimate/);
   assert.match(ingest, /decision_estimate_ms/);
   assert.match(ingest, /decision_estimate_reason/);
@@ -172,7 +187,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(agentJobs, /ideaStatusForOutcome/);
   assert.match(agentJobs, /UPDATE ideas SET status = \?[\s\S]*WHERE id = \? AND status IN \('new', 'working'\)/);
   assert.match(database, /WHEN 'completed' THEN 'done'/);
-  assert.match(database, /WHEN 'blocked' THEN 'working'/);
+  assert.match(database, /WHEN 'blocked' THEN 'new'/);
   assert.match(agentJobs, /status = 'running' AS reclaimed/);
   assert.match(agentJobs, /MAX_CONCURRENT_JOBS/);
   assert.match(agentJobs, /newer\.idea_id = job\.idea_id AND newer\.id > job\.id/);
@@ -180,4 +195,10 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(agentJobs, /canUpdateJob/);
   assert.match(action, /Agency is already working on this card/);
   assert.doesNotMatch(agentJobs, /status = 'new'/);
+});
+
+test("keeps every card action inside the card HTML (no host dock)", async () => {
+  const source = await readFile(new URL("../app/growth-radar.tsx", import.meta.url), "utf8");
+  assert.match(source, /dock\.hidden = true/);
+  assert.doesNotMatch(source, /dock\.replaceChildren\(\.\.\.decisionButtons\)/);
 });

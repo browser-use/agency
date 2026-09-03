@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cardDraftKey, cardHasChanged, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus";
 import { cardShortcut } from "../lib/card-shortcut";
+import { CLUSTERS, clusterForCard, type CardCluster } from "../lib/card-cluster";
 import { compareByRise } from "../lib/rise";
 
 type Idea = {
@@ -21,6 +23,7 @@ type Idea = {
   sourceLabel: string;
   sourceUrl: string;
   agentName: string;
+  createdAt: string;
   status: "new" | "working" | "done";
   jobId: number | null;
   jobStatus: "queued" | "running" | "done" | "failed" | null;
@@ -39,8 +42,9 @@ type Idea = {
 type RadarState = {
   context: { text: string; createdAt: string } | null;
   ideas: Idea[];
+  laneCounts: Record<Idea["status"], number>;
   jobs: { queued: number; running: number };
-  completionStats: { verified: number; legacy: number; reviewReady: number; dismissed: number };
+  completionStats: { verified: number; legacy: number; reviewReady: number; dismissed: number; points: number; pointsToday: number; verifiedToday: number };
   decisionMetrics: {
     tracked: number;
     accepted: number;
@@ -74,8 +78,9 @@ type AttentionTracker = {
 const emptyState: RadarState = {
   context: null,
   ideas: [],
+  laneCounts: { new: 0, working: 0, done: 0 },
   jobs: { queued: 0, running: 0 },
-  completionStats: { verified: 0, legacy: 0, reviewReady: 0, dismissed: 0 },
+  completionStats: { verified: 0, legacy: 0, reviewReady: 0, dismissed: 0, points: 0, pointsToday: 0, verifiedToday: 0 },
   decisionMetrics: {
     tracked: 0,
     accepted: 0,
@@ -112,8 +117,24 @@ function decisionKindLabel(kind: Idea["decisionKind"]) {
   return "card";
 }
 
-function ideasForView(ideas: Idea[], view: Idea["status"]) {
-  return ideas.filter((idea) => idea.status === view).toSorted(compareByRise);
+type SortMode = "score" | "newest";
+const SORT_KEY = "radar-sort";
+
+function readSortMode(): SortMode {
+  try {
+    return typeof window !== "undefined" && window.localStorage.getItem(SORT_KEY) === "newest" ? "newest" : "score";
+  } catch {
+    return "score";
+  }
+}
+
+// Newest = the card an agent created or replaced most recently (created_at resets on every replacement).
+function compareByNewest(left: Idea, right: Idea) {
+  return (right.createdAt ?? "").localeCompare(left.createdAt ?? "") || right.id - left.id;
+}
+
+function ideasForView(ideas: Idea[], view: Idea["status"], sort: SortMode = "score") {
+  return ideas.filter((idea) => idea.status === view).toSorted(sort === "newest" ? compareByNewest : compareByRise);
 }
 
 function summarizeJobResult(result: string) {
@@ -137,6 +158,7 @@ function improveLabel(idea: Idea) {
 
 function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; actionable: boolean; onAction: (action: CardAction) => void; onInteraction: (action: string, label: string) => void }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
   const onActionRef = useRef(onAction);
   const onInteractionRef = useRef(onInteraction);
 
@@ -147,9 +169,10 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!host) return;
+    const dock = dockRef.current;
+    if (!host || !dock) return;
     const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
-    root.innerHTML = `<style>:host{display:block}*{box-sizing:border-box}[data-radar-action="open"]{display:inline-flex!important;align-items:center;gap:.38em}[data-radar-action="open"]::after{content:"↗";font-size:.8em;line-height:1;opacity:.68;transform:translateY(-.08em)}.radar-fallback-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.radar-fallback-actions button{min-height:46px;padding:0 16px;border:2px solid #111;border-radius:999px;background:#fff;color:#111;font:800 14px/1 system-ui;cursor:pointer}.radar-fallback-actions button:first-child{background:#111;color:#fff}</style>${idea.cardHtml}`;
+    root.innerHTML = `<style>:host{display:block}*{box-sizing:border-box}[data-radar-action]{min-height:46px}[data-radar-action="open"]{display:inline-flex!important;align-items:center;gap:.38em}[data-radar-action="open"]::after{content:"↗";font-size:.8em;line-height:1;opacity:.68;transform:translateY(-.08em)}.radar-fallback-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.radar-fallback-actions button{min-height:46px;padding:0 16px;border:2px solid #111;border-radius:999px;background:#fff;color:#111;font:800 14px/1 system-ui;cursor:pointer}.radar-fallback-actions button:first-child{background:#111;color:#fff}</style>${idea.cardHtml}`;
     root.querySelectorAll('[data-radar-action="change"], [data-radar-action="no"]').forEach((button) => button.remove());
     root.querySelectorAll<HTMLElement>('[data-radar-action="open"]').forEach((button) => {
       if (!button.title) button.title = "Opens a link";
@@ -165,6 +188,9 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
       fallback.append(next);
       root.append(fallback);
     }
+    // Every action button stays inside the card HTML (Magnus, 2026-09-02): no host-level dock.
+    dock.replaceChildren();
+    dock.hidden = true;
     if (!actionable) {
       root.querySelectorAll<HTMLElement>("[data-radar-action]").forEach((button) => {
         if (button.dataset.radarAction === "open") return;
@@ -192,16 +218,123 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
       });
     };
     root.addEventListener("click", click);
-    return () => root.removeEventListener("click", click);
+    dock.addEventListener("click", click);
+    return () => {
+      root.removeEventListener("click", click);
+      dock.removeEventListener("click", click);
+    };
   }, [actionable, idea.id, idea.cardHtml]);
 
-  return <div ref={hostRef} />;
+  return (
+    <div className="radar-agent-card">
+      <div className="radar-agent-card-scroll" ref={hostRef} />
+      <div className="radar-card-action-dock" ref={dockRef} />
+    </div>
+  );
+}
+
+
+function dayKey(value: string | null) {
+  if (!value) return "earlier";
+  const date = new Date(value.includes("T") ? value : `${value.replace(" ", "T")}Z`);
+  if (Number.isNaN(date.getTime())) return "earlier";
+  return date.toLocaleDateString("en-CA");
+}
+
+function dayLabel(key: string) {
+  if (key === "earlier") return "Earlier";
+  const today = new Date().toLocaleDateString("en-CA");
+  const yesterday = new Date(Date.now() - 86_400_000).toLocaleDateString("en-CA");
+  if (key === today) return "Today";
+  if (key === yesterday) return "Yesterday";
+  return new Date(`${key}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function DoneList({ ideas, onAction, onInteraction }: { ideas: Idea[]; onAction: (idea: Idea, action: CardAction) => void; onInteraction: (idea: Idea, action: string, label: string) => void }) {
+  const [day, setDay] = useState<string>("all");
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [cardHtml, setCardHtml] = useState<Record<number, string>>({});
+  useEffect(() => {
+    if (!openId || cardHtml[openId]) return;
+    let cancelled = false;
+    fetch(`/api/state?view=done&only=${openId}`, { cache: "no-store" })
+      .then((response) => response.json())
+      .then((state: { ideas: Idea[] }) => {
+        const html = state.ideas[0]?.cardHtml ?? "";
+        if (!cancelled) setCardHtml((current) => ({ ...current, [openId]: html }));
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [openId, cardHtml]);
+  const groups = useMemo(() => {
+    const map = new Map<string, Idea[]>();
+    for (const idea of ideas) {
+      const key = dayKey(idea.jobUpdatedAt);
+      map.set(key, [...(map.get(key) ?? []), idea]);
+    }
+    return [...map.entries()].toSorted(([a], [b]) => (a === "earlier" ? 1 : b === "earlier" ? -1 : a < b ? 1 : -1));
+  }, [ideas]);
+  const shown = day === "all" ? groups : groups.filter(([key]) => key === day);
+  const pointsFor = (idea: Idea) => (idea.jobOutcome === "completed" ? Math.round(idea.score / 10) : 0);
+  return (
+    <section className="radar-done">
+      <nav className="radar-done-days" aria-label="Filter done by day">
+        <button className={day === "all" ? "is-active" : ""} onClick={() => setDay("all")}>All <b>{ideas.length}</b></button>
+        {groups.slice(0, 8).map(([key, items]) => (
+          <button key={key} className={day === key ? "is-active" : ""} onClick={() => setDay(key)}>{dayLabel(key)} <b>{items.length}</b></button>
+        ))}
+      </nav>
+      <div className="radar-done-scroll">
+        {shown.map(([key, items]) => (
+          <section key={key} className="radar-done-day">
+            <h2>{dayLabel(key)} <span>{items.length} done · {items.reduce((sum, idea) => sum + pointsFor(idea), 0)} pts</span></h2>
+            <ul>
+              {items.map((idea) => {
+                const cluster = clusterForCard(idea);
+                const open = openId === idea.id;
+                return (
+                  <li key={idea.id} className={open ? "is-open" : ""}>
+                    <button className="radar-done-row" onClick={() => { setOpenId(open ? null : idea.id); onInteraction(idea, open ? "collapse" : "expand", "Done list"); }} aria-expanded={open}>
+                      <i className={`is-${cluster}`} />
+                      <strong>{idea.headline}</strong>
+                      <span>{idea.jobLabel || decisionLabel(idea.decisionAction)}{idea.jobOutcome === "completed" ? " · verified" : idea.jobOutcome === "review" ? " · reviewed" : ""}{idea.decisionActiveMs ? ` · ${formatDuration(idea.decisionActiveMs)}` : ""}</span>
+                      <em>{pointsFor(idea) ? `+${pointsFor(idea)}` : ""}</em>
+                    </button>
+                    {open && (
+                      <div className="radar-done-card">
+                        {idea.jobResult && <p className="radar-done-result">{summarizeJobResult(idea.jobResult)}</p>}
+                        {cardHtml[idea.id] || idea.cardHtml
+                          ? <AgentCard idea={{ ...idea, cardHtml: cardHtml[idea.id] || idea.cardHtml }} actionable={false} onAction={(action) => onAction(idea, action)} onInteraction={(action, label) => onInteraction(idea, action, label)} />
+                          : <p className="radar-done-empty">Loading card…</p>}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+        {!shown.length && <p className="radar-done-empty">Nothing done on that day.</p>}
+      </div>
+    </section>
+  );
 }
 
 export function GrowthRadar() {
   const [data, setData] = useState<RadarState>(emptyState);
   const [view, setView] = useState<"new" | "working" | "done">("new");
+  const [cluster, setCluster] = useState<CardCluster | "all">("all");
+  const [sort, setSort] = useState<SortMode>(readSortMode);
+  const sortRef = useRef<SortMode>(sort);
+  useEffect(() => {
+    sortRef.current = sort;
+    try { window.localStorage.setItem(SORT_KEY, sort); } catch { /* private mode */ }
+  }, [sort]);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
+  // Poll responses may resolve after the user has already moved to another card.
+  // Keep the navigation anchor outside React's render timing so a refresh can
+  // never replace the card the user is currently reading.
+  const selectedIdeaRef = useRef<Idea | null>(null);
   const [composer, setComposer] = useState<"task" | "context" | null>(null);
   const [contextDraft, setContextDraft] = useState("");
   const [taskDraft, setTaskDraft] = useState("");
@@ -212,15 +345,31 @@ export function GrowthRadar() {
   const [liveDecision, setLiveDecision] = useState({ key: "", activeMs: 0 });
   const liveDecisionByCardRef = useRef<Record<string, number>>({});
   const attentionTrackerRef = useRef<AttentionTracker | null>(null);
+  const loadRequestRef = useRef(0);
   // `?card=<id>` opens one exact card on first load, whatever lane it sits in.
   const deepLinkHandledRef = useRef(false);
+
+  const selectIdea = useCallback((idea: Idea | null) => {
+    selectedIdeaRef.current = idea;
+    setSelectedIdea(idea);
+  }, []);
 
   const load = useCallback(async (
     targetView: Idea["status"] = view,
     selection?: { preferred: Idea | null; excludeId?: number },
   ) => {
-    const response = await fetch("/api/state", { cache: "no-store" });
+    const requestId = ++loadRequestRef.current;
+    const stateUrl = new URL("/api/state", window.location.origin);
+    stateUrl.searchParams.set("view", targetView);
+    if (targetView === "done") stateUrl.searchParams.set("light", "1");
+    const deepLinkedCardId = Number(new URLSearchParams(window.location.search).get("card"));
+    const requestedCardId = selection?.preferred?.id
+      ?? selectedIdeaRef.current?.id
+      ?? (!deepLinkHandledRef.current && Number.isInteger(deepLinkedCardId) && deepLinkedCardId > 0 ? deepLinkedCardId : null);
+    if (requestedCardId) stateUrl.searchParams.set("card", String(requestedCardId));
+    const response = await fetch(stateUrl, { cache: "no-store" });
     const next = (await response.json()) as RadarState;
+    if (requestId !== loadRequestRef.current) return;
     if (!deepLinkHandledRef.current) {
       deepLinkHandledRef.current = true;
       const requestedId = Number(new URLSearchParams(window.location.search).get("card"));
@@ -228,16 +377,17 @@ export function GrowthRadar() {
       if (requested) {
         setData(next);
         setView(requested.status);
-        setSelectedIdea(requested);
+        selectIdea(requested);
         setLoading(false);
         return;
       }
     }
-    const visible = ideasForView(next.ideas, targetView).filter((idea) => idea.id !== selection?.excludeId);
+    const visible = ideasForView(next.ideas, targetView, sortRef.current).filter((idea) => idea.id !== selection?.excludeId);
     setData(next);
-    setSelectedIdea((current) => keepSelectedCard(selection ? selection.preferred : current, visible));
+    const anchor = selection ? selection.preferred : selectedIdeaRef.current;
+    selectIdea(keepSelectedCard(anchor, visible));
     setLoading(false);
-  }, [view]);
+  }, [selectIdea, view]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -248,20 +398,40 @@ export function GrowthRadar() {
   }, [selectedIdea]);
 
   useEffect(() => {
-    const refresh = () => void load();
-    const first = window.setTimeout(refresh, 0);
-    const timer = window.setInterval(refresh, 5000);
+    let cancelled = false;
+    let timer = 0;
+    const refresh = async () => {
+      try {
+        await load();
+      } finally {
+        if (!cancelled) timer = window.setTimeout(refresh, document.hidden ? 30000 : 10000);
+      }
+    };
+    timer = window.setTimeout(refresh, 0);
     return () => {
-      window.clearTimeout(first);
-      window.clearInterval(timer);
+      cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [load]);
 
-  const visibleIdeas = useMemo(() => ideasForView(data.ideas, view), [data.ideas, view]);
-  const laneCounts = useMemo(() => data.ideas.reduce((counts, idea) => {
-    counts[idea.status] += 1;
+  const laneIdeas = useMemo(() => ideasForView(data.ideas, view, sort), [data.ideas, view, sort]);
+  const visibleIdeas = useMemo(
+    () => (cluster === "all" ? laneIdeas : laneIdeas.filter((idea) => clusterForCard(idea) === cluster)),
+    [laneIdeas, cluster],
+  );
+  const clusterCounts = useMemo(() => {
+    const counts: Record<CardCluster, number> = { growth: 0, support: 0, fix: 0, product: 0 };
+    for (const idea of laneIdeas) counts[clusterForCard(idea)] += 1;
     return counts;
-  }, { new: 0, working: 0, done: 0 }), [data.ideas]);
+  }, [laneIdeas]);
+  function selectCluster(next: CardCluster | "all") {
+    recordCardInteraction(active, "lane", `cluster:${next}`);
+    setCluster(next);
+    const nextVisible = next === "all" ? laneIdeas : laneIdeas.filter((idea) => clusterForCard(idea) === next);
+    if (!active || !nextVisible.some((idea) => idea.id === active.id)) selectIdea(nextVisible[0] ?? null);
+    setMessage("");
+  }
+  const laneCounts = data.laneCounts;
   const active = selectedIdea;
   const selectedIndex = active === null ? -1 : visibleIdeas.findIndex((idea) => idea.id === active.id);
   const activeIndex = selectedIndex >= 0 ? selectedIndex : 0;
@@ -278,8 +448,6 @@ export function GrowthRadar() {
     label: activeLiveState.jobLabel?.trim() ?? "",
   } : null;
   const jobInFlight = activeJob?.status === "queued" || activeJob?.status === "running";
-  const activeJobSummary = activeJob ? summarizeJobResult(activeJob.result) : "";
-  const activeJobHasMore = Boolean(activeJob?.result && activeJob.result !== activeJobSummary);
   const attentionIdeaId = active?.id ?? null;
   const attentionIdeaVersion = active?.version ?? null;
   const attentionDecisionAction = active?.decisionAction ?? null;
@@ -392,12 +560,12 @@ export function GrowthRadar() {
     const targetView = action === "no" ? view : "new";
     const nextSelection = targetView === view
       ? nextCardAfterRemoval(target.id, visibleIdeas)
-      : ideasForView(data.ideas, targetView)[0] ?? null;
+      : ideasForView(data.ideas, targetView, sortRef.current)[0] ?? null;
     setView(targetView);
-    setSelectedIdea(nextSelection);
+    selectIdea(nextSelection);
     await load(targetView, { preferred: nextSelection, excludeId: target.id });
     return true;
-  }, [data.ideas, load, takePendingActiveMs, view, visibleIdeas]);
+  }, [data.ideas, load, selectIdea, takePendingActiveMs, view, visibleIdeas]);
 
   const handleCardAction = useCallback((payload: CardAction) => {
       if (!active) return;
@@ -441,7 +609,7 @@ export function GrowthRadar() {
         active,
         "change",
         improveLabel(active),
-        "Improve the actual work behind this card, not only the card wording. Re-read the current Agency and no-ai-slop skills, the full stored card context, General Context, and the user's accepted, changed, and rejected history. Critique the artifact against strong comparable work, then complete every safe private revision. For visuals, designs, videos, demos, pages, or launch assets, inspect the real output at desktop and 390 px and fix weak composition, hierarchy, polish, and clarity. For launch or social copy, preserve verified facts and the user's voice, make it shorter and more human, and keep the complete exact post visible. Re-estimate all four RISE components and push one materially better replacement so the host can rank it. Do not send, post, publish, merge, deploy, contact anyone, or return a cosmetic rewrite.",
+        "Improve the actual work behind this card, not only the card wording. Re-read the current Agency and no-ai-slop skills, the full stored card context, Things to Monitor/Stream, and the user's accepted, changed, and rejected history. Critique the artifact against strong comparable work, then complete every safe private revision. For visuals, designs, videos, demos, pages, or launch assets, inspect the real output at desktop and 390 px and fix weak composition, hierarchy, polish, and clarity. For launch or social copy, preserve verified facts and the user's voice, make it shorter and more human, and keep the complete exact post visible. Re-estimate all four RISE components and push one materially better replacement so the host can rank it. Do not send, post, publish, merge, deploy, contact anyone, or return a cosmetic rewrite.",
       );
     } finally {
       setFeedbackSubmitting(false);
@@ -478,6 +646,12 @@ export function GrowthRadar() {
       } else if (action === "improve") {
         event.preventDefault();
         void submitImprove();
+      } else if (action === "previous") {
+        event.preventDefault();
+        move(-1);
+      } else if (action === "next") {
+        event.preventDefault();
+        move(1);
       }
     };
     window.addEventListener("keydown", shortcut);
@@ -489,7 +663,7 @@ export function GrowthRadar() {
     if (!text) return;
     await fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
     setComposer(null);
-    setMessage("General context saved.");
+    setMessage("Things to Monitor/Stream saved.");
     await load();
   }
 
@@ -509,7 +683,7 @@ export function GrowthRadar() {
     setComposer(null);
     setTaskDraft("");
     setView("new");
-    setSelectedIdea(null);
+    selectIdea(null);
     setMessage(`Task #${receipt.jobId ?? "?"} is queued. Agency has the full task and your general context.`);
     await load("new");
   }
@@ -520,14 +694,14 @@ export function GrowthRadar() {
     const currentIndex = active ? visibleIdeas.findIndex((idea) => idea.id === active.id) : -1;
     const startingIndex = currentIndex >= 0 ? currentIndex : direction > 0 ? -1 : 0;
     const nextIndex = (startingIndex + direction + visibleIdeas.length) % visibleIdeas.length;
-    setSelectedIdea(visibleIdeas[nextIndex]);
+    selectIdea(visibleIdeas[nextIndex]);
     setMessage("");
   }
 
   function selectView(next: "new" | "working" | "done") {
     recordCardInteraction(active, "lane", next);
     setView(next);
-    setSelectedIdea(ideasForView(data.ideas, next)[0] ?? null);
+    selectIdea(null);
     setMessage("");
   }
 
@@ -541,7 +715,7 @@ export function GrowthRadar() {
     if (!latestSelected || feedback.trim()) return;
     recordCardInteraction(active, "update", "Show update");
     setView(latestSelected.status);
-    setSelectedIdea(latestSelected);
+    selectIdea(latestSelected);
     setMessage("");
   }
 
@@ -553,7 +727,7 @@ export function GrowthRadar() {
   }
 
   function openGeneralContext() {
-    recordCardInteraction(active, "context", "General context");
+    recordCardInteraction(active, "context", "Things to Monitor/Stream");
     setContextDraft(data.context?.text ?? "");
     setComposer("context");
   }
@@ -569,74 +743,19 @@ export function GrowthRadar() {
           <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
           <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
         </nav>
-        <button className="radar-tell" onClick={openNewTask}>+ New Task</button>
+        <div className="radar-header-actions">
+          <span className="radar-points" aria-label={`${data.completionStats.points} points earned from verified completed tickets, ${data.completionStats.pointsToday} today`} title="Sum of RISE scores from verified completed tickets · today = verified since midnight Pacific"><b>{data.completionStats.points.toLocaleString("en-US")}</b> pts<em>+{data.completionStats.pointsToday.toLocaleString("en-US")} today</em></span>
+          <Link className="radar-stats-link" href="/stats">Stats</Link>
+          <button className="radar-tell" onClick={openNewTask}>+ New Task</button>
+        </div>
       </header>
 
-      <button className="radar-goal" onClick={openGeneralContext}>
-        <span>GENERAL CONTEXT</span>
-        <strong>{data.context?.text || "Add what you care about."}</strong>
-        <small>Change</small>
-      </button>
-
-      {composer === "task" ? (
-        <section className="radar-task">
-          <p>New task</p>
-          <label>
-            <span>What should Agency do?</span>
-            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One quick task…" />
-          </label>
-          <label className="is-context">
-            <span>General context</span>
-            <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What do you care about right now?" />
-          </label>
-          <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!taskDraft.trim()} onClick={queueTask}>Queue task</button></div>
-        </section>
-      ) : composer === "context" ? (
-        <section className="radar-context">
-          <p>What do you care about?</p>
-          <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="Your goal, project, people, or focus…" />
-          <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!contextDraft.trim()} onClick={saveGeneralContext}>Save context</button></div>
-        </section>
-      ) : active ? (
-        <>
-          {hasIncomingUpdate && (
-            <section className="radar-update-waiting" role="status">
-              <span>{feedback.trim()
-                ? "This card changed in the background. Your draft is pinned to the version you started on."
-                : "This card changed in the background. It will not replace what you are reading."}</span>
-              <button disabled={Boolean(feedback.trim())} onClick={showLatestSelected}>
-                {feedback.trim() ? "Finish draft first" : "Show update"}
-              </button>
-            </section>
-          )}
-          {activeJob && (
-            <section className={`radar-job is-${activeJob.status === "done" && activeJob.outcome === "review" ? "review" : activeJob.status ?? "unknown"}`} role="status">
-              <strong>{activeJob.status === "queued"
-                ? `Waiting · ${activeJob.label || `Job #${activeJob.id}`}`
-                : activeJob.status === "running"
-                  ? `Working · ${activeJob.label || `Job #${activeJob.id}`}`
-                  : activeJob.status === "failed"
-                    ? `Blocked · ${activeJob.label || `Job #${activeJob.id}`}`
-                    : activeJob.outcome === "completed" || (!activeJob.outcome && activeLiveState?.status === "done")
-                      ? `Done · ${activeJob.label || "Final step completed"}`
-                      : `Ready to review · ${activeJob.label || "Agency update"}`}</strong>
-              <span>{activeJob.status === "queued"
-                ? "Queued for Agency."
-                : activeJob.status === "running"
-                  ? "The agent is doing the work now."
-                  : activeJobSummary || (activeJob.status === "failed"
-                    ? "The agent stopped without a note."
-                    : activeJob.outcome === "completed"
-                      ? "The agent completed the final action."
-                      : "Agency updated the work for your review.")}</span>
-              {activeJobHasMore && (
-                <details>
-                  <summary>Full agent result</summary>
-                  <p>{activeJob.result}</p>
-                </details>
-              )}
-            </section>
-          )}
+      <div className="radar-topline">
+        <button className="radar-goal" onClick={openGeneralContext} title={data.context?.text || "Add what you care about."}>
+          <span>DREAM</span>
+          <strong>{data.context?.text || "Add what you care about."}</strong>
+        </button>
+        {active && composer === null && (
           <div className="radar-card-signals">
             <section
               className={`radar-decision-time${active.decisionAction ? "" : " is-live"}`}
@@ -663,6 +782,58 @@ export function GrowthRadar() {
               <span>R {active.riseReach} · I {active.riseImpact} · S {active.riseStrategicFit} · E {active.riseEase}</span>
             </section>
           </div>
+        )}
+      </div>
+
+      <nav className="radar-clusters" aria-label="Filter by kind of work">
+        <div className="radar-sort" role="group" aria-label="Sort">
+          <button className={sort === "newest" ? "is-active" : ""} onClick={() => { setSort("newest"); recordCardInteraction(active, "lane", "sort:newest"); }}>Newest</button>
+          <button className={sort === "score" ? "is-active" : ""} onClick={() => { setSort("score"); recordCardInteraction(active, "lane", "sort:score"); }}>Score</button>
+        </div>
+        <button className={cluster === "all" ? "is-active" : ""} onClick={() => selectCluster("all")}>All <b>{laneIdeas.length}</b></button>
+        {CLUSTERS.map((item) => (
+          <button key={item.id} className={`is-${item.id}${cluster === item.id ? " is-active" : ""}`} title={item.hint} onClick={() => selectCluster(item.id)}>
+            {item.label} <b>{clusterCounts[item.id]}</b>
+          </button>
+        ))}
+      </nav>
+
+      {composer === "task" ? (
+        <section className="radar-task">
+          <p>New task</p>
+          <label>
+            <span>What should Agency do?</span>
+            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One quick task…" />
+          </label>
+          <label className="is-context">
+            <span>Things to Monitor/Stream</span>
+            <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What do you care about right now?" />
+          </label>
+          <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!taskDraft.trim()} onClick={queueTask}>Queue task</button></div>
+        </section>
+      ) : composer === "context" ? (
+        <section className="radar-context">
+          <p>Things to Monitor/Stream</p>
+          <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="Your goal, project, people, or focus…" />
+          <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!contextDraft.trim()} onClick={saveGeneralContext}>Save stream</button></div>
+        </section>
+      ) : view === "done" ? (
+        <DoneList ideas={visibleIdeas} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />
+      ) : active ? (
+        <section className="radar-workspace">
+          {hasIncomingUpdate && (
+            <section className="radar-update-waiting" role="status">
+              <span>{feedback.trim()
+                ? "This card changed in the background. Your draft is pinned to the version you started on."
+                : "This card changed in the background. It will not replace what you are reading."}</span>
+              <button disabled={Boolean(feedback.trim())} onClick={showLatestSelected}>
+                {feedback.trim() ? "Finish draft first" : "Show update"}
+              </button>
+            </section>
+          )}
+          {jobInFlight && (
+            <p className="radar-working" role="status">Agency is working on this card.</p>
+          )}
           <section className="radar-card-host">
             <AgentCard idea={active} actionable={!jobInFlight} onAction={handleCardAction} onInteraction={(action, label) => recordCardInteraction(active, action, label)} />
           </section>
@@ -712,14 +883,14 @@ export function GrowthRadar() {
             <span>{selectedIndex >= 0 ? `${activeIndex + 1} of ${visibleIdeas.length}` : `Pinned · ${visibleIdeas.length} ${view}`}</span>
             <button onClick={() => move(1)} aria-label="Next card">Next →</button>
           </div>
-        </>
+        </section>
       ) : (
         <section className="radar-empty"><strong>{view === "new" ? "No new cards." : view === "working" ? "No agents working." : "Nothing done yet."}</strong></section>
       )}
 
       <footer>
         <i /> {data.jobs.running ? `${data.jobs.running} running now` : data.jobs.queued ? `${data.jobs.queued} queued for the next Agency run` : "Agents ready"} · Private on this Mac
-        <> · Done {data.completionStats.verified} verified{data.completionStats.legacy > 0 ? ` · ${data.completionStats.legacy} legacy` : ""}{data.completionStats.reviewReady > 0 ? ` · ${data.completionStats.reviewReady} ready to review` : ""}</>
+        <> · {data.completionStats.points.toLocaleString("en-US")} pts · Done {data.completionStats.verified} verified{data.completionStats.legacy > 0 ? ` · ${data.completionStats.legacy} legacy` : ""}{data.completionStats.reviewReady > 0 ? ` · ${data.completionStats.reviewReady} ready to review` : ""}</>
         {data.decisionMetrics.tracked > 0 && <> · Accept p50 {formatDuration(data.decisionMetrics.medianAcceptedActiveMs)} · Any action p50 {formatDuration(data.decisionMetrics.medianFirstActionMs)} · Effort error ±{formatDuration(data.decisionMetrics.medianEstimateErrorMs)}{data.decisionMetrics.parked > 0 ? ` · ${data.decisionMetrics.parked} parked` : ""}</>}
         {data.decisionMetrics.tracked === 0 && <> · Decision timing starts now</>}
       </footer>
