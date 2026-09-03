@@ -1,4 +1,4 @@
-export type CardShortcut = "skip" | "improve" | "previous" | "next";
+export type CardShortcut = "skip" | "improve" | "previous" | "next" | "focus";
 
 type CardShortcutInput = {
   key: string;
@@ -17,5 +17,6 @@ export function cardShortcut(input: CardShortcutInput): CardShortcut | null {
   if (key === "i") return "improve";
   if (key === "arrowleft") return "previous";
   if (key === "arrowright") return "next";
+  if (key === "enter") return "focus";
   return null;
 }

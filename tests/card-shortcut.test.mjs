@@ -10,6 +10,7 @@ test("maps card shortcuts", () => {
   assert.equal(cardShortcut({ key: "I", editable: false }), "improve");
   assert.equal(cardShortcut({ key: "ArrowLeft", editable: false }), "previous");
   assert.equal(cardShortcut({ key: "ArrowRight", editable: false }), "next");
+  assert.equal(cardShortcut({ key: "Enter", editable: false }), "focus");
 });
 
 test("does not fire while typing or using a modified shortcut", () => {
@@ -21,5 +22,6 @@ test("does not fire while typing or using a modified shortcut", () => {
   assert.equal(cardShortcut({ key: "i", editable: false, composing: true }), null);
   assert.equal(cardShortcut({ key: "s", editable: false, metaKey: true }), null);
   assert.equal(cardShortcut({ key: "i", editable: false, ctrlKey: true }), null);
+  assert.equal(cardShortcut({ key: "Enter", editable: true }), null);
   assert.equal(cardShortcut({ key: "x", editable: false }), null);
 });
