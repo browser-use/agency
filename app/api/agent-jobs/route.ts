@@ -47,8 +47,18 @@ export async function GET(request: Request) {
       OR (status = 'running' AND updated_at <= datetime('now', ?))
     ORDER BY status = 'running' ASC, id ASC
     LIMIT (SELECT slots FROM capacity)
-  `).bind(MAX_CONCURRENT_JOBS, leaseWindow, leaseWindow).all();
-  return Response.json({ jobs: jobs.results });
+  `).bind(MAX_CONCURRENT_JOBS, leaseWindow, leaseWindow).all<{ id: number; ideaId: number } & Record<string, unknown>>();
+  // Every job carries the card's whole conversation: each earlier note in order, with what the
+  // agent did about it. A worker should never have to rediscover "don't say Desktop" from job four.
+  const history = await Promise.all(jobs.results.map(async (job) => {
+    const rows = await db.prepare(`
+      SELECT id, action, button_label AS buttonLabel, user_feedback AS note, status, ticket_outcome AS outcome,
+             substr(result, 1, 600) AS result, created_at AS createdAt
+      FROM agent_jobs WHERE idea_id = ? AND id < ? ORDER BY id ASC
+    `).bind(job.ideaId, job.id).all();
+    return rows.results;
+  }));
+  return Response.json({ jobs: jobs.results.map((job, index) => ({ ...job, history: history[index] })) });
 }
 
 export async function POST(request: Request) {
