@@ -49,7 +49,7 @@ test("keeps card decisions fast and actionable", async () => {
     readFile(new URL("../app/api/agent-jobs/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(ui, />Tell Agency<\/button>/);
+  assert.match(ui, />Dream<\/button>/);
   assert.match(ui, /data\.completionStats\.points\.toLocaleString\("en-US"\)/);
   assert.match(styles, /\.radar-workspace \{ flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; \}/);
   assert.match(styles, /\.radar-card-host \{ flex: 1 1 auto; min-height: 120px; overflow: hidden/);
@@ -57,7 +57,7 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(styles, /\.radar-card-action-dock \{ flex: 0 0 58px/);
   assert.match(styles, /\.radar-inline-change \{ flex: 0 0 auto; min-height: 58px/);
   assert.match(styles, /\.radar-inline-change textarea \{[^}]*resize: none/);
-  assert.match(ui, /\{taskDraft\.trim\(\) \? "Queue task" : "Save dream"\}/);
+  assert.match(ui, /\{taskDraft\.trim\(\) \? "Send it off" : "Save dream"\}/);
   assert.match(ui, /fetch\("\/api\/tasks"/);
   assert.doesNotMatch(ui, /\+ New Context/);
   assert.match(ui, /setView\("new"\)/);

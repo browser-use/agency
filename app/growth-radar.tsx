@@ -752,7 +752,7 @@ export function GrowthRadar() {
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-side-actions">
-          <button className="radar-tell" onClick={openNewTask}>Tell Agency</button>
+          <button className="radar-tell" onClick={openNewTask}>Dream</button>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
           <button className={sort === "newest" ? "is-active" : ""} onClick={() => { setSort("newest"); recordCardInteraction(active, "lane", "sort:newest"); }}>Newest</button>
@@ -768,21 +768,17 @@ export function GrowthRadar() {
 
       {composer === "task" ? (
         <section className="radar-task">
-          <header>
-            <p>Tell Agency</p>
-            <small>One thing to do now, and the dream it keeps watching. Either one is fine on its own.</small>
-          </header>
-          <label>
-            <span>Do this once</span>
-            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Leave empty to only update the dream." />
+          <label className="is-once">
+            <span>Do it once</span>
+            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Agency carries your dream with it." />
           </label>
           <label className="is-context">
             <span>My dream · what Agency always watches</span>
             <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What you are aiming at." />
           </label>
           <footer>
-            <span>{contextDraft.trim().length.toLocaleString("en-US")} characters in the dream{contextDraft.trim().length > 800 ? " · long enough that agents skim it" : ""}</span>
-            <div><button onClick={() => setComposer(null)}>Cancel</button><button className="is-dark" disabled={!taskDraft.trim() && !contextDraft.trim()} onClick={() => void submitTell()}>{taskDraft.trim() ? "Queue task" : "Save dream"}</button></div>
+            <button onClick={() => setComposer(null)}>Cancel</button>
+            <button className="is-dark" disabled={!taskDraft.trim() && !contextDraft.trim()} onClick={() => void submitTell()}>{taskDraft.trim() ? "Send it off" : "Save dream"}</button>
           </footer>
         </section>
       ) : view === "done" ? (
