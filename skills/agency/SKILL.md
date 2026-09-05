@@ -10,7 +10,10 @@ Optimize real benefit and low decision time, not clicks at any cost.
 
 Setup is in the [README](https://github.com/browser-use/agency#run-locally).
 Read this skill and [APPROVALS.md](APPROVALS.md) completely. Use the user's configured
-`APPROVALS_PATH` instead when set. Editing these instructions does not start Agency work.
+`APPROVALS_PATH` instead when set. At Agency startup, also read [LAYOUT.md](LAYOUT.md), or the
+user's configured `LAYOUT_PATH`. The coordinator and every worker creating, revising or reviewing
+cards must read that same layout file before working and reread it after layout changes.
+Editing these instructions does not start Agency work.
 
 ## Learn the person
 
@@ -37,6 +40,8 @@ constraints; and uncertain observations to check. Label explicit preferences ver
 keep dated source pointers, replace outdated guidance and respect the runner's memory permissions.
 Do not store secrets, copied private conversations or speculative sensitive traits. Keep personal
 details out of shared files and public artifacts. Current instructions outrank historical clicks.
+Keep card-specific presentation preferences in the selected layout file; reference it from `me.md`
+instead of maintaining two copies. The user's goals and outgoing writing voice stay in `me.md`.
 
 Share two or three small, supported observations early. Use warm, lightly funny wording that sounds
 like the user, without flattery or pretending to know their personality. An observation might be:
@@ -54,7 +59,8 @@ artifacts, or independently review results. Parallelize independent lanes as far
 Use background workers when supported; create separate user-visible tasks only when requested.
 
 Each worker reads this skill, the applicable approval policy, latest profile and relevant live
-card/job history. Give it exact ownership, sources and a separate branch or artifact destination.
+card/job history. Give card workers the resolved layout path too, including any private override.
+Give each worker exact ownership, sources and a separate branch or artifact destination.
 Coordinate other active runners first. The queue API is not an exclusive lock: if ownership is
 uncertain, keep research private and do not claim, overwrite shared state or act externally.
 
@@ -75,7 +81,7 @@ a related bug fix, or a working integration. Prepare it before offering it; do n
 
 At first activation, offer a four-hour check-in if recurring work fits the goal. Create or update
 the runner's schedule only after the user agrees, checking existing schedules first. Save the actual
-app/profile/policy paths. Stay quiet without meaningful changes, and honor pause/stop.
+app/profile/policy/layout paths. Stay quiet without meaningful changes, and honor pause/stop.
 
 ## Find work that matters
 
@@ -110,67 +116,31 @@ already replied, both before drafting and before sending. Retire dead or resolve
 Confirm the exact recipient, channel, wording and result. An uncertain send requires a duplicate
 check before any retry. Keep private customer facts out of public replies and examples.
 
-## Cards: picture first, plain words
-
-Assume the reader knows nothing about the ticket. Explain it as simply as to a five-year-old,
-without baby talk: concrete names, everyday words, one idea at a time.
-Use short three-to-five-word labels and sentences where natural. Add context when those would
-be cryptic. The reader must see who is affected, what is wrong, what changes and why it helps.
-
-- Start with the exact subject and one short benefit line. Make the artifact or explanatory
-  graphic dominant. Use tiny labels such as "Who gets stuck?", "What changes?" and "What you get"
-  when helpful, not a mandatory row of boxes.
-- Include the original message or useful excerpt. Put longer conversation, evidence and logs in
-  expandable details. Keep important risk, uncertainty and action scope visible.
-- Show the end result: a tested before/after screenshot, a runnable preview, exact message or
-  readable change diagram. Label a proposed best case as proposed; never fake a screenshot,
-  observed outcome or impact number.
-- Use meaningful graphics and a few words instead of paragraphs in decorative boxes.
-  Favor whitespace, large readable type, aligned comparisons and one useful accent.
-  Name proven affected users or complaints separately from potential reach.
-- Try different bodies when they fit: annotated screenshots, before/after, a short animated
-  mechanism, a timeline or a conversation. Keep controls stable. Note the style in private
-  context, compare feedback and decision times, and repeat what helps this user.
-- Use local SVG images for diagrams; animation should explain what changes, not demand attention.
-  Keep labels readable, make the still frame understandable, honor reduced motion and avoid
-  endless loops. The host rejects inline SVG, scripts and remote media.
-- Match the affected product's visual system. Prefer the user's proven previous designs.
-  Check desktop, 390px, expanded details and real media; get independent critique when useful.
-
-Keep feedback and host controls consistent, with the work body scrollable. Preserve the selected
-card, typed feedback and expanded details when new cards arrive or content changes. No update banner.
-Show keyboard hints on hover/focus only for shortcuts the host actually supports.
-
-### Messages
-
-Show three distinct, short, complete options together. Recommend one; give each an exact
-"Message 1", "Message 2" or "Message 3" send button and state the recipient/channel.
-Each choice approves only its own text. Never offer "Draft a message": draft it yourself.
-If exact wording is already approved, execute it under the policy instead of inventing new options.
-
 Preserve the user's vocabulary and directness. A useful question can be the whole reply.
 Mention a benchmark or complementary tool only when relevant. No filler, fake praise, invented
 commercial offer or competitor insult. Use the existing `no-ai-slop` skill when available.
 Keep visible text, saved draft and button prompt identical; preserve literal quotes and code.
+Each choice approves only its own text. If exact wording is already approved, execute it under
+the policy instead of inventing new options.
 
-### PRs and demos
+For demos, record real product use and continuous source footage for long tasks. Review privacy
+and the finished cut; do not reenact an unrecorded run. The layout defines how to present the result.
 
-Explain the behavior change above an expandable, selectable, colorful current-head diff.
-Include SHA, paths, context, hunk headers and +/- totals. Use soft red/green plus literal signs.
-Include the full human-written diff; identify omitted generated files and their totals.
-UI changes need real visual proof. Do not make the user open GitHub to understand the change.
+## Present decision-ready cards
 
-Record real product use. Show the problem and payoff in the first two or three seconds.
-Cut dead time, keep labels readable and follow the requested length. For long tasks, capture
-continuous source footage. Review privacy and the finished cut; do not reenact an unrecorded run.
-
-### One click to move on
+Use the selected layout for appearance and explanation style. A theme cannot remove evidence,
+hide risks, invent impact, change score meanings or expand approval. Make who, problem, change,
+impact and result clear; label proposed outcomes and keep exact reviewable work inside the card.
+Card appearance does not change the user's outgoing writing voice or the branding of public assets.
 
 Offer the useful final choices: "Merge", a complete message, or an exact publication.
-Ask at the real approval boundary, never for research or drafting you can already do.
+Keep action labels literal. Ask at the real approval boundary, never for research or drafting
+you can already do. Never offer "Draft a message": draft it yourself.
 A successful decision click queues the work, moves the card out of New and shows the next ticket;
 view-only Open buttons do not. The agent finishes it in the background.
 Use the host's feedback/Improve/Skip controls, not duplicate card-level ones.
+Preserve selected identity, feedback and expanded details during updates. Follow the README's
+HTML contract; a layout request does not authorize changing host controls or reopening Done/Skip.
 
 ## Score, learn, repeat
 

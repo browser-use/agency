@@ -32,11 +32,11 @@ node scripts/install-skill.mjs --codex
 node scripts/install-skill.mjs --claude
 ```
 
-The installer copies `skills/agency/`, including its approval defaults, to your own skill directory.
+The installer copies `skills/agency/`, including its approval and layout defaults, to your own skill directory.
 It refuses to overwrite an existing installation. Review and back up an existing copy before updating;
 a new agent session loads installed changes. You can also read the skill directly from this checkout.
-There is one [Agency skill](skills/agency/SKILL.md), with a separate
-[approval policy](skills/agency/APPROVALS.md), not several skills.
+There is one [Agency skill](skills/agency/SKILL.md), with an editable
+[approval policy](skills/agency/APPROVALS.md) and [layout](skills/agency/LAYOUT.md).
 
 Installation grants no service access and creates no worker or schedule. Use your own authorized
 accounts. The existing standalone `no-ai-slop` skill can help with copy; it is not bundled or required
@@ -46,7 +46,7 @@ to run this app.
 
 Keep one coding-agent session responsible for Agency. Tell it:
 
-> Start Agency. Read skills/agency/SKILL.md and its approval policy. Use this checkout and
+> Start Agency. Read skills/agency/SKILL.md, its approval policy and LAYOUT.md. Use this checkout and
 > RADAR_URL=http://localhost:3100. Learn from my relevant feedback and writing, create or refine
 > my private me.md, handle queued work, and use subagents to prepare useful new cards.
 > Offer a four-hour schedule, but do not create it until I agree.
@@ -64,14 +64,15 @@ the first two or three useful cards once the intent is clear. You need not finis
 
 If ongoing work is useful, agree to a four-hour cadence or choose another. The agent uses its
 runner's scheduler, reuses any matching schedule and records the real checkout, app URL, profile
-and approval-policy paths. It reports a meaningful result or blocker, not empty periodic updates.
+and approval-policy/layout paths. It reports a meaningful result or blocker, not empty periodic updates.
 A cadence written in a profile does not itself run anything.
 
-## Profile and approval settings
+## Profile, layout and approval settings
 
 | File | Purpose |
 | --- | --- |
-| [SKILL.md](skills/agency/SKILL.md) | How Agency learns, works, proves results and presents cards |
+| [SKILL.md](skills/agency/SKILL.md) | How Agency learns, delegates, proves results and handles decisions |
+| [LAYOUT.md](skills/agency/LAYOUT.md) | Editable card appearance, graphics, typography and explanation style |
 | [APPROVALS.md](skills/agency/APPROVALS.md) | Editable defaults for what the agent may do and when it asks |
 | `me.md`, private | Your dream, writing style, preferences, sources and constraints |
 | This README | Setup, profile synchronization, access and the app API |
@@ -84,6 +85,27 @@ For personal approval settings, copy the default to a private location such as c
 are Git-ignored. The installer also gives you your own editable policy beside the installed skill.
 The agent reads the policy; the app does not enforce it. Current explicit restrictions and runner
 rules take precedence. Do not infer broader permission from past acceptance.
+
+### Customize the layout
+
+New users get Agency's existing picture-first design by default: big useful graphics, short
+explanations, clear context and impact, three message options and expandable colorful diffs.
+No theme selection is needed. The rules moved from the main skill without replacing that style.
+
+Edit your installed `LAYOUT.md`, or tell Agency how you want cards to look. For example:
+"Make my cards look like Pokémon cards, with a big illustration and very little text."
+Agency updates the selected local layout and shows one preview before a broad redesign.
+
+The shared default is `skills/agency/LAYOUT.md`. To keep a personal version outside the shared
+skill, copy it to checkout-root `layout.local.md` and tell the agent its absolute `LAYOUT_PATH`.
+That filename is Git-ignored. Use one selected layout, not competing instructions in `me.md`;
+your goals and outgoing writing voice remain in the private profile.
+
+The coordinator reads the layout at startup and passes the resolved path to every card-making
+or reviewing worker. They read it before working and again after changes. These are agent
+instructions, not automatic file injection, a website setting or a CSS theme engine.
+Updating the file alone does not restyle existing cards or update older installed skill copies.
+Themes change presentation, not approvals, evidence, scores or host controls.
 
 ### Synchronize My dream and me.md
 

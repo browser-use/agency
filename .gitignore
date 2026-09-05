@@ -18,6 +18,7 @@
 *.sqlite-*
 /me.md
 /approvals.local.md
+/layout.local.md
 /.agent-output/
 /agency-output/
 /agent-work/

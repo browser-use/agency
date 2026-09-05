@@ -48,6 +48,13 @@ Setup, profile synchronization, connection steps and the detailed API contract l
 The separately editable `skills/agency/APPROVALS.md` defines action boundaries; personal overrides
 such as `approvals.local.md` stay ignored. There is still one Agency skill and a private user profile.
 
+Presentation guidance now lives in `skills/agency/LAYOUT.md`, moved out of the main skill.
+The existing picture-first design remains the shared default for new users; themes are optional.
+The coordinator and card workers read the same selected layout, including a private `LAYOUT_PATH`
+when configured. It covers graphics, explanation style, message options, diffs and themes;
+evidence and action boundaries remain in the skill and approval policy. `layout.local.md` is ignored.
+This documentation split does not restyle existing cards or overwrite installed skill copies.
+
 Shortcut hints cover only the host's existing key bindings. No new send or merge shortcut was added.
 Topic settings now ask only for a name and description. Existing routing data is retained internally
 so editing a topic does not unfile its existing cards.
