@@ -32,12 +32,20 @@ The profile-sync commit added synchronization code. It did **not** commit the pr
 | Build completeness | Previously ignored but required Vite build helper and card-push script; local binding config without the original hosted project ID. |
 | Packaging | Dependency versions retained; package renamed `browser-use-agency`; explicit ignores for private state and generated outputs. |
 
-The portable skill keeps the approval, evidence, deduplication, completion and visual-review rules. It replaces the original operator's personal paths, thresholds and communication choices with the current user's profile. Installing it does not copy accounts, create a schedule or start an agent.
+The portable skill keeps approval, evidence, deduplication, completion and visual-review rules.
+The founder's design choices are now shared product defaults, including three short communication
+options, inline diffs and visual proof. Personal paths, goals, contacts, commercial thresholds and
+decision histories stay private. Installing it does not copy accounts, create a schedule or start an agent.
 
 The skill now separates the shared method, private profile and per-ticket history. Browser interaction
 uses Browser Harness with real local Chrome, or an authenticated cloud browser when needed. The copied
 `no-ai-slop` guide and evaluator under `skills/agency/references/` were removed; Agency uses the
 standalone writing skill when installed. Both removed files remain recoverable from Git history.
+
+The 950-line entrypoint was condensed into a short work loop and four task-specific references:
+onboarding, design, execution and the feed API. This removes repeated rules while preserving
+the approval and validation gates. The instructions now describe the actual Start button, external
+agent requirement, absent connector wizard, blocked-to-New behavior and current score display.
 
 ## Intentionally not committed
 

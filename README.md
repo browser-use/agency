@@ -2,7 +2,7 @@
 
 A local review desk for agent work. See the result, evidence and proposed action in one card; approve it or send feedback without opening a pile of tabs.
 
-This snapshot includes the current card design system, fixed action dock, inline colorful diffs, stable card focus, New Task submission feedback, queue history, decision timing and completion stats. It starts empty. No personal tickets, customer media, credentials or user profile are included.
+This snapshot includes the current card design system, in-card action buttons, consistent feedback controls, inline colorful diffs, stable card focus, New Task submission feedback, queue history, decision timing and completion stats. It starts empty. No personal tickets, customer media, credentials or user profile are included.
 
 ## Run locally
 
@@ -48,17 +48,55 @@ This copies the app profile to `me.md` in this checkout. Set `ME_PATH` to use an
 
 | Place | Keep here |
 | --- | --- |
-| `skills/agency/SKILL.md`, shared | How Agency researches, verifies, uses tools, prepares cards, handles jobs and asks for approval. |
-| `me.md`, private | Your goals, priorities, sources, voice, design preferences and requested budgets, cadence and volume targets. "My dream" shows the same document. |
+| `skills/agency/SKILL.md` and references, shared | The work loop, approval rules and current Agency product/design defaults, including three-option replies. |
+| `me.md`, private | Your goals, priorities, sources, relationships, voice exceptions and requested budgets, cadence and volume targets. "My dream" shows the same document. |
 | Local card/job history | Evidence, exact drafts and approvals, feedback, results and measured decision times for each ticket. |
 
-Keep the general rule in the skill and your choice in the profile. For example, the skill requires an exact message preview; your profile can request three short alternatives. Current instructions outrank the profile and historical clicks. A profile may restrict actions but never grants permission to send, merge or publish. A saved cadence does not start a schedule. Keep credentials in your runner's secret store.
+The founder's current design choices are shared defaults for now: three short reply options, visual explanations, colorful inline diffs, real proof and compact controls. Your profile can record an explicit preference that differs. Current instructions outrank the profile and historical clicks. A profile may restrict actions but never grants permission to send, merge or publish. A saved cadence does not start a schedule. Keep credentials in your runner's secret store.
 
 Then ask your coding agent:
 
 > Read skills/agency/SKILL.md completely. Use this checkout and RADAR_URL=http://localhost:3100. Read my profile and the live card/job history. Process queued work, then prepare evidence-backed cards with finished private work. Do not send, post, merge, deploy or contact anyone unless I explicitly approve the exact action. Do not create a schedule yet.
 
 Keep that agent session open while it works. **The website does not run an AI agent.** Buttons store durable jobs; an active agent must fetch, claim and process them. There is no automatic thread injection, installed background worker or schedule in this package. Set up a recurring run separately only if you want one.
+
+## What happens when you start Agency
+
+```text
+Start local app + load skill
+           ↓
+Describe your dream, sources and boundaries
+           ↓
+Ask your coding agent to start Agency
+           ↓
+Agent checks available access and prior work
+           ↓
+Queued work first → research → finish and verify → decision card
+           ↓
+Your exact approval → agent acts → verifies → Done
+```
+
+The first-run **Start** button saves the dream; it does not launch that agent. The agent reuses an
+existing brief rather than asking the same questions again. It checks available connectors and
+signed-in Browser Harness sessions, then offers a missing service only when it would improve the
+work. It explains why and supplies the connection link returned by that integration. There is no
+built-in connector wizard in this app, and naming Slack or Gmail in the dream does not connect it.
+Missing access is reported as "not checked", while other useful work continues.
+
+### What's in the skill
+
+| File | Read for |
+| --- | --- |
+| [SKILL.md](skills/agency/SKILL.md) | Mission, onboarding outline, work loop, approvals, privacy, browser choice, learning and schedules |
+| [onboarding.md](skills/agency/references/onboarding.md) | Setup, dream/profile sync, access discovery and connection requests |
+| [card-design.md](skills/agency/references/card-design.md) | Shared visual defaults, three replies, exact diffs, demos and card review |
+| [execution.md](skills/agency/references/execution.md) | Finding useful work, proving fixes, finishing PRs and checking live replies |
+| [feed-contract.md](skills/agency/references/feed-contract.md) | Queue, card identity, API payloads, outcomes, score, effort and topics |
+
+The main file routes the agent to the references its task needs. Read the full package for a complete
+Agency wave; a connection check need not load the diff-design instructions. Repeated merge, approval,
+first-view and effort rules were consolidated. Your business goals, contacts, private examples and
+personal decision-time baseline remain in your own profile and history.
 
 ## What a click does
 
