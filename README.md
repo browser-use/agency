@@ -29,7 +29,13 @@ node scripts/install-skill.mjs --claude
 
 The installer copies `skills/agency/` into your own skill directory. It refuses to overwrite an existing installation. You can also read the repository's `skills/agency/SKILL.md` directly from your agent session. Use your own signed-in accounts and authorized connectors; installing this repo grants no Slack, GitHub, email, browser or production access.
 
-In Settings → My dream, enter your goals, preferences, sources and boundaries. Your profile is local and ignored by Git:
+For browser interaction, use [Browser Harness](https://github.com/browser-use/browser-harness) with your real local Chrome and signed-in sessions. Follow its [setup guide](https://github.com/browser-use/browser-harness/blob/main/install.md). Agency can use an authenticated cloud browser through Browser Harness when isolation or a remote environment is needed; it does not copy local logins or authorize extra spend.
+
+Agency uses your existing standalone `no-ai-slop` writing skill. This repo does not bundle or install a second copy. If it is missing, the agent reports that the writing review was not checked and continues with your voice preferences and concrete wording. The app itself needs neither skill to run.
+
+Already have a private profile? Inspect it and use `ME_PATH=/absolute/path/to/me.md node scripts/sync-me.mjs --pull` with `RADAR_URL` set to your running app. This loads the file into the app. Do not use `--push` over an existing file you want to keep.
+
+For a new profile, enter your goals, preferences, sources and boundaries in Settings → My dream. Your profile is local and ignored by Git:
 
 ```sh
 export RADAR_URL=http://localhost:3100
@@ -37,6 +43,16 @@ node scripts/sync-me.mjs --push
 ```
 
 This copies the app profile to `me.md` in this checkout. Set `ME_PATH` to use another file. `--pull` copies the file into the app; no flag synchronizes the newer side; `--check` reports differences without writing.
+
+### Where instructions belong
+
+| Place | Keep here |
+| --- | --- |
+| `skills/agency/SKILL.md`, shared | How Agency researches, verifies, uses tools, prepares cards, handles jobs and asks for approval. |
+| `me.md`, private | Your goals, priorities, sources, voice, design preferences and requested budgets, cadence and volume targets. "My dream" shows the same document. |
+| Local card/job history | Evidence, exact drafts and approvals, feedback, results and measured decision times for each ticket. |
+
+Keep the general rule in the skill and your choice in the profile. For example, the skill requires an exact message preview; your profile can request three short alternatives. Current instructions outrank the profile and historical clicks. A profile may restrict actions but never grants permission to send, merge or publish. A saved cadence does not start a schedule. Keep credentials in your runner's secret store.
 
 Then ask your coding agent:
 

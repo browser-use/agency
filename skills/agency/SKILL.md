@@ -12,10 +12,10 @@ step. Ask a focused question when the answer would materially improve the plan�
 your dream here?” when the user's deeper ambition is unclear—then keep moving with the best safe
 assumption if the user does not answer.
 
-Before writing user-facing copy or an Agency card, read the available skill named `no-ai-slop` when
-it is present in the current environment. If it is unavailable, read `references/no-ai-slop.md` and
-check the result against `references/no-ai-slop-eval.md`. Use this as the only writing style guidance.
-Write with short, common words and concrete facts.
+Before writing user-facing copy or an Agency card, read the installed skill named `no-ai-slop`.
+Keep one standalone writing skill; do not bundle or maintain another copy inside Agency. Apply the
+current user's voice preferences alongside it. If the skill is unavailable, say the writing review
+was not checked and continue with short, common words and concrete facts.
 
 Apply communication preferences from the current user's profile, not from the person who packaged
 this skill. Before creating or replacing a ticket, check the full visible draft, its stored context,
@@ -219,8 +219,30 @@ release, and other final external actions always require their own exact approva
 
 ## Learn the user
 
-1. Read the conversation and the ordinary user memory already present in `AGENTS.md`. Do not create
-   `AGENCY.md`, a separate identity file, or other Agency-specific state.
+### Shared method, private profile, ticket history
+
+Keep one shared operating skill and one private profile per person:
+
+- This `SKILL.md` holds the reusable method: evidence, approval boundaries, tool use, deduplication,
+  job outcomes, testing, and card design and review requirements.
+- The configured `me.md` holds the person's goals, priorities, monitored sources, voice, visual
+  preferences, examples of likes and dislikes, and requested budgets, cadence and volume targets.
+  Keep it local and Git-ignored, even when the source repository is private. Each teammate supplies
+  their own profile. The app's "My dream" is a synchronized view of that same document.
+- Card and job history hold exact evidence, drafts, source links, approvals, execution results,
+  failures and decision timings. Keep those details out of the skill and profile.
+
+State the method once here and the person's chosen values once in their profile. For example,
+this skill requires exact send-ready text; the profile chooses the voice and number of alternatives.
+Read current instructions first, then the profile, then historical decisions. A profile can narrow
+scope or specialize defaults; it cannot waive evidence or approval gates or authorize an external
+action. A saved cadence is a preference, not a command to start a schedule. New restrictions override
+older approvals, and every proposed external action still needs applicable authorization.
+
+Keep credentials in the runner's authorized secret store, never in any of these documents.
+
+1. Read the conversation, the configured private profile and ordinary user memory already available.
+   Respect the runner's rules for memory updates. Do not create another identity file or `AGENCY.md`.
    When a local Agency feed exposes `General Context`, use the newest entry as durable background
    about what the user cares about. Treat a queued `New Task` as the immediate instruction and carry
    its saved General Context with it. Do not blend the task and background into one vague prompt or
@@ -281,6 +303,31 @@ browser login, a token, a checkout, an integration skill, or a local daemon exis
 unavailable, say `not checked` and name the missing capability; never turn an access failure into
 evidence that no messages, customers, incidents, or opportunities exist. A cloud or delegated run
 must receive the profile and task context it needs without copying private data unnecessarily.
+
+### Browser interaction: Browser Harness
+
+Use [browser-harness](https://github.com/browser-use/browser-harness) for every browser interaction.
+For local work, connect it to the user's real Chrome and existing signed-in sessions. Do not switch
+to the built-in Codex browser, a separate Chrome-control tool, or a fresh headless browser as a
+substitute. Plain HTTP reads and documented API or CLI operations do not need a browser.
+
+Before interacting, read the currently installed Browser Harness `SKILL.md` completely. Follow its
+current connection and tab-routing instructions rather than copying its manual here. For setup or
+connection problems, use the [installation guide](https://github.com/browser-use/browser-harness/blob/main/install.md)
+and `browser-harness --doctor`. If it remains unavailable, report the missing capability and keep
+working on non-browser steps; do not silently switch browser tools.
+
+Reuse the default local daemon and keep each task's tab target ID. Do not create per-ticket daemons
+or take over the user's visible tab. Parallel work on distinct tabs is allowed when the installed
+runtime supports target-scoped routing; shared-page, cookie, account-switching, and native-UI
+operations still need coordination. Close only task-created tabs that are no longer needed, keeping
+user-visible results, known follow-ups, and tabs with unsaved work.
+
+Use a Browser Use cloud browser through Browser Harness when the task needs an isolated session,
+separate browser lifecycle, or a remote environment. Check authentication first and stay within
+authorized spend. A cloud browser does not inherit local logins: do not upload cookies, credentials,
+or private browser state without approval. Track the exact remote session and follow the installed
+skill's billing and cleanup instructions. Local and cloud work have the same final-action boundary.
 
 ### Exhaust useful context before asking
 
@@ -500,10 +547,9 @@ Make the first view answer four questions in five seconds:
 ### Answer six questions with a clear visual hierarchy
 
 Use the problem, audience, actual change, proof, risk, and outcome as a private evidence checklist.
-Do not present them as six stages or six labeled panels: the user explicitly rejected that format.
-Never invent a before state for a staged comparison. The September 4 feedback found that repeated
-captions, diagrams, and accordions were making short decisions harder. Group related answers and let the actual artifact
-determine the layout:
+Do not force them into six stages or six labeled panels. Never invent a before state for a staged
+comparison. Group related answers, avoid repeating them in captions and accordions, and let the
+actual artifact and the current user's design preferences determine the layout:
 
 - Start with the project, a verb-first headline, one practical impact sentence, and the named audience
   or exact recipient. State the actual approval boundary, including any unfinished validation.
@@ -521,7 +567,7 @@ determine the layout:
   main artifact. For code, show the lines that explain the behavior and keep the complete current-head
   diff expandable. For a demo, make the real video the dominant visual.
 - End with FOR YOU and the exact action buttons inside the card, one dark primary except for the
-  three message alternatives described below. A button that
+  profile-configured message alternatives described below. A button that
   authorizes a test followed by a conditional PR must say both; do not label it as a tested PR already.
 
 Keep the first-view copy near 120 words, excluding the exact artifact. Put no duplicate scores on the
@@ -677,7 +723,7 @@ real screenshot, artifact, diagram, or generated image only when it explains the
 text; otherwise let type and spacing carry the card.
 
 Keep the headline readable in no more than roughly three lines on desktop. Keep proof labels beside
-their numbers. Make one next action visually primary (or recommend one of three reply choices), and make view-only or context controls clearly
+their numbers. Make one next action visually primary (or recommend one of the configured reply choices), and make view-only or context controls clearly
 secondary with their `↗` mark. Inspect the actual card at a
 normal desktop width and at 390 px before pushing; reject cramped, repetitive, clipped, or gimmicky
 designs.
@@ -687,7 +733,7 @@ say what it opens or requests, such as `Watch 7-sec video`, `Read the email`, or
 Hide long evidence and exact drafts when the first view does not need them. Never say `I made`
 unless the artifact exists and the card can show or open it.
 
-Minimize decision time with the patterns repeated in the user's feedback:
+Apply the current user's feedback while minimizing decision time:
 
 - Put the exact subject, problem, practical impact, finished result, and final action in the first
   view. Never make the user ask what the card is about, why it matters, who someone is, or what will
@@ -696,14 +742,14 @@ Minimize decision time with the patterns repeated in the user's feedback:
   edge cases and side effects, and finish the PR before carding it. Do not offer `get diagnostics
   ready`, a plan, or a question when Agency can return a fix or exact blocker.
 - For messages, read prior sent examples, show the exact recipient and complete text, and keep the
-  copy short and human. Avoid em dashes and generic outreach. Do not ask a person for context that the
-  database, thread, or repository can answer.
+  copy short and human. Follow the profile's voice and punctuation preferences and avoid generic
+  outreach. Do not ask a person for context that the database, thread, or repository can answer.
 - For demos, show the real site or product when possible, put the magical moment in the first two or
-  three seconds, remove dead frames, and default to roughly ten seconds. Use large readable labels
+  three seconds, remove dead frames, and choose the length for the brief and destination. Use readable labels
   only when they clarify the action. Generic AI art, overlapping text, unexplained motion, and long
   setup lose the card.
-- Match Browser Use's established website type, spacing, and components for product pages and case
-  studies. Use a strict independent visual critique before carding a creative artifact, and keep
+- Match the affected product's established type, spacing, and components for product pages and case
+  studies. Use an independent visual critique before carding a creative artifact when practical, and keep
   iterating when the reviewer cannot explain the story after one view.
 
 ### Prove the claim before asking for trust
@@ -734,7 +780,8 @@ blocker. Never ask the user to trust an unproven causal story.
 
 Apply a strict readiness gate before pushing a card. Do not show the user progress they cannot act
 on. Keep the job in `Working` while tests, CI, deploy previews, bot reviewers such as Cubic, or other
-automatic checks are still running. Poll them or schedule the exact private follow-up yourself. Push
+automatic checks are still running. Use the runner's wait mechanism; schedule a follow-up only when
+the user has requested it, as described below. Push
 the replacement only after that work is fully finished and the user has a real decision to make.
 Never create cards whose main news is `still building`, `review in progress`, `waiting on the last
 file`, or `check again later`. The exception is a precise blocker the user can resolve now, such as
@@ -816,10 +863,10 @@ Every card that passes this readiness gate must give the user a real decision:
 - If the next step is an outside or irreversible action, its prompt is approval for only the exact
   shown recipient, destination, content, cost, commit, or deployment. Otherwise the click queues the
   remaining reversible work and returns a new approval card at the boundary.
-- A timed check-in button must create the exact one-shot follow-up or check using the scheduling
-  rules below. It must not pretend that waiting inside the page performs the check. If the agent can
-  schedule that check without a new user decision, do so and keep the feed quiet until the result is
-  actionable.
+- A clicked timed check-in button authorizes only its exact one-shot follow-up or check, using the
+  scheduling rules below. Waiting inside the page does not perform the check. Create no unrequested
+  schedule; if a matching authorized follow-up already exists, reuse it and keep the feed quiet until
+  the result is actionable.
 
 Return standalone HTML and CSS only. Do not include scripts, iframes, forms, remote fonts, inline event
 handlers, `javascript:` URLs, or automatic network requests. The host will render the card in an
