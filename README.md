@@ -48,7 +48,7 @@ This copies the app profile to `me.md` in this checkout. Set `ME_PATH` to use an
 
 | Place | Keep here |
 | --- | --- |
-| `skills/agency/SKILL.md` and references, shared | The work loop, approval rules and current Agency product/design defaults, including three-option replies. |
+| `skills/agency/SKILL.md`, shared | The work loop, approval rules and current Agency product/design defaults, including three-option replies. |
 | `me.md`, private | Your goals, priorities, sources, relationships, voice exceptions and requested budgets, cadence and volume targets. "My dream" shows the same document. |
 | Local card/job history | Evidence, exact drafts and approvals, feedback, results and measured decision times for each ticket. |
 
@@ -85,18 +85,18 @@ Missing access is reported as "not checked", while other useful work continues.
 
 ### What's in the skill
 
-| File | Read for |
-| --- | --- |
-| [SKILL.md](skills/agency/SKILL.md) | Mission, onboarding outline, work loop, approvals, privacy, browser choice, learning and schedules |
-| [onboarding.md](skills/agency/references/onboarding.md) | Setup, dream/profile sync, access discovery and connection requests |
-| [card-design.md](skills/agency/references/card-design.md) | Shared visual defaults, three replies, exact diffs, demos and card review |
-| [execution.md](skills/agency/references/execution.md) | Finding useful work, proving fixes, finishing PRs and checking live replies |
-| [feed-contract.md](skills/agency/references/feed-contract.md) | Queue, card identity, API payloads, outcomes, score, effort and topics |
+All Agency instructions are in one [SKILL.md](skills/agency/SKILL.md), with a linked contents list
+and sections for:
 
-The main file routes the agent to the references its task needs. Read the full package for a complete
-Agency wave; a connection check need not load the diff-design instructions. Repeated merge, approval,
-first-view and effort rules were consolidated. Your business goals, contacts, private examples and
-personal decision-time baseline remain in your own profile and history.
+- Starting Agency, learning the dream and connecting useful services.
+- Context, privacy, browser access, the work loop and approval boundaries.
+- Research, proven fixes, PRs, replies and demos.
+- Shared card design, three message choices, colorful diffs and visual proof.
+- Feedback, scoring, job outcomes, the feed API and requested schedules.
+
+The agent reads the complete skill. Repeated merge, approval, first-view and effort rules were
+consolidated. Your business goals, contacts, private examples and personal decision-time baseline
+remain in your own profile and history.
 
 ## What a click does
 

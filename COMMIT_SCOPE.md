@@ -42,10 +42,12 @@ uses Browser Harness with real local Chrome, or an authenticated cloud browser w
 `no-ai-slop` guide and evaluator under `skills/agency/references/` were removed; Agency uses the
 standalone writing skill when installed. Both removed files remain recoverable from Git history.
 
-The 950-line entrypoint was condensed into a short work loop and four task-specific references:
-onboarding, design, execution and the feed API. This removes repeated rules while preserving
-the approval and validation gates. The instructions now describe the actual Start button, external
-agent requirement, absent connector wizard, blocked-to-New behavior and current score display.
+The original 950-line skill was shortened and consolidated into one `skills/agency/SKILL.md` with
+sections for onboarding, work, design, execution and the feed API. The four temporary reference
+files were folded into it and removed; their history remains recoverable in Git. Repeated rules
+were consolidated without removing approval or validation gates. The instructions describe the
+actual Start button, external agent requirement, absent connector wizard, blocked-to-New behavior
+and current score display.
 
 ## Intentionally not committed
 
