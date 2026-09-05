@@ -22,6 +22,7 @@ test("does not fire while typing or using a modified shortcut", () => {
   assert.equal(cardShortcut({ key: "i", editable: false, composing: true }), null);
   assert.equal(cardShortcut({ key: "s", editable: false, metaKey: true }), null);
   assert.equal(cardShortcut({ key: "i", editable: false, ctrlKey: true }), null);
+  assert.equal(cardShortcut({ key: "i", editable: false, altKey: true }), null);
   assert.equal(cardShortcut({ key: "Enter", editable: true }), null);
   assert.equal(cardShortcut({ key: "x", editable: false }), null);
 });

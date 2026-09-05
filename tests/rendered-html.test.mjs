@@ -93,6 +93,14 @@ test("keeps card decisions fast and actionable", async () => {
   assert.match(ui, /else if \(action === "improve"\)/);
   assert.match(ui, /aria-keyshortcuts="S"/);
   assert.match(ui, /aria-keyshortcuts="I"/);
+  assert.match(ui, /aria-keyshortcuts="ArrowLeft"/);
+  assert.match(ui, /aria-keyshortcuts="ArrowRight"/);
+  assert.match(ui, /data-shortcut-hint="Skip · S"/);
+  assert.ok(ui.includes('data-shortcut-hint={`${improveLabel(active)} · I`}'));
+  assert.match(ui, /data-shortcut-hint="Send · Enter in feedback"/);
+  assert.match(ui, /data-shortcut-hint="Previous card · ←"/);
+  assert.match(ui, /data-shortcut-hint="Next card · →"/);
+  assert.doesNotMatch(ui, /aria-keyshortcuts="Enter"/);
   assert.match(ui, /Improve the actual work behind this card, not only the card wording/);
   assert.match(ui, /do not send, post, publish, merge, deploy, or contact anyone/);
   assert.match(ui, /event\.key !== "Enter" \|\| event\.shiftKey \|\| event\.nativeEvent\.isComposing/);

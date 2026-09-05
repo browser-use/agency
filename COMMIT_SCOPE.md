@@ -42,12 +42,15 @@ uses Browser Harness with real local Chrome, or an authenticated cloud browser w
 `no-ai-slop` guide and evaluator under `skills/agency/references/` were removed; Agency uses the
 standalone writing skill when installed. Both removed files remain recoverable from Git history.
 
-The original 950-line skill was shortened and consolidated into one `skills/agency/SKILL.md` with
-sections for onboarding, work, design, execution and the feed API. The four temporary reference
-files were folded into it and removed; their history remains recoverable in Git. Repeated rules
-were consolidated without removing approval or validation gates. The instructions describe the
-actual Start button, external agent requirement, absent connector wizard, blocked-to-New behavior
-and current score display.
+The skill now focuses on the operating method: learn from relevant sessions and user-written messages,
+coordinate parallel work, finish and verify artifacts, and make visual decisions fast.
+Setup, profile synchronization, connection steps and the detailed API contract live in the README.
+The separately editable `skills/agency/APPROVALS.md` defines action boundaries; personal overrides
+such as `approvals.local.md` stay ignored. There is still one Agency skill and a private user profile.
+
+Shortcut hints cover only the host's existing key bindings. No new send or merge shortcut was added.
+Topic settings now ask only for a name and description. Existing routing data is retained internally
+so editing a topic does not unfile its existing cards.
 
 ## Intentionally not committed
 
@@ -70,4 +73,6 @@ The update was prepared in a separate clean checkout. The running local app, pri
 
 ## Verification
 
-The prepared package passed a fresh install, production build and all 70 tests. A separate empty local database exercised profile sync, New Task, queue authentication, running/review/completed outcomes and Done counts. Lint reported no errors and one existing hook-dependency warning. No deployment or external customer action is part of this update.
+The earlier package passed a fresh install, production build and all 70 tests. A separate empty local database exercised profile sync, New Task, queue authentication, running/review/completed outcomes and Done counts.
+
+This follow-up passed the production build and all 74 tests, including four topic regressions using an isolated in-memory database. The skill validator and local documentation links passed. Lint reported no errors and one existing hook-dependency warning. A hover-only check in real Chrome confirmed the visible “Skip · S” hint without changing a ticket. No deployment or external customer action is part of this update.

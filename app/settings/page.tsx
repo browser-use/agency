@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Topic } from "../../lib/card-cluster";
 
-type Draft = { id?: string; label: string; hint: string; keywords: string };
+type Draft = { id?: string; label: string; hint: string };
 
 export default function SettingsPage() {
   const [dream, setDream] = useState("");
@@ -67,7 +67,7 @@ export default function SettingsPage() {
       <section className="settings-block">
         <div className="settings-head">
           <h2>Topics</h2>
-          <p>The filters on the left. A card lands in the first topic whose keywords match its category or headline; unmatched cards show only under All. Agents can add topics too.</p>
+          <p>Name a topic and describe what belongs there. Agency uses this to organize new cards. Existing cards stay in their topics.</p>
         </div>
         <ul className="settings-topics">
           {topics.map((t) => (
@@ -75,10 +75,9 @@ export default function SettingsPage() {
               <div>
                 <strong>{t.label}</strong>
                 <span>{t.hint || "no description"}</span>
-                <small>{t.keywords.slice(0, 8).join(" · ")}{t.keywords.length > 8 ? ` · +${t.keywords.length - 8}` : ""}</small>
               </div>
               <div className="settings-row-actions">
-                <button onClick={() => setEditing({ id: t.id, label: t.label, hint: t.hint, keywords: t.keywords.join(", ") })}>Edit</button>
+                <button onClick={() => setEditing({ id: t.id, label: t.label, hint: t.hint })}>Edit</button>
                 <button className="is-danger" onClick={() => void removeTopic(t.id)}>Remove</button>
               </div>
             </li>
@@ -87,15 +86,14 @@ export default function SettingsPage() {
         {editing ? (
           <div className="settings-editor">
             <label><span>Name</span><input value={editing.label} onChange={(e) => setEditing({ ...editing, label: e.target.value })} placeholder="e.g. Hiring" /></label>
-            <label><span>One line</span><input value={editing.hint} onChange={(e) => setEditing({ ...editing, hint: e.target.value })} placeholder="what belongs here" /></label>
-            <label><span>Keywords</span><input value={editing.keywords} onChange={(e) => setEditing({ ...editing, keywords: e.target.value })} placeholder="comma separated, matched against category and headline" /></label>
+            <label><span>Description</span><input value={editing.hint} onChange={(e) => setEditing({ ...editing, hint: e.target.value })} placeholder="What belongs here" maxLength={120} /></label>
             <div className="settings-actions">
               <button onClick={() => setEditing(null)}>Cancel</button>
               <button className="is-dark" disabled={!editing.label.trim() || busy} onClick={() => void saveTopic()}>{editing.id ? "Save topic" : "Add topic"}</button>
             </div>
           </div>
         ) : (
-          <div className="settings-actions"><button className="is-dark" onClick={() => setEditing({ label: "", hint: "", keywords: "" })}>Add topic</button></div>
+          <div className="settings-actions"><button className="is-dark" onClick={() => setEditing({ label: "", hint: "" })}>Add topic</button></div>
         )}
       </section>
     </main>

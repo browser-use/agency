@@ -880,34 +880,35 @@ export function Agency() {
             />
             <div className="radar-inline-actions">
               <button
-                className="is-skip"
+                className="is-skip radar-shortcut-hint"
                 disabled={feedbackSubmitting}
                 aria-keyshortcuts="S"
                 aria-label="Skip this card"
-                title="Skip · S"
+                data-shortcut-hint="Skip · S"
                 onClick={() => void submitSkip()}
               ><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none"/></svg></button>
               <button
-                className="is-improve"
+                className="is-improve radar-shortcut-hint"
                 disabled={jobInFlight || feedbackSubmitting}
                 aria-keyshortcuts="I"
                 onClick={() => void submitImprove()}
-                title="Shortcut: I · ask Agency to improve the finished work without more instructions"
+                aria-label={improveLabel(active)}
+                data-shortcut-hint={`${improveLabel(active)} · I`}
               ><span aria-hidden="true">✦</span> {improveLabel(active)}</button>
               <button
-                className="is-send"
+                className="is-send radar-shortcut-hint"
                 disabled={jobInFlight || feedbackSubmitting || !feedback.trim()}
                 aria-label="Send"
-                title="Send · Enter"
+                data-shortcut-hint="Send · Enter in feedback"
                 onClick={() => void submitFeedback()}
               ><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></button>
             </div>
           </section>
 
           <div className="radar-next">
-            <button onClick={() => move(-1)} aria-label="Previous card">← Back</button>
+            <button className="radar-shortcut-hint" data-shortcut-hint="Previous card · ←" data-shortcut-side="start" aria-keyshortcuts="ArrowLeft" onClick={() => move(-1)} aria-label="Previous card">← Back</button>
             <span>{selectedIndex >= 0 ? `${activeIndex + 1} of ${visibleIdeas.length}` : `Pinned · ${visibleIdeas.length} ${view}`}</span>
-            <button onClick={() => move(1)} aria-label="Next card">Next →</button>
+            <button className="radar-shortcut-hint" data-shortcut-hint="Next card · →" aria-keyshortcuts="ArrowRight" onClick={() => move(1)} aria-label="Next card">Next →</button>
           </div>
         </section>
       ) : (
