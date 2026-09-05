@@ -14,9 +14,9 @@ Start agency. Create a me.md file and make the first 10 suggestions.
 
 <br><br>
 
-![Agency running on localhost, showing an example bug-fix card with before and after views and one Merge button](docs/readme/agency-localhost.png)
+![Agency on localhost: a mobile pricing bug, before-and-after screenshots, and one Merge fix button](docs/readme/agency-localhost.png)
 
-*Actual localhost app. Fictional example data; no real customer reports or PR.*
+*Actual localhost app. Sample cards, points and reports. Before/after screenshots show a fictional pricing page; no real PR.*
 
 <br>
 
