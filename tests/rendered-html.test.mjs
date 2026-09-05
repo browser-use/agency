@@ -15,12 +15,14 @@ async function render() {
   );
 }
 
-test("server-renders the private growth radar", async () => {
+test("server-renders the private Agency workspace", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>Growth Radar<\/title>/i);
+  assert.match(html, /<title>Agency<\/title>/i);
+  assert.match(html, /A private workspace for finished work, evidence and decisions\./);
+  assert.doesNotMatch(html, /Growth Radar/i);
   assert.match(html, /Opening Agency/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
 });
@@ -31,15 +33,15 @@ test("removes starter-only files and metadata", async () => {
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /GrowthRadar/);
-  assert.match(layout, /title: "Growth Radar"/);
+  assert.match(page, /<Agency \/>/);
+  assert.match(layout, /title: "Agency"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await assert.rejects(access(new URL("app/_sites-preview/SkeletonPreview.tsx", root)));
 });
 
 test("keeps card decisions fast and actionable", async () => {
   const [ui, styles, ingest, tasks, state, action, attention, agentJobs, database] = await Promise.all([
-    readFile(new URL("../app/growth-radar.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/agency.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/api/ideas/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/tasks/route.ts", import.meta.url), "utf8"),
@@ -193,7 +195,7 @@ test("keeps card decisions fast and actionable", async () => {
 });
 
 test("keeps every card action inside the card HTML (no host dock)", async () => {
-  const source = await readFile(new URL("../app/growth-radar.tsx", import.meta.url), "utf8");
+  const source = await readFile(new URL("../app/agency.tsx", import.meta.url), "utf8");
   assert.match(source, /dock\.hidden = true/);
   assert.doesNotMatch(source, /dock\.replaceChildren\(\.\.\.decisionButtons\)/);
 });

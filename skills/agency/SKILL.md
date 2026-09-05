@@ -920,7 +920,7 @@ Store enough private agent context with each card to continue without making the
 goal, evidence, files, or prior work. Keep private source text out of the visible HTML. Deduplicate by
 the audience, problem, capability, and desired result.
 
-When the caller or automation supplies a local Growth Radar app root and base URL, use that
+When the caller or automation supplies a local Agency app root and base URL, use that
 configured app only. Do not assume those paths or services exist in a deployed worker. Write each
 card as one `.html` file plus one small metadata `.json` file in the supplied app root and push it
 with `npm run card:push -- path/to/card.json`. Read queued clicks from `GET /api/agent-jobs` at the

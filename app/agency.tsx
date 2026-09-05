@@ -340,7 +340,7 @@ function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; t
   );
 }
 
-export function GrowthRadar() {
+export function Agency() {
   const [data, setData] = useState<RadarState>(emptyState);
   const [view, setView] = useState<"new" | "working" | "done">("new");
   const [cluster, setCluster] = useState<string>("all");

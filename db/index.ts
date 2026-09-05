@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 
 export function getD1() {
-  if (!env.DB) throw new Error("The local Growth Radar database is unavailable.");
+  if (!env.DB) throw new Error("The local Agency database is unavailable.");
   return env.DB;
 }
 

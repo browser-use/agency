@@ -1,5 +1,5 @@
-import { GrowthRadar } from "./growth-radar";
+import { Agency } from "./agency";
 
 export default function Home() {
-  return <GrowthRadar />;
+  return <Agency />;
 }

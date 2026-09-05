@@ -1,12 +1,12 @@
 # What is in this repository
 
-This September 5, 2026 update preserves the existing Git history and packages the current local Agency app for teammates. The repository was transferred from the original personal owner to `browser-use/growth-radar`, then renamed to `browser-use/agency`, without changing its private visibility.
+This September 5, 2026 update preserves the existing Git history and packages the current local Agency app for teammates. The repository was transferred from the original personal owner into the Browser Use organization and renamed to `browser-use/agency`, without changing its private visibility.
 
 ## Already on GitHub before this update
 
 Remote `main` ended at `f1182d8` (`Merge me.md and the dream into one document`). It contained:
 
-- The Growth Radar website, responsive styles, card renderer and action controls.
+- The Agency website, responsive styles, card renderer and action controls.
 - New, Working and Done views, editable topics, Settings and the stats page.
 - Job queue routes, full per-card note history and explicit completion outcomes.
 - Decision timing, estimated review effort, sorting and keyboard navigation.

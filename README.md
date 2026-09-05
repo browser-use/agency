@@ -1,4 +1,4 @@
-# Agency · Growth Radar
+# Agency
 
 A local review desk for agent work. See the result, evidence and proposed action in one card; approve it or send feedback without opening a pile of tabs.
 
