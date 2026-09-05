@@ -60,8 +60,10 @@ Topic settings now ask only for a name and description. Existing routing data is
 so editing a topic does not unfile its existing cards.
 
 The README opens with a copyable startup prompt and a real Chrome screenshot of an isolated
-localhost app. The screenshot and its HTML fixture under `docs/readme/` use explicitly fictional
-reports and an inactive example Merge button. They contain no real ticket or customer data.
+localhost app. The screenshot and its HTML fixtures under `docs/readme/` use explicitly fictional
+reports, queue counts and points, plus an inactive example Merge button. The mobile pricing
+comparison consists of real browser captures of the same fictional page at the same viewport,
+before and after one CSS rule. They contain no real ticket or customer data.
 
 ## Intentionally not committed
 
