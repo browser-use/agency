@@ -9,8 +9,8 @@ This snapshot includes the current card design system, fixed action dock, inline
 Requires Node.js 22.13 or later and npm. Install dependencies from the lockfile:
 
 ```sh
-git clone https://github.com/browser-use/growth-radar.git
-cd growth-radar
+git clone https://github.com/browser-use/agency.git
+cd agency
 npm ci
 npm run dev -- --hostname localhost --port 3100
 ```

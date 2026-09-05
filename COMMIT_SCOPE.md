@@ -1,6 +1,6 @@
 # What is in this repository
 
-This September 5, 2026 update preserves the existing Git history and packages the current local Agency app for teammates. The repository was transferred from the original personal owner to `browser-use/growth-radar` without changing its private visibility.
+This September 5, 2026 update preserves the existing Git history and packages the current local Agency app for teammates. The repository was transferred from the original personal owner to `browser-use/growth-radar`, then renamed to `browser-use/agency`, without changing its private visibility.
 
 ## Already on GitHub before this update
 
