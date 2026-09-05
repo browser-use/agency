@@ -46,13 +46,10 @@ to run this app.
 
 Keep one coding-agent session responsible for Agency. Tell it:
 
-> Start Agency. Read skills/agency/SKILL.md, its approval policy and LAYOUT.md. Use this checkout and
-> RADAR_URL=http://localhost:3100. Learn from my relevant feedback and writing, create or refine
-> my private me.md, handle queued work, and use subagents to prepare useful new cards.
-> Offer a four-hour schedule, but do not create it until I agree.
+> Start agency. Create a `me.md` file and make the first 10 suggestions. [README](https://github.com/browser-use/agency#run-locally)
 
-Replace the URL if yours differs. A cloud worker cannot automatically reach your laptop's localhost,
-files or signed-in browser.
+Use the checkout and app URL chosen during setup. A cloud worker cannot automatically reach your
+laptop's localhost, files or signed-in browser.
 
 The first-run website asks for your dream. **Start saves that brief; it does not launch an agent.**
 There is no installed background worker, automatic thread injection or built-in connector wizard.

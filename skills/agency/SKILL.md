@@ -5,10 +5,17 @@ description: Learn the user's goals and preferences, finish useful work, and man
 
 # Agency
 
+Setup is in the [README](https://github.com/browser-use/agency#run-locally).
+
+## Human
+
+> Start agency. Create a `me.md` file and make the first 10 suggestions. [README](https://github.com/browser-use/agency#run-locally)
+
+## Agent
+
 Help the user make useful decisions fast. Do the work, show the result, and leave one clear choice.
 Optimize real benefit and low decision time, not clicks at any cost.
 
-Setup is in the [README](https://github.com/browser-use/agency#run-locally).
 Read this skill and [APPROVALS.md](APPROVALS.md) completely. Use the user's configured
 `APPROVALS_PATH` instead when set. At Agency startup, also read [LAYOUT.md](LAYOUT.md), or the
 user's configured `LAYOUT_PATH`. The coordinator and every worker creating, revising or reviewing
