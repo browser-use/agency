@@ -1,7 +1,26 @@
 # Agency
 
-A local desk for work your agent has finished. See the result, evidence and exact action.
-Click once, move to the next ticket, and let the agent handle the rest.
+<br>
+
+## Human
+
+Copy this into your coding agent:
+
+```text
+Start agency. Create a me.md file and make the first 10 suggestions.
+```
+
+[Setup instructions ↓](#run-locally)
+
+<br><br>
+
+![Agency running on localhost, showing an example bug-fix card with before and after views and one Merge button](docs/readme/agency-localhost.png)
+
+*Actual localhost app. Fictional example data; no real customer reports or PR.*
+
+<br>
+
+See the finished work. Click once. Your agent handles the rest.
 
 The package starts empty. It includes no personal profile, tickets, customer media or credentials.
 
@@ -44,9 +63,7 @@ to run this app.
 
 ## Start Agency
 
-Keep one coding-agent session responsible for Agency. Tell it:
-
-> Start agency. Create a `me.md` file and make the first 10 suggestions. [README](https://github.com/browser-use/agency#run-locally)
+Keep one coding-agent session responsible for Agency. Use the [prompt at the top](#human).
 
 Use the checkout and app URL chosen during setup. A cloud worker cannot automatically reach your
 laptop's localhost, files or signed-in browser.

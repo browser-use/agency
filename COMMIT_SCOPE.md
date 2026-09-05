@@ -59,6 +59,10 @@ Shortcut hints cover only the host's existing key bindings. No new send or merge
 Topic settings now ask only for a name and description. Existing routing data is retained internally
 so editing a topic does not unfile its existing cards.
 
+The README opens with a copyable startup prompt and a real Chrome screenshot of an isolated
+localhost app. The screenshot and its HTML fixture under `docs/readme/` use explicitly fictional
+reports and an inactive example Merge button. They contain no real ticket or customer data.
+
 ## Intentionally not committed
 
 - The local ticket database, card HTML records, decisions, job history and pending queue under `.wrangler/` or standalone database files.
