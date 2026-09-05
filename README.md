@@ -1,40 +1,83 @@
-# Growth Radar
+# Agency · Growth Radar
 
-A private Agency feed at `http://localhost:3000`.
+A local review desk for agent work. See the result, evidence and proposed action in one card; approve it or send feedback without opening a pile of tabs.
 
-Each agent writes one complete HTML card. The app owns general context, the task queue, the sandbox, and Next/Back buttons.
+This snapshot includes the current card design system, fixed action dock, inline colorful diffs, stable card focus, New Task submission feedback, queue history, decision timing and completion stats. It starts empty. No personal tickets, customer media, credentials or user profile are included.
 
-`New Task` creates a real queued agent job. The task includes the current general context, moves to Working, and leaves the user on the next New card.
+## Run locally
 
-View-only card buttons use `data-radar-action="open"`. The host adds a small `↗` mark so opening proof or a link is visibly different from starting agent work.
+Requires Node.js 22.13 or later and npm. Install dependencies from the lockfile:
 
-Every card has one always-open change box below it. Add context and press `Send`; the card moves to Working and the next New card appears immediately. Press the adjacent `Improve` button to have Agency critique and materially improve the finished work without writing instructions. Creative cards automatically use a more specific label such as `Improve post`, `Improve demo`, or `Improve design`. The host removes old card-level `Change` buttons.
-
-## Card clicks
-
-- `Do` sends the full card and button request to an agent.
-- The change box adds the user's feedback and sends it to an agent.
-- `Improve` creates a change job that upgrades the real artifact and replaces the card; it never authorizes publishing or another external action.
-- `No` removes the card and sends the reason to an agent.
-- `Open` opens the exact local artifact or source.
-
-## Decision timing
-
-Every undecided card shows a live active-time counter beside an exact `Effort 20s` prediction. Effort is the predicted number of seconds the user needs to decide. It uses the actual review surface: changed files and lines for a PR, words in an exact message, visual duration, card size, and whether the proof is clear inside the card. Expandable copy, inline visuals, and color-coded inline diffs lower effort; requiring another page raises it. The prediction is calibrated against the user's last 48 hours of active decision time without changing the RISE priority score.
-
-The app records active time to the first meaningful card action and to the final `Do`, `Change`, or `No` decision. Opening proof, expanding details, Next/Back, lane changes, context, and task actions are also recorded. Wall-time gaps over 30 minutes remain parked time, not reading time. The footer reports median accept time, median time to any action, and median estimate error.
-
-Queued work lives at `/api/agent-jobs`. The hourly Growth Radar Agency reads that queue, does the work, and pushes replacement cards.
-Running jobs use a six-hour lease. Posting `running` again renews the lease; if a worker disappears, the queue exposes the latest stale claim again without rewriting job history. The queue returns at most ten available slots and never replays an older job after a newer job exists for the same card.
-
-## Run
-
-```bash
-npm install
-npm run dev
-npm run card:push -- examples/checkout-card.json
+```sh
+git clone https://github.com/browser-use/growth-radar.git
+cd growth-radar
+npm ci
+npm run dev -- --hostname localhost --port 3100
 ```
 
-Agents must read the root Agency skill before they write a card:
+Open `http://localhost:3100`. If that port is occupied, choose another unused port and set `RADAR_URL` to the URL actually printed by the server. The local SQLite/D1 database initializes automatically under `.wrangler/`. No Cloudflare account or hosted deployment is required.
 
-`/Users/magnus/Documents/Codex/2026-08-15/hi/work/cloud-browsercode-0-1-20/backend/sandboxes/v4-worker/skills/agency/SKILL.md`
+**Keep this on loopback.** This is a trusted, single-user local app, not a multi-user service. Several routes do not require authentication. Do not bind it to `0.0.0.0`, expose it through a tunnel, or treat a private GitHub repo as access control for the running app. Card HTML is trusted agent content; only ingest work from agents you trust.
+
+## Install the Agency skill
+
+```sh
+node scripts/install-skill.mjs --codex
+# Or, for Claude Code:
+node scripts/install-skill.mjs --claude
+```
+
+The installer copies `skills/agency/` into your own skill directory. It refuses to overwrite an existing installation. You can also read the repository's `skills/agency/SKILL.md` directly from your agent session. Use your own signed-in accounts and authorized connectors; installing this repo grants no Slack, GitHub, email, browser or production access.
+
+In Settings → My dream, enter your goals, preferences, sources and boundaries. Your profile is local and ignored by Git:
+
+```sh
+export RADAR_URL=http://localhost:3100
+node scripts/sync-me.mjs --push
+```
+
+This copies the app profile to `me.md` in this checkout. Set `ME_PATH` to use another file. `--pull` copies the file into the app; no flag synchronizes the newer side; `--check` reports differences without writing.
+
+Then ask your coding agent:
+
+> Read skills/agency/SKILL.md completely. Use this checkout and RADAR_URL=http://localhost:3100. Read my profile and the live card/job history. Process queued work, then prepare evidence-backed cards with finished private work. Do not send, post, merge, deploy or contact anyone unless I explicitly approve the exact action. Do not create a schedule yet.
+
+Keep that agent session open while it works. **The website does not run an AI agent.** Buttons store durable jobs; an active agent must fetch, claim and process them. There is no automatic thread injection, installed background worker or schedule in this package. Set up a recurring run separately only if you want one.
+
+## What a click does
+
+1. New Task, Improve, feedback or an approval saves a job and its full card context.
+2. The agent reads `/api/agent-jobs`, claims a job as `running`, and performs the authorized work.
+3. It pushes a complete replacement card when review is needed, then records the job result.
+4. `ticketOutcome: completed` counts as Done. `review` returns work for another decision; `blocked` records a blocker. Skip and cosmetic improvements are not completed tickets.
+
+An explicit Send/Post/Merge button approves only its exact displayed action. Improve is not permission to publish. A job marked `done` is not necessarily a completed ticket.
+
+For local agent requests, include `x-radar-local-agent: 1`. The skill describes the card contract, deduplication and approval rules. The source routes are authoritative for the current API:
+
+- `app/api/agent-jobs/route.ts`: queue, claims and outcomes
+- `app/api/ideas/route.ts`: complete HTML card ingestion
+- `app/api/ideas/action/route.ts`: decisions and feedback
+- `app/api/state/route.ts`: cards, context, history and stats
+- `lib/agency-card-design.mjs`: reusable visual components
+
+Push a card whose JSON includes a `cardHtmlFile` path relative to that JSON file:
+
+```sh
+RADAR_URL=http://localhost:3100 npm run card:push -- path/to/card.json
+```
+
+PR cards should carry a selectable, current-head diff and relevant tests. UI changes need visual evidence. Put risk and the exact proposed action where they can be understood quickly; do not inflate impact or hide uncertainty to improve a score.
+
+## Checks and storage
+
+```sh
+npm test
+npm run lint
+```
+
+`npm test` builds the app and runs its tests. The local `.openai/hosting.json` declares only local bindings; it contains no shared hosting project. The included build helper is required by Vite even for local builds.
+
+Each checkout has its own database, profile and assets. Back these up privately if needed; never commit `.wrangler`, `me.md`, `.env*`, browser state or generated customer artifacts. Sharing this source does not share your current cards or connector credentials.
+
+See [COMMIT_SCOPE.md](COMMIT_SCOPE.md) for what was already committed, what this update adds, and what intentionally remains local.

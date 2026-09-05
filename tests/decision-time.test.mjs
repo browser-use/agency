@@ -78,7 +78,7 @@ test("does not shorten an explicit 30-minute PR review to the heuristic cap", ()
   const card = {
     headline: "Review the API-key spend PR",
     decisionEstimateMs: 1_800_000,
-    decisionEstimateReason: "Magnus estimated at least 30 minutes",
+    decisionEstimateReason: "The user estimated at least 30 minutes",
   };
   assert.equal(estimateDecisionTime(card).estimatedMs, 1_800_000);
   assert.equal(calibratedDecisionTime(card).estimatedMs, 1_800_000);

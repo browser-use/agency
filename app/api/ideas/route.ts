@@ -2,6 +2,8 @@ import { env } from "cloudflare:workers";
 import { ensureDatabase } from "../../../db";
 import { estimateDecisionTime } from "../../../lib/decision-time";
 import { calculateRiseScore, normalizeRise, type RiseBreakdown } from "../../../lib/rise";
+import { shortDashes, shortDashesHtml, shortDashesStoredContext } from "../../../lib/agency-dashes";
+import { BLOCKED_CARD_UPDATE_SQL, cardIngestMode } from "../../../lib/blocked-card";
 
 type NewCard = {
   project?: string;
@@ -19,6 +21,8 @@ type NewCard = {
   sourceUrl?: string;
   agentName?: string;
   dedupeKey?: string;
+  blockedJobId?: number;
+  expectedVersion?: number;
 };
 
 const MAX_CARD_HTML_LENGTH = 250_000;
@@ -47,17 +51,18 @@ export async function POST(request: Request) {
   const card = (await request.json()) as NewCard;
   const project = card.project?.trim() ?? "";
   const category = card.category?.trim() ?? "";
-  const headline = card.headline?.trim() ?? "";
-  const cardHtml = card.cardHtml?.trim() ?? "";
+  const headline = shortDashes(card.headline?.trim() ?? "");
+  const cardHtml = shortDashesHtml(card.cardHtml?.trim() ?? "");
   const dedupeKey = card.dedupeKey?.trim() ?? "";
   if (!project || !category || !headline || !dedupeKey || cardHtml.length < 80 || cardHtml.length > MAX_CARD_HTML_LENGTH) {
     return Response.json({ error: "Card needs project, category, headline, dedupeKey, and 80–250000 characters of HTML." }, { status: 400 });
   }
   if (unsafeHtml(cardHtml)) return Response.json({ error: "Card HTML contains an unsafe element or attribute." }, { status: 400 });
-  if (!/data-radar-action\s*=\s*["']do["']/i.test(cardHtml)) {
-    return Response.json({ error: "Every card needs a meaningful next-step button. Open or See proof does not count." }, { status: 400 });
+  const ingestMode = cardIngestMode(cardHtml, card.blockedJobId, card.expectedVersion);
+  if (!ingestMode) {
+    return Response.json({ error: "A suggestion needs a meaningful next-step button. A blocked replacement instead needs blockedJobId, expectedVersion, a data-radar-state='blocked' marker, and no Do action." }, { status: 400 });
   }
-  const context = typeof card.agentContext === "string" ? card.agentContext : JSON.stringify(card.agentContext ?? {});
+  const context = shortDashesStoredContext(typeof card.agentContext === "string" ? card.agentContext : JSON.stringify(card.agentContext ?? {}));
   if (context.length > 100_000) return Response.json({ error: "Agent context is too large." }, { status: 400 });
   const rise = normalizeRise(card.rise, card.score);
   if (!rise) {
@@ -70,9 +75,16 @@ export async function POST(request: Request) {
     cardHtml,
     agentContext: context,
     decisionEstimateMs: Number(card.effortSeconds ?? card.decisionEstimateSeconds ?? 0) * 1_000,
-    decisionEstimateReason: card.effortReason ?? card.decisionEstimateReason,
+    decisionEstimateReason: shortDashes(card.effortReason ?? card.decisionEstimateReason ?? ""),
   });
   const db = await ensureDatabase();
+  if (ingestMode === "blocked") {
+    const result = await db.prepare(BLOCKED_CARD_UPDATE_SQL)
+      .bind(headline, cardHtml, context, dedupeKey, card.expectedVersion, card.blockedJobId).first();
+    if (!result) return Response.json({ error: "Blocked replacement is stale or does not match the card's latest failed/blocked job." }, { status: 409 });
+    // Preserve status, ranking, timestamps, and the terminal blocked outcome.
+    return Response.json({ ok: true, idea: result, blocked: true }, { status: 201 });
+  }
   const result = await db.prepare("INSERT INTO ideas (project, category, headline, why_matters, impact, finished_work, primary_action, secondary_action, external_action, card_html, agent_context, score, rise_reach, rise_impact, rise_strategic_fit, rise_ease, decision_estimate_ms, decision_estimate_reason, source_label, source_url, agent_name, preview_kind, preview_title, preview_body, preview_asset, dedupe_key) VALUES (?, ?, ?, '', '', '', '', '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'html', '', '', '', ?) ON CONFLICT(dedupe_key) DO UPDATE SET project=excluded.project, category=excluded.category, headline=excluded.headline, card_html=excluded.card_html, agent_context=excluded.agent_context, score=excluded.score, rise_reach=excluded.rise_reach, rise_impact=excluded.rise_impact, rise_strategic_fit=excluded.rise_strategic_fit, rise_ease=excluded.rise_ease, decision_estimate_ms=excluded.decision_estimate_ms, decision_estimate_reason=excluded.decision_estimate_reason, source_label=excluded.source_label, source_url=excluded.source_url, agent_name=excluded.agent_name, version=ideas.version+1, status='new', created_at=CURRENT_TIMESTAMP RETURNING id, version")
     .bind(project, category, headline, cardHtml, context, score, rise.reach, rise.impact, rise.strategicFit, rise.ease, decisionEstimate.estimatedMs, decisionEstimate.reason, card.sourceLabel?.trim() ?? "", card.sourceUrl?.trim() ?? "", card.agentName?.trim() ?? "Agency", dedupeKey).first();
   // A replacement card answers a blocked job: mark that job as review so the

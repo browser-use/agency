@@ -1,11 +1,14 @@
 "use client";
 
+import { needsFallbackAction } from "../lib/blocked-card";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { cardDraftKey, cardHasChanged, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus";
+import { cardDraftKey, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus";
 import { cardShortcut } from "../lib/card-shortcut";
 import { DEFAULT_TOPICS, clusterForCard, type Topic } from "../lib/card-cluster";
 import { compareByImpact, impactPoints } from "../lib/rise";
+import { MAX_TASK_LENGTH, submitNewTask } from "../lib/task-submission";
 
 type Idea = {
   id: number;
@@ -132,7 +135,7 @@ function compareByNewest(left: Idea, right: Idea) {
   return (right.createdAt ?? "").localeCompare(left.createdAt ?? "") || right.id - left.id;
 }
 
-// Effort = the calibrated seconds Magnus needs to decide; ascending is "start with the quick ones".
+// Effort = the calibrated seconds the user needs to decide; ascending is "start with the quick ones".
 function compareByEffort(left: Idea, right: Idea) {
   return left.decisionEstimateMs - right.decisionEstimateMs || right.id - left.id;
 }
@@ -166,6 +169,7 @@ function improveLabel(idea: Idea) {
 function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; actionable: boolean; onAction: (action: CardAction) => void; onInteraction: (action: string, label: string) => void }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
+  const renderedCardIdRef = useRef<number | null>(null);
   const onActionRef = useRef(onAction);
   const onInteractionRef = useRef(onInteraction);
 
@@ -179,13 +183,22 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
     const dock = dockRef.current;
     if (!host || !dock) return;
     const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
+    const detailsState = renderedCardIdRef.current === idea.id
+      ? new Map(Array.from(root.querySelectorAll("details"), (detail) => [detail.querySelector("summary")?.textContent, detail.open]))
+      : new Map();
     root.innerHTML = `<style>:host{display:block;font-family:inherit}*{box-sizing:border-box}[data-radar-action]{min-height:44px;cursor:pointer}[data-radar-action="open"]{display:inline-flex!important;align-items:center;gap:.38em}[data-radar-action="open"]::after{content:"↗";font-size:.8em;line-height:1;opacity:.68;transform:translateY(-.08em)}.radar-fallback-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.radar-fallback-actions{padding:0 20px 20px}.radar-fallback-actions button{min-height:40px;padding:0 16px;border:1px solid #e4e1da;border-radius:999px;background:#fff;color:#16150f;font:600 14px/1 inherit;cursor:pointer}.radar-fallback-actions button:first-child{background:#16150f;color:#fff;border-color:#16150f}</style>${idea.cardHtml}`;
     root.querySelectorAll('[data-radar-action="change"], [data-radar-action="no"]').forEach((button) => button.remove());
+    root.querySelectorAll("details").forEach((detail) => {
+      const open = detailsState.get(detail.querySelector("summary")?.textContent);
+      if (open !== undefined) detail.open = open;
+    });
+    renderedCardIdRef.current = idea.id;
     root.querySelectorAll<HTMLElement>('[data-radar-action="open"]').forEach((button) => {
       if (!button.title) button.title = "Opens a link";
     });
     const missingDo = !root.querySelector('[data-radar-action="do"]');
-    if (missingDo) {
+    const explicitlyBlocked = Boolean(root.querySelector('[data-radar-state="blocked"]'));
+    if (needsFallbackAction(missingDo, explicitlyBlocked, idea.jobOutcome)) {
       const fallback = document.createElement("div");
       fallback.className = "radar-fallback-actions";
       const next = document.createElement("button");
@@ -195,7 +208,7 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
       fallback.append(next);
       root.append(fallback);
     }
-    // Every action button stays inside the card HTML (Magnus, 2026-09-02): no host-level dock.
+    // Every action button stays inside the card HTML: no host-level dock.
     dock.replaceChildren();
     dock.hidden = true;
     if (!actionable) {
@@ -230,7 +243,7 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
       root.removeEventListener("click", click);
       dock.removeEventListener("click", click);
     };
-  }, [actionable, idea.id, idea.cardHtml]);
+  }, [actionable, idea.id, idea.cardHtml, idea.jobOutcome]);
 
   return (
     <div className="radar-agent-card">
@@ -340,11 +353,14 @@ export function GrowthRadar() {
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   // Poll responses may resolve after the user has already moved to another card.
   // Keep the navigation anchor outside React's render timing so a refresh can
-  // never replace the card the user is currently reading.
+  // never select a different card from the one the user is currently reading.
   const selectedIdeaRef = useRef<Idea | null>(null);
   const [composer, setComposer] = useState<"task" | "context" | null>(null);
   const [contextDraft, setContextDraft] = useState("");
   const [taskDraft, setTaskDraft] = useState("");
+  const [taskSubmitting, setTaskSubmitting] = useState(false);
+  const taskSubmittingRef = useRef(false);
+  const [composerError, setComposerError] = useState("");
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>({});
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -392,7 +408,7 @@ export function GrowthRadar() {
     const visible = ideasForView(next.ideas, targetView, sortRef.current).filter((idea) => idea.id !== selection?.excludeId);
     setData(next);
     const anchor = selection ? selection.preferred : selectedIdeaRef.current;
-    selectIdea(keepSelectedCard(anchor, visible));
+    selectIdea(keepSelectedCard(anchor, visible, next.ideas));
     setLoading(false);
   }, [selectIdea, view]);
 
@@ -445,7 +461,6 @@ export function GrowthRadar() {
   const selectedIndex = active === null ? -1 : visibleIdeas.findIndex((idea) => idea.id === active.id);
   const activeIndex = selectedIndex >= 0 ? selectedIndex : 0;
   const latestSelected = active ? data.ideas.find((idea) => idea.id === active.id) : undefined;
-  const hasIncomingUpdate = active ? cardHasChanged(active, latestSelected) : false;
   const feedbackKey = active ? cardDraftKey(active) : "";
   const feedback = feedbackKey ? feedbackDrafts[feedbackKey] ?? "" : "";
   const activeLiveState = latestSelected ?? active;
@@ -544,7 +559,10 @@ export function GrowthRadar() {
     if (response.status === 409) {
       const tracker = attentionTrackerRef.current;
       if (tracker?.id === target.id && tracker.version === target.version) tracker.pendingActiveMs += activeMs;
-      setMessage("This card changed while you were reading. Your draft is still saved here. Show the update before sending.");
+      // A click racing a revision is not approval for the new action. Refresh
+      // the card, keep the draft, and never replay the rejected action.
+      await load();
+      setMessage("Nothing sent. Check the current card and try again. Your draft is saved.");
       return false;
     }
     if (!response.ok) {
@@ -674,42 +692,46 @@ export function GrowthRadar() {
   }, [active, composer, submitImprove, submitSkip]);
 
 
-  // One panel, one button: a task is queued if typed, and the dream is saved if it changed.
   async function submitTell() {
+    if (taskSubmittingRef.current) return;
     const task = taskDraft.trim();
     const dream = contextDraft.trim();
-    const dreamChanged = dream && dream !== (data.context?.text ?? "").trim();
-    if (dreamChanged) {
-      await fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: dream }) });
+    if (composer === "task" ? !task : !dream) return;
+    taskSubmittingRef.current = true;
+    setTaskSubmitting(true);
+    setComposerError("");
+    try {
+      if (composer === "task") {
+        const { jobId } = await submitNewTask(task);
+        const newIdeas = ideasForView(data.ideas, "new", sort);
+        const filtered = newIdeas.filter((idea) => cluster === "all" || clusterForCard(idea, data.topics) === cluster);
+        const candidates = filtered.length ? filtered : newIdeas;
+        const next = active ? nextCardAfterRemoval(active.id, candidates) ?? candidates[0] ?? null : candidates[0] ?? null;
+        if (!filtered.length) setCluster("all");
+        setTaskDraft("");
+        setComposer(null);
+        setView("new");
+        selectIdea(next);
+        setMessage(`Task queued · #${jobId}. You can keep reviewing.`);
+        // Refresh failure must not make a saved task look unsent.
+        void load("new", { preferred: next }).catch(() => undefined);
+      } else {
+        const response = await fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: dream }) });
+        if (!response.ok) {
+          const result = await response.json().catch(() => null) as { error?: string } | null;
+          throw new Error(result?.error || "Your context was not saved. Try again.");
+        }
+        setComposer(null);
+        await load();
+      }
+    } catch (error) {
+      setComposerError(error instanceof TypeError
+        ? "Could not confirm delivery. Your draft is still here; check Working before sending again."
+        : error instanceof Error ? error.message : "Could not send. Your draft is still here.");
+    } finally {
+      taskSubmittingRef.current = false;
+      setTaskSubmitting(false);
     }
-    if (task) {
-      await queueTask();
-      return;
-    }
-    setComposer(null);
-    setMessage("");
-    await load();
-  }
-
-  async function queueTask() {
-    const task = taskDraft.trim();
-    if (!task) return;
-    const response = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ task, context: contextDraft.trim() }),
-    });
-    if (!response.ok) {
-      setMessage("That task did not reach Agency. Try once more.");
-      return;
-    }
-    await response.json().catch(() => undefined);
-    setComposer(null);
-    setTaskDraft("");
-    setView("new");
-    selectIdea(null);
-    setMessage("");
-    await load("new");
   }
 
   function move(direction: number) {
@@ -736,17 +758,10 @@ export function GrowthRadar() {
     setFeedbackDrafts((current) => ({ ...current, [key]: value }));
   }
 
-  function showLatestSelected() {
-    if (!latestSelected || feedback.trim()) return;
-    recordCardInteraction(active, "update", "Show update");
-    setView(latestSelected.status);
-    selectIdea(latestSelected);
-    setMessage("");
-  }
-
   function openNewTask() {
     recordCardInteraction(active, "new_task", "New Task");
-    setTaskDraft("");
+    setMessage("");
+    setComposerError("");
     setContextDraft(data.context?.text ?? "");
     setComposer("task");
   }
@@ -762,7 +777,8 @@ export function GrowthRadar() {
             <small>Agency reads this before every wave. Say what you are aiming at, what it should keep watching (Slack channels, X, Reddit, email, repos, a customer), and what to leave alone. You can change it any time in Settings.</small>
           </header>
           <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="e.g. Browser Use becomes the default browser agent. Watch #a-customer-support, #social-mentions, X mentions of browser use, and our GitHub issues. Never send anything without asking me." />
-          <footer><div><button className="is-dark" disabled={!contextDraft.trim()} onClick={() => void submitTell()}>Start</button></div></footer>
+          {composerError && <p className="radar-task-error" role="alert">{composerError}</p>}
+          <footer><div><button className="is-dark" disabled={taskSubmitting || !contextDraft.trim()} onClick={() => void submitTell()}>{taskSubmitting ? "Saving…" : "Start"}</button></div></footer>
         </section>
       </main>
     );
@@ -794,7 +810,7 @@ export function GrowthRadar() {
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-side-actions">
-          <button className={`radar-tell${composer ? " is-open" : ""}`} onClick={() => (composer ? setComposer(null) : openNewTask())}>New task</button>
+          <button className={`radar-tell${composer ? " is-open" : ""}`} disabled={taskSubmitting} onClick={() => (composer ? setComposer(null) : openNewTask())}>New task</button>
           <Link className="radar-settings-link" href="/settings">Settings</Link>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
@@ -826,14 +842,15 @@ export function GrowthRadar() {
       </nav>
 
       {composer === "task" ? (
-        <section className="radar-task">
+        <section className="radar-task" aria-busy={taskSubmitting}>
           <label className="is-once">
             <span>New task</span>
-            <textarea value={taskDraft} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Agency carries your dream with it." />
+            <textarea value={taskDraft} disabled={taskSubmitting} maxLength={MAX_TASK_LENGTH} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Agency carries your dream with it." />
           </label>
+          {composerError && <p className="radar-task-error" role="alert">{composerError}</p>}
           <footer>
             <Link className="radar-settings-link" href="/settings">Edit my dream and topics in Settings</Link>
-            <button className="is-dark" disabled={!taskDraft.trim()} onClick={() => void submitTell()}>Send</button>
+            <button className="is-dark" disabled={taskSubmitting || !taskDraft.trim()} onClick={() => void submitTell()}>{taskSubmitting ? "Sending…" : "Send"}</button>
           </footer>
         </section>
       ) : view === "done" ? (
@@ -841,16 +858,6 @@ export function GrowthRadar() {
       ) : active ? (
         <section className="radar-workspace">
           {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}
-          {hasIncomingUpdate && (
-            <section className="radar-update-waiting" role="status">
-              <span>{feedback.trim()
-                ? "This card changed in the background. Your draft is pinned to the version you started on."
-                : "This card changed in the background. It will not replace what you are reading."}</span>
-              <button disabled={Boolean(feedback.trim())} onClick={showLatestSelected}>
-                {feedback.trim() ? "Finish draft first" : "Show update"}
-              </button>
-            </section>
-          )}
           <section className="radar-card-host">
             <AgentCard idea={active} actionable={!jobInFlight} onAction={handleCardAction} onInteraction={(action, label) => recordCardInteraction(active, action, label)} />
           </section>
@@ -897,8 +904,6 @@ export function GrowthRadar() {
             </div>
           </section>
 
-          {message && <div className="radar-message" role="status">{message}</div>}
-
           <div className="radar-next">
             <button onClick={() => move(-1)} aria-label="Previous card">← Back</button>
             <span>{selectedIndex >= 0 ? `${activeIndex + 1} of ${visibleIdeas.length}` : `Pinned · ${visibleIdeas.length} ${view}`}</span>
@@ -908,6 +913,8 @@ export function GrowthRadar() {
       ) : (
         <section className="radar-empty"><strong>{view === "new" ? "No new cards." : view === "working" ? "No agents working." : "Nothing done yet."}</strong></section>
       )}
+
+      {!composer && message && <div className="radar-message" role="status">{message}</div>}
 
       <footer className="radar-footer">
         <i /> {data.jobs.running ? `${data.jobs.running} agents working` : data.jobs.queued ? `${data.jobs.queued} queued` : "Agents ready"}

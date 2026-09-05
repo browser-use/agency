@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { cardDraftKey, cardHasChanged, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus.ts";
+import { cardDraftKey, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus.ts";
 
 test("incoming higher-scored cards never replace the selected card", () => {
   const selected = { id: 7, version: 2, status: "new", score: 60 };
@@ -9,11 +9,17 @@ test("incoming higher-scored cards never replace the selected card", () => {
   assert.equal(keepSelectedCard(selected, [incoming, selected]), selected);
 });
 
-test("a replacement version does not replace the selected snapshot", () => {
+test("a replacement version appears immediately without changing the selected ID", () => {
   const selected = { id: 7, version: 2, status: "new" };
   const replacement = { id: 7, version: 3, status: "new" };
-  assert.equal(keepSelectedCard(selected, [replacement]), selected);
-  assert.equal(cardHasChanged(selected, replacement), true);
+  assert.equal(keepSelectedCard(selected, [replacement]), replacement);
+});
+
+test("polling refreshes the selected card even when its status changes", () => {
+  const selected = { id: 7, version: 2, status: "new" };
+  const updated = { id: 7, version: 3, status: "working" };
+  const other = { id: 8, version: 1, status: "new" };
+  assert.equal(keepSelectedCard(selected, [other], [other, updated]), updated);
 });
 
 test("polling keeps the selected card pinned even if it leaves the lane", () => {
@@ -30,10 +36,11 @@ test("an action advances to the following untouched card without jumping to the 
   assert.equal(nextCardAfterRemoval(10, [cards[0]]), null);
 });
 
-test("feedback drafts are scoped to an exact card version", () => {
-  assert.equal(cardDraftKey({ id: 7, version: 2, status: "new" }), "7:2");
-  assert.notEqual(
+test("feedback stays on the same card across live revisions", () => {
+  assert.equal(cardDraftKey({ id: 7, version: 2, status: "new" }), "7");
+  assert.equal(
     cardDraftKey({ id: 7, version: 2, status: "new" }),
     cardDraftKey({ id: 7, version: 3, status: "new" }),
   );
+  assert.notEqual(cardDraftKey({ id: 7 }), cardDraftKey({ id: 8 }));
 });

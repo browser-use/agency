@@ -1,12 +1,8 @@
-export type VersionedCard = {
-  id: number;
-  version: number;
-  status: string;
-};
-
-export function keepSelectedCard<T extends { id: number }>(selected: T | null, visible: T[]): T | null {
+export function keepSelectedCard<T extends { id: number }>(selected: T | null, visible: T[], latest: T[] = visible): T | null {
   if (!selected) return visible[0] ?? null;
-  return selected;
+  // Keep identity, not an old rendering. New cards may reorder the lane,
+  // but revisions to this exact card should appear without another click.
+  return latest.find((card) => card.id === selected.id) ?? selected;
 }
 
 export function nextCardAfterRemoval<T extends { id: number }>(removedId: number, visible: T[]): T | null {
@@ -17,10 +13,6 @@ export function nextCardAfterRemoval<T extends { id: number }>(removedId: number
   return remaining[removedIndex % remaining.length];
 }
 
-export function cardDraftKey(card: VersionedCard) {
-  return `${card.id}:${card.version}`;
-}
-
-export function cardHasChanged(selected: VersionedCard, latest: VersionedCard | undefined) {
-  return Boolean(latest && (latest.version !== selected.version || latest.status !== selected.status));
+export function cardDraftKey(card: { id: number }) {
+  return String(card.id);
 }

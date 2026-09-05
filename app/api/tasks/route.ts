@@ -1,4 +1,5 @@
 import { ensureDatabase } from "../../../db";
+import { MAX_CONTEXT_LENGTH, MAX_TASK_LENGTH } from "../../../lib/task-submission";
 
 function isSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
@@ -34,8 +35,8 @@ export async function POST(request: Request) {
   const payload = (await request.json()) as { task?: string; context?: string };
   const task = payload.task?.trim() ?? "";
   const context = payload.context?.trim() ?? "";
-  if (!task || task.length > 5000) return Response.json({ error: "Task must be 1–5000 characters." }, { status: 400 });
-  if (context.length > 5000) return Response.json({ error: "Context must be at most 5000 characters." }, { status: 400 });
+  if (!task || task.length > MAX_TASK_LENGTH) return Response.json({ error: "Task must be 1–5000 characters." }, { status: 400 });
+  if (context.length > MAX_CONTEXT_LENGTH) return Response.json({ error: "Context must be at most 40000 characters." }, { status: 400 });
 
   const db = await ensureDatabase();
   const latestContext = await db.prepare("SELECT text FROM contexts ORDER BY id DESC LIMIT 1").first<{ text: string }>();

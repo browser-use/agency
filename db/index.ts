@@ -131,7 +131,7 @@ async function runMaintenance(db: ReturnType<typeof getD1>) {
       ) IS NOT NULL
   `).run();
   // Early Agency audits used the same decision fields as real user clicks. Mark
-  // those known maintenance labels once so decision timing measures Magnus.
+  // those known maintenance labels once so decision timing measures the user.
   await db.prepare(`
     UPDATE card_attention SET decision_source = 'agency'
     WHERE decision_source = 'user' AND (

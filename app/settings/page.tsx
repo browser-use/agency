@@ -56,7 +56,7 @@ export default function SettingsPage() {
       <section className="settings-block">
         <div className="settings-head">
           <h2>My dream</h2>
-          <p>My profile and my dream in one document: <code>~/Documents/Codex/2026-08-15/hi/me.md</code>. Agency reads it before every wave, and may rewrite it when I give feedback about myself or how it should work.</p>
+          <p>My profile and my dream in one document: <code>me.md</code> in this checkout, or the file set by <code>ME_PATH</code>. Agency reads it before every wave. Keep it in sync with <code>scripts/sync-me.mjs</code>.</p>
         </div>
         <textarea className="settings-dream" value={dream} onChange={(event) => setDream(event.target.value)} placeholder="What you are aiming at, what to keep monitoring, what to leave alone." />
         <div className="settings-actions">

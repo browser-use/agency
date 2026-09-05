@@ -181,8 +181,8 @@ export function buildDecisionTimeModel(samples: DecisionSample[]): DecisionTimeM
     const values = ratios[kind];
     const observed = median(values);
     if (observed === null || values.length < 3) return [kind, { factor: 1, samples: values.length }];
-    // Magnus's real decisions run ~3x the naive baselines. Let the learned factor
-    // reach that instead of clamping at 2x, and trust it after a dozen samples.
+    // Let observed decision times exceed the naive baselines while shrinking
+    // sparse samples toward the neutral starting factor.
     const weight = values.length / (values.length + 8);
     const factor = 1 + (clamp(observed, 0.5, 5) - 1) * weight;
     return [kind, { factor, samples: values.length }];

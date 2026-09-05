@@ -8,10 +8,14 @@
 //   node scripts/sync-me.mjs --check  # report only, exit 1 if they differ
 
 import { readFile, writeFile, stat } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
-const ME = process.env.ME_PATH ?? "/Users/magnus/Documents/Codex/2026-08-15/hi/me.md";
+const ME = process.env.ME_PATH ?? fileURLToPath(new URL("../me.md", import.meta.url));
 const RADAR = process.env.RADAR_URL ?? "http://localhost:3100";
 const mode = process.argv[2] ?? "--sync";
+if (!["--sync", "--pull", "--push", "--check"].includes(mode)) {
+  throw new Error("Use --pull (file to app), --push (app to file), --check, or no flag (newest wins).");
+}
 
 async function readApp() {
   const response = await fetch(`${RADAR}/api/state?view=working&light=1`, { headers: { "x-radar-local-agent": "1" } });
@@ -20,7 +24,8 @@ async function readApp() {
   const context = state.context;
   if (!context) return { text: "", at: 0 };
   // SQLite CURRENT_TIMESTAMP is UTC without a zone marker.
-  return { text: context.text ?? "", at: Date.parse(`${context.createdAt.replace(" ", "T")}Z`) || 0 };
+  const timestamp = String(context.createdAt ?? "").replace(" ", "T");
+  return { text: context.text ?? "", at: Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(timestamp) ? timestamp : `${timestamp}Z`) || 0 };
 }
 
 async function writeApp(text) {
@@ -33,11 +38,16 @@ async function writeApp(text) {
 }
 
 const [file, app] = await Promise.all([
-  Promise.all([readFile(ME, "utf8"), stat(ME)]).then(([text, info]) => ({ text, at: info.mtimeMs })),
+  Promise.all([readFile(ME, "utf8"), stat(ME)]).then(([text, info]) => ({ text, at: info.mtimeMs })).catch((error) => {
+    if (error.code !== "ENOENT") throw error;
+    return { text: "", at: 0, missing: true };
+  }),
   readApp(),
 ]);
 
-if (file.text.trim() === app.text.trim()) {
+if (file.missing && mode === "--pull") throw new Error(`Profile does not exist: ${ME}. Add your dream in Settings and run --push, or create the file first.`);
+if (file.missing && !app.text.trim()) throw new Error("No profile yet. Add your dream in Settings, then run --push.");
+if (!file.missing && file.text.trim() === app.text.trim()) {
   console.log("in sync");
   process.exit(0);
 }
