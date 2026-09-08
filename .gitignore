@@ -1,4 +1,5 @@
 /node_modules/
+/node_modules
 /.next/
 /.vinext/
 /dist/
@@ -31,3 +32,8 @@
 /outputs/
 /public/agent-assets/
 /public/previews/
+/.linear-migration.json
+/.pilot/
+/public/media/
+/public/screenshots/
+/public/videos/

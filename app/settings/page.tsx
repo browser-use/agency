@@ -12,6 +12,11 @@ export default function SettingsPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function save(request: Promise<Response>) {
+    const response=await request;
+    if(!response.ok){const data=await response.json().catch(()=>null);throw new Error(data?.error||"Not saved. Your changes are still here.");}
+  }
 
   function load() {
     return Promise.all([
@@ -28,20 +33,20 @@ export default function SettingsPage() {
     const text = dream.trim();
     if (!text || text === savedDream.trim()) return;
     setBusy(true);
-    await fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
-    setSavedDream(text); setBusy(false);
+    try { await save(fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) })); setSavedDream(text);setError(""); }
+    catch(error){setError(error instanceof Error?error.message:"Not saved");}finally{setBusy(false);}
   }
   async function saveTopic() {
     if (!editing || !editing.label.trim()) return;
     setBusy(true);
-    await fetch("/api/topics", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(editing) });
-    setEditing(null); await load(); setBusy(false);
+    try { await save(fetch("/api/topics", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(editing) }));setEditing(null);await load();setError(""); }
+    catch(error){setError(error instanceof Error?error.message:"Not saved");}finally{setBusy(false);}
   }
   async function removeTopic(id: string) {
     if (!window.confirm("Remove this topic? Its cards stay and show under All until they are refiled.")) return;
     setBusy(true);
-    await fetch(`/api/topics?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-    await load(); setBusy(false);
+    try {await save(fetch(`/api/topics?id=${encodeURIComponent(id)}`, { method: "DELETE" }));await load();setError("");}
+    catch(error){setError(error instanceof Error?error.message:"Not saved");}finally{setBusy(false);}
   }
 
   const dreamChanged = dream.trim() !== savedDream.trim();
@@ -52,11 +57,12 @@ export default function SettingsPage() {
         <h1 className="settings-title">Settings</h1>
         <span />
       </header>
+      {error && <p role="alert">{error}</p>}
 
       <section className="settings-block">
         <div className="settings-head">
           <h2>My dream</h2>
-          <p>My profile and my dream in one document: <code>me.md</code> in this checkout, or the file set by <code>ME_PATH</code>. Agency reads it before every wave. Keep it in sync with <code>scripts/sync-me.mjs</code>.</p>
+          <p>Your private profile stays on this computer. Agency reads it before each wave. It is not shared with Linear.</p>
         </div>
         <textarea className="settings-dream" value={dream} onChange={(event) => setDream(event.target.value)} placeholder="What you are aiming at, what to keep monitoring, what to leave alone." />
         <div className="settings-actions">

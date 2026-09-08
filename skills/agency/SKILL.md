@@ -164,6 +164,15 @@ Never hide risks or exaggerate outcomes to improve acceptance.
 
 ## Feed essentials
 
+When the user chooses Linear, follow the [Linear setup](https://github.com/browser-use/agency#linear-backed-agency)
+in the README and use the authenticated CLI. Keep one issue per stable ticket; revisions belong to
+its history. Native owner, state and estimate are shared; the private profile and visual layout stay
+local. Assign new work to the configured user, preserve explicit hand-offs, and never assign on view.
+Use native Linear estimates in this mode; keep decision timing separate.
+Do/feedback moves to In Progress, Skip to Canceled, and only a verified result earns completion.
+An imported job or a native state change is not a new approval. Reconcile imported unfinished work
+against its full history and live target before continuing. Run one execution coordinator per project.
+
 Read the [agent API](https://github.com/browser-use/agency#agent-api) in the README before using it.
 Process the full stored context; preserve the canonical `dedupeKey` and coordinate replacements.
 Ordinary ingestion resets a card to New, so never use it to cosmetically reopen Done or Skip.

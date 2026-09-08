@@ -4,13 +4,16 @@ import test from "node:test";
 import ts from "typescript";
 import { MAX_CONTEXT_LENGTH, MAX_TASK_LENGTH, submitNewTask } from "../lib/task-submission.ts";
 
-test("new tasks send only the task; the server supplies the latest context", async () => {
+test("new tasks send task and retry identity, never a stale profile", async () => {
   let calls = 0;
   const result = await submitNewTask("  Fix the login bug  ", async (url, options) => {
     calls++;
     assert.equal(url, "/api/tasks");
     assert.equal(options.method, "POST");
-    assert.deepEqual(JSON.parse(options.body), { task: "Fix the login bug" });
+    const body=JSON.parse(options.body);
+    assert.equal(body.task,"Fix the login bug");
+    assert.match(body.requestId,/^[0-9a-f-]{36}$/);
+    assert.equal(body.context,undefined);
     return Response.json({ ok: true, ideaId: 81, jobId: 95 }, { status: 201 });
   });
   assert.deepEqual(result, { ideaId: 81, jobId: 95 });

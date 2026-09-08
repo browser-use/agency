@@ -67,9 +67,9 @@ test("keeps card decisions fast and actionable", async () => {
   assert.doesNotMatch(ui, /\+ New Context/);
   assert.match(ui, /setView\("new"\)/);
   assert.doesNotMatch(ui, /setView\("working"\)/);
-  assert.match(ui, /const jobInFlight = activeJob\?\.status === "queued" \|\| activeJob\?\.status === "running"/);
+  assert.match(ui, /const jobInFlight = !importedJobPaused && \(activeJob\?\.status === "queued" \|\| activeJob\?\.status === "running"\)/);
   assert.match(ui, /const activeLiveState = latestSelected \?\? active/);
-  assert.match(ui, /actionable=\{!jobInFlight\}/);
+  assert.match(ui, /actionable=\{!decisionsDisabled\}/);
   assert.doesNotMatch(ui, /disabled=\{view === "working"/);
   assert.match(ui, /missingDo/);
   assert.doesNotMatch(ui, /missingChange|changeRequest/);

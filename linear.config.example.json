@@ -1,0 +1,33 @@
+{
+  "workspace": "YOUR_WORKSPACE_SLUG",
+  "organizationId": "YOUR_ORGANIZATION_UUID",
+  "userId": "YOUR_LINEAR_USER_UUID",
+  "teamId": "YOUR_TEAM_UUID",
+  "projectId": "YOUR_AGENCY_PROJECT_UUID",
+  "projectUrl": "https://linear.app/YOUR_WORKSPACE/project/YOUR_PROJECT",
+  "sourceNamespace": "YOUR_STABLE_SOURCE_NAME",
+  "database": "/absolute/path/to/existing/local.sqlite",
+  "publicDir": "/absolute/path/to/existing/public",
+  "output": "/absolute/path/to/agency/.pilot/full-migration",
+  "mePath": "/absolute/path/to/private/me.md",
+  "appUrl": "http://localhost:3100",
+  "bridgePort": 3130,
+  "enableWrites": false,
+  "members": [{ "id": "YOUR_LINEAR_USER_UUID", "name": "Your name" }],
+  "states": {
+    "new": "TODO_UUID",
+    "working": "IN_PROGRESS_UUID",
+    "done": "DONE_UUID",
+    "rejected": "CANCELED_UUID",
+    "later": "BACKLOG_UUID"
+  },
+  "labels": {
+    "Growth": "GROWTH_LABEL_UUID",
+    "Support": "SUPPORT_LABEL_UUID",
+    "Fixes": "FIXES_LABEL_UUID",
+    "Product": "PRODUCT_LABEL_UUID"
+  },
+  "excludeIdeas": [],
+  "excludeJobs": [],
+  "excludeFeedback": []
+}

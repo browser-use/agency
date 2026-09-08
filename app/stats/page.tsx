@@ -94,7 +94,7 @@ export default function StatsPage() {
         <div>
           <span className="stats-eyebrow">Today</span>
           <b>{(todayRow?.points ?? 0).toLocaleString("en-US")}</b>
-          <span className="stats-sub">points from {todayRow ? todayRow.do + todayRow.change + todayRow.no : 0} decisions</span>
+          <span className="stats-sub">points from verified work · {todayRow ? todayRow.do + todayRow.change + todayRow.no : 0} decisions today</span>
         </div>
         <div>
           <span className="stats-eyebrow">Last {stats.days} days</span>

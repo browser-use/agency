@@ -11,6 +11,13 @@ import { compareByImpact, impactPoints } from "../lib/rise";
 import { MAX_TASK_LENGTH, submitNewTask } from "../lib/task-submission";
 
 type Idea = {
+  linearId?: string;
+  linearIdentifier?: string;
+  linearUrl?: string;
+  linearEstimate?: number | null;
+  importedJobPaused?: boolean;
+  assigneeId?: string;
+  assigneeName?: string;
   id: number;
   version: number;
   project: string;
@@ -43,6 +50,7 @@ type Idea = {
 };
 
 type RadarState = {
+  linear?: {projectUrl:string;members:{id:string;name:string}[];syncedAt:string|null;syncError:string;imported:number;total:number;executionPaused:boolean};
   context: { text: string; createdAt: string } | null;
   topics: Topic[];
   ideas: Idea[];
@@ -135,9 +143,11 @@ function compareByNewest(left: Idea, right: Idea) {
   return (right.createdAt ?? "").localeCompare(left.createdAt ?? "") || right.id - left.id;
 }
 
-// Effort = the calibrated seconds the user needs to decide; ascending is "start with the quick ones".
+// Effort = the calibrated seconds Magnus needs to decide; ascending is "start with the quick ones".
 function compareByEffort(left: Idea, right: Idea) {
-  return left.decisionEstimateMs - right.decisionEstimateMs || right.id - left.id;
+  const a = left.linearId ? left.linearEstimate ?? Infinity : left.decisionEstimateMs;
+  const b = right.linearId ? right.linearEstimate ?? Infinity : right.decisionEstimateMs;
+  return a - b || right.id - left.id;
 }
 
 function ideasForView(ideas: Idea[], view: Idea["status"], sort: SortMode = DEFAULT_SORT) {
@@ -208,7 +218,7 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
       fallback.append(next);
       root.append(fallback);
     }
-    // Every action button stays inside the card HTML: no host-level dock.
+    // Every action button stays inside the card HTML (Magnus, 2026-09-02): no host-level dock.
     dock.replaceChildren();
     dock.hidden = true;
     if (!actionable) {
@@ -341,6 +351,7 @@ function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; t
 }
 
 export function Agency() {
+  const [owner, setOwner] = useState("");
   const [data, setData] = useState<RadarState>(emptyState);
   const [view, setView] = useState<"new" | "working" | "done">("new");
   const [cluster, setCluster] = useState<string>("all");
@@ -384,6 +395,7 @@ export function Agency() {
     const requestId = ++loadRequestRef.current;
     const stateUrl = new URL("/api/state", window.location.origin);
     stateUrl.searchParams.set("view", targetView);
+    if (owner) stateUrl.searchParams.set("owner", owner);
     if (targetView === "done") stateUrl.searchParams.set("light", "1");
     const deepLinkedCardId = Number(new URLSearchParams(window.location.search).get("card"));
     const requestedCardId = selection?.preferred?.id
@@ -391,6 +403,7 @@ export function Agency() {
       ?? (!deepLinkHandledRef.current && Number.isInteger(deepLinkedCardId) && deepLinkedCardId > 0 ? deepLinkedCardId : null);
     if (requestedCardId) stateUrl.searchParams.set("card", String(requestedCardId));
     const response = await fetch(stateUrl, { cache: "no-store" });
+    if (!response.ok) { setMessage("Linear is unavailable. Your card and draft are kept."); setLoading(false); return; }
     const next = (await response.json()) as RadarState;
     if (requestId !== loadRequestRef.current) return;
     if (!deepLinkHandledRef.current) {
@@ -410,7 +423,7 @@ export function Agency() {
     const anchor = selection ? selection.preferred : selectedIdeaRef.current;
     selectIdea(keepSelectedCard(anchor, visible, next.ideas));
     setLoading(false);
-  }, [selectIdea, view]);
+  }, [selectIdea, view, owner]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -471,7 +484,10 @@ export function Agency() {
     result: activeLiveState.jobResult?.trim() ?? "",
     label: activeLiveState.jobLabel?.trim() ?? "",
   } : null;
-  const jobInFlight = activeJob?.status === "queued" || activeJob?.status === "running";
+  const migrationPaused = Boolean(data.linear?.executionPaused);
+  const importedJobPaused = Boolean(activeLiveState?.importedJobPaused);
+  const jobInFlight = !importedJobPaused && (activeJob?.status === "queued" || activeJob?.status === "running");
+  const decisionsDisabled = jobInFlight || migrationPaused;
   const attentionIdeaId = active?.id ?? null;
   const attentionIdeaVersion = active?.version ?? null;
   const attentionDecisionAction = active?.decisionAction ?? null;
@@ -550,6 +566,7 @@ export function Agency() {
   }, [takePendingActiveMs]);
 
   const sendToAgent = useCallback(async (target: Idea, action: "do" | "change" | "no", label: string, prompt = "", note = "") => {
+    if(data.linear?.executionPaused){setMessage("Migration verification is running. Your draft stays here.");return false;}
     const activeMs = takePendingActiveMs(target.id, target.version);
     const response = await fetch("/api/ideas/action", {
       method: "POST",
@@ -587,7 +604,7 @@ export function Agency() {
     selectIdea(nextSelection);
     await load(targetView, { preferred: nextSelection, excludeId: target.id });
     return true;
-  }, [data.ideas, load, selectIdea, takePendingActiveMs, view, visibleIdeas]);
+  }, [data.ideas, data.linear?.executionPaused, load, selectIdea, takePendingActiveMs, view, visibleIdeas]);
 
   const handleCardAction = useCallback((payload: CardAction) => {
       if (!active) return;
@@ -797,7 +814,7 @@ export function Agency() {
           {active && composer === null && view !== "done" && (
             <span className="radar-card-chips" title={`This card: score ${impactPoints(active)} of 10, about ${formatDuration(active.decisionEstimateMs)} to decide.`}>
               <span><b>{impactPoints(active)}</b><i>score</i></span>
-              <span><b>{formatDuration(active.decisionEstimateMs)}</b><i>effort</i></span>
+              {data.linear ? <span title="Native Linear estimate. Unset estimates show a dash."><b>{active.linearEstimate ?? "—"}</b><i>estimate</i></span> : <span title={active.decisionEstimateReason}><b>{Math.round(active.decisionEstimateMs / 1000)}</b><i>effort</i></span>}
             </span>
           )}
           <Link className="radar-scores" href="/stats" title="Points today and all time. Opens stats.">
@@ -809,6 +826,7 @@ export function Agency() {
 
 
       <nav className="radar-clusters" aria-label="Filter by kind of work">
+        {data.linear && <label style={{display:"grid",gap:6,fontSize:14,order:0,marginBottom:8}}>Show<select aria-label="Show tickets owned by" value={owner} onChange={event=>{selectIdea(null);setOwner(event.target.value);}} style={{padding:8,border:"1px solid var(--line)",borderRadius:8,background:"var(--panel)"}}><option value="">Everyone</option>{data.linear.members.map(member=><option value={member.id} key={member.id}>{member.name}</option>)}</select></label>}
         <div className="radar-side-actions">
           <button className={`radar-tell${composer ? " is-open" : ""}`} disabled={taskSubmitting} onClick={() => (composer ? setComposer(null) : openNewTask())}>New task</button>
           <Link className="radar-settings-link" href="/settings">Settings</Link>
@@ -857,9 +875,12 @@ export function Agency() {
         <DoneList ideas={visibleIdeas} topics={data.topics} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />
       ) : active ? (
         <section className="radar-workspace">
+          {data.linear && <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",fontSize:13,color:"var(--ink-2)"}}><a href={active.linearUrl || data.linear.projectUrl} target="_blank" rel="noreferrer">{active.linearIdentifier || `Importing #${active.id}`} ↗</a><select aria-label="Ticket owner" disabled={data.linear.executionPaused || !active.linearId} value={active.assigneeId || ""} onChange={async event=>{const response=await fetch("/api/linear/assignee",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:active.id,assigneeId:event.target.value})});if(response.ok)await load();else setMessage("Assignment was not confirmed. The current owner is unchanged.");}} style={{marginLeft:"auto",border:"1px solid var(--line)",borderRadius:7,padding:"4px 8px",background:"transparent"}}>{data.linear.members.map(member=><option value={member.id} key={member.id}>{member.name}</option>)}</select></div>}
           {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}
+          {importedJobPaused && <span className="radar-working" role="status">Previous request preserved. Agency must check its live status before continuing.</span>}
+          {migrationPaused && <span className="radar-working" role="status">Migration check in progress. Decisions are paused.</span>}
           <section className="radar-card-host">
-            <AgentCard idea={active} actionable={!jobInFlight} onAction={handleCardAction} onInteraction={(action, label) => recordCardInteraction(active, action, label)} />
+            <AgentCard idea={active} actionable={!decisionsDisabled} onAction={handleCardAction} onInteraction={(action, label) => recordCardInteraction(active, action, label)} />
           </section>
 
           <section className="radar-inline-change">
@@ -867,7 +888,7 @@ export function Agency() {
               aria-label="Change this card"
               value={feedback}
               rows={1}
-              disabled={jobInFlight || feedbackSubmitting}
+              disabled={decisionsDisabled || feedbackSubmitting}
               onChange={(event) => { updateFeedback(event.target.value); event.target.style.height = "auto"; event.target.style.height = `${Math.min(event.target.scrollHeight, 180)}px`; }}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
@@ -881,7 +902,7 @@ export function Agency() {
             <div className="radar-inline-actions">
               <button
                 className="is-skip radar-shortcut-hint"
-                disabled={feedbackSubmitting}
+                disabled={feedbackSubmitting || migrationPaused}
                 aria-keyshortcuts="S"
                 aria-label="Skip this card"
                 data-shortcut-hint="Skip · S"
@@ -889,7 +910,7 @@ export function Agency() {
               ><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none"/></svg></button>
               <button
                 className="is-improve radar-shortcut-hint"
-                disabled={jobInFlight || feedbackSubmitting}
+                disabled={decisionsDisabled || feedbackSubmitting}
                 aria-keyshortcuts="I"
                 onClick={() => void submitImprove()}
                 aria-label={improveLabel(active)}
@@ -897,7 +918,7 @@ export function Agency() {
               ><span aria-hidden="true">✦</span> {improveLabel(active)}</button>
               <button
                 className="is-send radar-shortcut-hint"
-                disabled={jobInFlight || feedbackSubmitting || !feedback.trim()}
+                disabled={decisionsDisabled || feedbackSubmitting || !feedback.trim()}
                 aria-label="Send"
                 data-shortcut-hint="Send · Enter in feedback"
                 onClick={() => void submitFeedback()}
@@ -918,6 +939,7 @@ export function Agency() {
       {!composer && message && <div className="radar-message" role="status">{message}</div>}
 
       <footer className="radar-footer">
+        {data.linear && <><a href={data.linear.projectUrl} target="_blank" rel="noreferrer">Linear</a> · {data.linear.imported}/{data.linear.total} imported · {data.linear.executionPaused ? "Migration in progress. Decisions paused" : data.linear.syncError ? "Sync paused; showing saved state" : "CLI connected"} · </>}
         <i /> {data.jobs.running ? `${data.jobs.running} agents working` : data.jobs.queued ? `${data.jobs.queued} queued` : "Agents ready"}
         {data.decisionMetrics.tracked > 0 && <> · you decide in {formatDuration(data.decisionMetrics.medianAcceptedActiveMs)} on average</>}
       </footer>
