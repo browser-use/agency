@@ -31,3 +31,9 @@
 /outputs/
 /public/agent-assets/
 /public/previews/
+/.agents/skills/design/
+/.linear-migration.json
+/.pilot/
+/public/media/
+/public/screenshots/
+/public/videos/
