@@ -24,96 +24,6 @@ See the finished work. Click once. Your agent handles the rest.
 
 The package starts empty. It includes no personal profile, tickets, customer media or credentials.
 
-## Linear-backed Agency
-
-Use Linear for shared tickets and keep this localhost UI for visual decisions. Use a separate
-**Agency project** in an existing team. Assign imports and new tickets to the configured user;
-hand-offs change the native assignee. Growth, Support, Fixes and Product can be team labels.
-
-```text
-Linear: issues, owners, states, estimates, committed card revisions and decisions
-                         ↕ Linear CLI
-localhost: the same cards, diffs, media, feedback and next-card navigation
-private files: me.md, topic display preferences, local cache and pending timer samples
-```
-
-This optional adapter runs locally through `@schpet/linear-cli@2.6.0`. The CLI stores credentials
-in Keychain. Do not put a token in browser code or in Git. The default D1 backend still works
-when the adapter is not configured. This is not a hosted multi-user server.
-
-### Set up or migrate
-
-1. Run `npx --yes @schpet/linear-cli@2.6.0 auth login` for the intended workspace. Verify the
-   identity with `auth whoami`. Use CLI help to resolve the project, team, user, state and label IDs.
-   Do not change an existing team's estimate settings just for Agency.
-2. Copy `linear.config.example.json` to ignored `.linear-migration.json`. Set absolute local paths,
-   identity, project, members and state mappings. Keep `enableWrites: false` until verification.
-   Fill any explicit privacy exclusions **before exporting**. Keep the source namespace stable.
-3. Pause other ticket writers, then run:
-
-   ```sh
-   node scripts/linear-migrate.mjs .linear-migration.json export
-   node scripts/linear-migrate.mjs .linear-migration.json import
-   node scripts/linear-migrate.mjs .linear-migration.json verify
-   ```
-
-   Export reads the original database without changing it. Import uses deterministic issue IDs,
-   so an uncertain request can be reconciled without duplicate tickets. Never rerun export over
-   an active migration: reconcile source changes first. Review the export for private material
-   and credentials before importing. Automated redaction is not a complete privacy review.
-4. Package the exported records/HTML and `public` assets into private archives. Attach them using
-   `linear issue attach ISSUE archive.tgz --title "Agency archive"` without `--public`. Record
-   checksums and link the archive issue from the project's overview. Keep all ticket data out of Git.
-5. Restore the exported asset folders into this checkout's `public` directory, preserving their
-   paths. Inspect archive entries first: reject absolute paths, `..` and unexpected links. On a
-   teammate's computer, restore `manifest.json` and `records/` into the configured output directory
-   from the private archive as well. Never overwrite an existing personal profile.
-6. Start the bridge and app in separate terminals:
-
-   ```sh
-   node scripts/linear-bridge.mjs .linear-migration.json
-   AGENCY_LINEAR_BRIDGE_URL=http://127.0.0.1:3130 npm run dev -- --hostname localhost --port 3100
-   ```
-
-   The bridge reads native Linear changes every minute. Choose an unused app port and configure
-   `bridgePort` when needed. This adapter is for `npm run dev`; hosted/build-start modes retain D1.
-7. Compare counts, IDs, status and ownership with the snapshot, then test with private fixtures.
-   Enable writes in the config and restart the bridge only after verification. Preserve the
-   original database as a rollback source; it is no longer the live queue after cutover.
-
-### Decisions and history
-
-- Do or feedback saves the exact artifact/version and decision, moves the same issue to In Progress,
-  and advances only after persistence succeeds. Skip goes to Canceled, never Done.
-- A worker claims with a stable `workerId`. `done/completed` needs a verified result;
-  `done/review` returns the ticket to Todo; `failed/blocked` leaves it In Progress with the blocker.
-  A native Done without an explicit completed outcome remains an unverified historical completion.
-- `POST /api/tasks` needs a stable `requestId` on retries. New tasks are assigned to the configured
-  user. A native-created Linear issue also appears locally; it starts with its description until
-  an agent supplies a visual card.
-- `POST /api/ideas` requires `expectedVersion` for replacement. It saves new HTML on the same issue
-  without reopening Done/Canceled or changing the assignee. An existing working job must then be
-  finished with `done/review` to return the revised card to New.
-- Card revisions and decisions are compressed, checksummed records in issue comments. Partial
-  chunks do not constitute a committed event. Earlier versions stay in history. Only configured
-  `userId` and `agentActorIds` are trusted as authors of these records; issue text is not permission.
-- Images and videos remain files. Attach new/revised assets privately through the CLI and preserve
-  their local paths when restoring another computer. The bridge does not download private media
-  automatically. Imported assets are available in the migration archive.
-- Imported unfinished jobs are **not replayed**. `GET /api/agent-jobs?includeImported=1` exposes their
-  stored context and a pause marker. After checking the live target, the coordinator records
-  `POST /api/agent-jobs/reconcile` with `id`, `workerId`, `liveTarget`, `result` and an `outcome`
-  of `completed`, `review`, `blocked` or `resume`. Resume also requires `approvalStillValid: true`
-  based on the exact saved scope and fresh target evidence. This preserves the existing approval,
-  not a blanket new one. Migration itself never resumes jobs.
-- One coordinator owns execution. The local journal serializes this host, not every laptop; do not
-  run competing worker coordinators against one project. Read-only colleague views are fine.
-- Topic settings are local display preferences; edit actual shared labels in Linear. `me.md` stays
-  private. Live timing samples stay local until a decision snapshot is committed.
-
-No backend transition, label, assignee or state change alone authorizes sending, posting or merging.
-The exact approved action and artifact still govern execution.
-
 ## Run locally
 
 Requires Node.js 22.13 or later and npm.
@@ -165,6 +75,12 @@ The active coding agent reads jobs, assigns workers and verifies their results.
 The agent reuses your existing brief, reads relevant sessions and writing, and builds a compact
 profile. It shares a few evidence-backed observations for correction. In parallel, workers prepare
 the first two or three useful cards once the intent is clear. You need not finish an interview first.
+
+Startup discovers available connectors, APIs, CLIs and authorized sessions, then verifies useful
+sources with a live read. Depending on the goal, those may include Gmail, Slack, Calendar, repositories,
+support, analytics and Linear. A missing connection is reported while other research continues.
+There are no canned starter tickets: the agent prepares real replies, launch material, fixes or
+decision briefs from that context. Profile setup and routine checks do not count as suggestions.
 
 If ongoing work is useful, agree to a four-hour cadence or choose another. The agent uses its
 runner's scheduler, reuses any matching schedule and records the real checkout, app URL, profile
@@ -248,6 +164,18 @@ For missing access, it explains what a connection unlocks and provides the real 
 returned by that integration. No invented links, password requests or bypassing consent/MFA.
 Naming Slack or Gmail in the dream does not connect it. Unavailable sources remain "not checked";
 work on other sources continues.
+
+### Optional Linear workflow
+
+Agency's app uses the local database. An active agent can also use your authenticated Linear
+connector, API or CLI for shared tickets, owners and status. The short [Linear instructions](skills/agency/LINEAR.md)
+cover finding and linking issues, scoped updates and one-off transfers. The agent chooses the tools
+and timing within your existing authorization; there is no Linear bridge or continuous synchronization.
+
+Teammates can collaborate on the native Linear issues. Agency's profile, full decision history and
+visual assets remain local, so another person's Agency is not automatically the same feed. The agent
+shares selected material only with the authorized audience and verifies the result. Starting Agency
+or opening the website never migrates your private records to Linear by itself.
 
 ### Browser setup
 
@@ -403,5 +331,7 @@ bindings; it contains no shared hosting project. The included build helper is re
 Each checkout has its own database, profile and assets. Keep backups private. Never commit
 `.wrangler`, `me.md`, personal approval settings, environment files, browser state or customer media.
 Sharing this source does not share your cards or credentials.
+The private `.agents/skills/design/` bundle and local migration state are ignored too; do not force-add
+them. Shared defaults belong in the tracked Agency instructions, without personal ticket examples.
 
 See [COMMIT_SCOPE.md](COMMIT_SCOPE.md) for the source included and what remains local.

@@ -28,6 +28,15 @@ On "Start Agency", read the current request, existing `me.md`, app context and r
 Reuse the brief. If direction is missing, ask once: "What's your dream? What should I help with?"
 Begin useful private research from the context already provided while the user answers.
 
+Find the intended local checkout and running app before creating another. Discover the runner's
+available skills, connectors, APIs, CLIs and authorized browser sessions. Verify account/workspace
+identity and a small live read for relevant sources; configured is not the same as connected.
+Choose sources by the goal: Gmail sent/recent threads for open commitments and voice, Slack for
+current blockers, Calendar for upcoming decisions, repositories for shipped work, support and
+analytics for customer pain, and Linear for shared tasks. Read a bounded recent sample, follow
+useful leads, and mark unavailable sources as not checked. Never print credentials or copy whole
+private conversations into the profile. Reading context does not authorize sending or sharing it.
+
 Build or refine the user's private `me.md` from relevant, authorized evidence:
 
 - Prior Codex or Claude Code sessions: what the user requested, corrected, accepted or rejected.
@@ -57,6 +66,24 @@ Only say that when the evidence supports it. Invite a quick correction, not anot
 
 While the user reviews those observations, other workers should finish the first two or three
 high-confidence cards. Do not wait for a perfect profile. Use a real brief and evidence, never filler.
+Profile observations and access setup belong in the conversation, not in the suggestion count.
+
+### Useful first decisions
+
+There is no universal seed queue. Use these as research directions only when the user's context
+supports them; the first card should resolve a real open loop with finished work:
+
+- An unanswered commitment: prepare the exact reply to the actual person.
+- An upcoming launch: verify what shipped and prepare the announcement and real product proof.
+- A reported obstacle: reproduce it, prepare the smallest fix and show the changed behavior.
+- An upcoming meeting: prepare the brief and recommendation from the relevant conversation.
+- Repeated manual work: run a small example and show the verified result before proposing adoption.
+
+For a launch brief, inspect the release/PR, audience, existing announcement drafts and recent
+customer questions before choosing a card. Check whether someone already handled the opportunity.
+Do not seed profile tuning, connector inventories, routine QA, or "Prepare this" tasks to fill ten
+slots. Finish those prerequisites yourself. Count only grounded, reviewable results; keep researching
+or report the specific source gap when the requested number cannot yet be supported.
 
 ## One coordinator, parallel workers
 
@@ -164,14 +191,9 @@ Never hide risks or exaggerate outcomes to improve acceptance.
 
 ## Feed essentials
 
-When the user chooses Linear, follow the [Linear setup](https://github.com/browser-use/agency#linear-backed-agency)
-in the README and use the authenticated CLI. Keep one issue per stable ticket; revisions belong to
-its history. Native owner, state and estimate are shared; the private profile and visual layout stay
-local. Assign new work to the configured user, preserve explicit hand-offs, and never assign on view.
-Use native Linear estimates in this mode; keep decision timing separate.
-Do/feedback moves to In Progress, Skip to Canceled, and only a verified result earns completion.
-An imported job or a native state change is not a new approval. Reconcile imported unfinished work
-against its full history and live target before continuing. Run one execution coordinator per project.
+The local database remains the app's queue. When shared tracking helps, read [LINEAR.md](LINEAR.md).
+The active agent chooses tools, timing and one-off transfers within the user's existing permission;
+the app does not synchronize with Linear or migrate data in the background.
 
 Read the [agent API](https://github.com/browser-use/agency#agent-api) in the README before using it.
 Process the full stored context; preserve the canonical `dedupeKey` and coordinate replacements.
