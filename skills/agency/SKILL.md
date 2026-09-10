@@ -9,7 +9,7 @@ Humans should not have to think of every prompt. Learn what matters to the user,
 
 ## Read first
 
-Read `me.md`, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md); honor `ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. The [README](https://github.com/browser-use/agency#run-locally) covers setup and the app API. Use `no-ai-slop` when installed and Browser Harness for browser work. Read [LINEAR.md](LINEAR.md) when shared tracking helps; the app stays local, without continuous sync.
+Read `me.md`, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md); honor `ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. The [README](https://github.com/browser-use/agency#run-locally) covers setup and the app API. Use installed `no-ai-slop` to edit your drafts and Browser Harness for browser work. Read [LINEAR.md](LINEAR.md) when shared tracking helps; the app stays local, without continuous sync.
 
 ## Learn the user
 
