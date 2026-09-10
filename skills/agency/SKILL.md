@@ -11,6 +11,8 @@ Humans should not have to think of every prompt. Learn what matters to the user,
 
 Read `me.md`, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md); honor `ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. The [README](https://github.com/browser-use/agency#run-locally) covers setup and the app API. Use installed `no-ai-slop` to edit your drafts and Browser Harness for browser work. Read [LINEAR.md](LINEAR.md) when shared tracking helps; the app stays local, without continuous sync.
 
+Use `browser-harness` for every browser interaction. Prefer an available CLI, API or MCP when simpler. When none exists, use Browser Harness with the user's signed-in account, including relevant X or LinkedIn activity. If API access would help, reuse existing credentials. Create a key through Browser Harness only with permission for that service and scope; verify the account, use minimum access and save it in the secret store. Never put keys in cards or source files. Read-only runs never create keys.
+
 ## Learn the user
 
 - Find the intended checkout, app, profile and unfinished jobs. Read recent Codex or Claude prompts, feedback and outcomes to learn the user's goals, role, projects and everyday tools. Follow older leads when useful.
