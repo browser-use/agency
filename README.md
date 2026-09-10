@@ -20,7 +20,8 @@ Start agency. Create a me.md file and make the first 10 suggestions.
 
 <br>
 
-See the finished work. Click once. Your agent handles the rest.
+Agency finds useful work without waiting for you to think of another prompt. It learns what you
+care about, prepares the result privately, and asks you for a decision in a clear visual card.
 
 The package starts empty. It includes no personal profile, tickets, customer media or credentials.
 
@@ -72,15 +73,20 @@ The first-run website asks for your dream. **Start saves that brief; it does not
 There is no installed background worker, automatic thread injection or built-in connector wizard.
 The active coding agent reads jobs, assigns workers and verifies their results.
 
-The agent reuses your existing brief, reads relevant sessions and writing, and builds a compact
-profile. It shares a few evidence-backed observations for correction. In parallel, workers prepare
-the first two or three useful cards once the intent is clear. You need not finish an interview first.
+The agent reads your brief, relevant Codex or Claude prompts, feedback and past work to learn your
+goals, role and everyday tools. It learns your words from your prompts and sent messages, keeping a
+few short examples in a private profile. Subagents research and prepare useful cards in parallel;
+one coordinator handles duplicates and approvals. You need not finish an interview first.
 
 Startup discovers available connectors, APIs, CLIs and authorized sessions, then verifies useful
-sources with a live read. Depending on the goal, those may include Gmail, Slack, Calendar, repositories,
-support, analytics and Linear. A missing connection is reported while other research continues.
-There are no canned starter tickets: the agent prepares real replies, launch material, fixes or
-decision briefs from that context. Profile setup and routine checks do not count as suggestions.
+sources with a live read. Those may include Gmail, Slack, Granola, Calendar, repositories, support,
+analytics and Linear. For a useful missing connection, it explains the benefit and offers a verified
+setup path while continuing elsewhere. It follows fresh and older leads to prepare replies, posts,
+fixes, outreach or briefs, checking why each matters now. Setup chores do not count as suggestions.
+
+The agent prepares privately as far as possible. Before anyone else can see a message, post or shared
+change, it needs your approval for that action. Clear feedback can approve edits and execution together,
+such as "shorten this and send it". Existing permission applies; there is no need to approve twice.
 
 If ongoing work is useful, agree to a four-hour cadence or choose another. The agent uses its
 runner's scheduler, reuses any matching schedule and records the real checkout, app URL, profile

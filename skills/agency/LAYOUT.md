@@ -6,7 +6,7 @@ The user sees only the card. It must explain the full decision without the agent
 
 Name the person or product, the problem, the prepared change and the benefit. Show the exact action and material risk. A ticket number alone explains nothing.
 
-Use short, complete sentences and familiar words, as if explaining to a five-year-old. Keep full context. Remove jargon, filler and repeated captions.
+Use short, complete sentences and the user's familiar words from `me.md`, as if explaining to a five-year-old. Keep full context. Remove jargon, filler and repeated captions.
 
 ## Big visuals
 

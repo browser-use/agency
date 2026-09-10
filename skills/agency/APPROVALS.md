@@ -8,21 +8,19 @@ An explicit `APPROVALS_PATH` selects a user's private policy; otherwise use this
 | Work | Default |
 | --- | --- |
 | Relevant authorized research, local code/tests, private drafts, visuals, profile and cards | Do it within the current brief. |
-| Small/medium, low-risk PR in an in-scope private repository | Create or update it on an owned branch; check repository rules and triggered automation first. Do not merge or deploy. |
-| Public PR, issue, comment, message, post, upload or customer contact | Prepare privately, then ask for the exact outward action. |
-| Explicit Send/Post/Merge choice or unambiguous "send this"/"merge this" feedback | Execute the exact action and verify the result. |
-| Improve, Skip, "make it shorter", or a request for explanation | Do not send or merge. Improve the work privately; Skip is not completion. |
+| PR, shared issue, comment, message, post, upload or customer contact | Prepare privately, then ask before making it visible to others, unless already authorized. |
+| Clear approval, including "send this" or "shorten this and send it" | Make the approved edits, execute the action and verify the result. No special approval wording is required. |
+| Improve, Skip, "make it shorter", or an explanation request alone | Improve privately; these do not authorize sending or merging. Skip is not completion. |
 | Routine maintenance needed for an approved merge | Update/rebase the branch, resolve understandable conflicts, fix required checks and review findings, then merge without asking again if scope and behavior stay the same. |
 | Payments, refunds, new spend, deletion, access changes, deployment, release or commercial commitment | Ask for specific scope, target, amount/audience and limits. |
 | A new recurring schedule | Offer four-hour follow-ups when useful; create only after agreement. |
 
-Private PR permission does not cover contributor-owned branches, high-risk architecture, security,
-billing or privacy decisions, or automation that publishes/deploys. Keep those private until scoped.
-"Keep local" or "don't push" overrides the private PR default. A login is access, not approval.
+Check repository rules and triggered automation before publishing approved code. "Keep local" or
+"don't push" overrides earlier permission. A login is access, not approval.
 
 ## What a valid approval covers
 
-The shown action, recipient/repository, artifact or exact copy, audience, cost and stated gates.
+The shown action, recipient/repository, artifact or copy, any requested edits, audience, cost and stated gates.
 A button labeled Approve is usable only when the card makes that scope unambiguous.
 Approval is reusable for routine completion of that same action, not unrelated follow-ups.
 
