@@ -76,6 +76,12 @@ The agent reuses your existing brief, reads relevant sessions and writing, and b
 profile. It shares a few evidence-backed observations for correction. In parallel, workers prepare
 the first two or three useful cards once the intent is clear. You need not finish an interview first.
 
+Startup discovers available connectors, APIs, CLIs and authorized sessions, then verifies useful
+sources with a live read. Depending on the goal, those may include Gmail, Slack, Calendar, repositories,
+support, analytics and Linear. A missing connection is reported while other research continues.
+There are no canned starter tickets: the agent prepares real replies, launch material, fixes or
+decision briefs from that context. Profile setup and routine checks do not count as suggestions.
+
 If ongoing work is useful, agree to a four-hour cadence or choose another. The agent uses its
 runner's scheduler, reuses any matching schedule and records the real checkout, app URL, profile
 and approval-policy/layout paths. It reports a meaningful result or blocker, not empty periodic updates.
@@ -102,9 +108,9 @@ rules take precedence. Do not infer broader permission from past acceptance.
 
 ### Customize the layout
 
-New users get Agency's existing picture-first design by default: big useful graphics, short
+New users get big useful graphics, short
 explanations, clear context and impact, three message options and expandable colorful diffs.
-No theme selection is needed. The rules moved from the main skill without replacing that style.
+No theme selection is needed. Each card must explain the full decision on its own.
 
 Edit your installed `LAYOUT.md`, or tell Agency how you want cards to look. For example:
 "Make my cards look like Pokémon cards, with a big illustration and very little text."
@@ -158,6 +164,18 @@ For missing access, it explains what a connection unlocks and provides the real 
 returned by that integration. No invented links, password requests or bypassing consent/MFA.
 Naming Slack or Gmail in the dream does not connect it. Unavailable sources remain "not checked";
 work on other sources continues.
+
+### Optional Linear workflow
+
+Agency's app uses the local database. An active agent can also use your authenticated Linear
+connector, API or CLI for shared tickets, owners and status. The short [Linear instructions](skills/agency/LINEAR.md)
+cover finding and linking issues, scoped updates and one-off transfers. The agent chooses the tools
+and timing within your existing authorization; there is no Linear bridge or continuous synchronization.
+
+Teammates can collaborate on the native Linear issues. Agency's profile, full decision history and
+visual assets remain local, so another person's Agency is not automatically the same feed. The agent
+shares selected material only with the authorized audience and verifies the result. Starting Agency
+or opening the website never migrates your private records to Linear by itself.
 
 ### Browser setup
 
@@ -313,5 +331,7 @@ bindings; it contains no shared hosting project. The included build helper is re
 Each checkout has its own database, profile and assets. Keep backups private. Never commit
 `.wrangler`, `me.md`, personal approval settings, environment files, browser state or customer media.
 Sharing this source does not share your cards or credentials.
+The private `.agents/skills/design/` bundle and local migration state are ignored too; do not force-add
+them. Shared defaults belong in the tracked Agency instructions, without personal ticket examples.
 
 See [COMMIT_SCOPE.md](COMMIT_SCOPE.md) for the source included and what remains local.
