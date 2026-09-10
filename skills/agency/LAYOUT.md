@@ -24,7 +24,7 @@ Show observed results and remaining gaps. Separate verified complaints from poss
 - **Code:** explain the behavior and include a selectable current-head diff: SHA, paths, context and totals. Use soft red/green with +/- signs. Include the human-written patch; name omitted generated files. UI fixes need real before/after proof.
 - **Demos:** show real product use and the payoff in the first few seconds. Remove dead time and private information.
 
-Keep decisions together. Expand longer evidence under specific labels, such as “Read the conversation”. Keep the problem, beneficiary and risk visible. Preserve host navigation, feedback, Improve and Skip.
+Keep concrete decisions together. Offer three distinct options when they avoid another round of questions; recommend one and state what each does. Short research belongs in the prepared work, never behind an “Investigate” button. Expand longer evidence under specific labels, such as “Read the conversation”. Keep the problem, beneficiary and risk visible. Preserve host navigation, feedback, Improve and Skip.
 
 ## Check
 
