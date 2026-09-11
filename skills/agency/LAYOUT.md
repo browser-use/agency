@@ -20,7 +20,7 @@ For SVGs, put original files in ignored `public/agent-assets/` and embed with `<
 
 ## Make choices concrete
 
-- **Messages:** show channel, recipient and exact text. Offer two or three options when they differ in substance. Give each its own action, such as “Send the pricing reply” or “Decline the offer”; recommend one. A generic Approve button cannot choose among alternatives. Each approves only its visible text.
+- **Messages:** show the sending account, recipients including CC, channel and exact text. Offer two or three options when they differ in substance. Give each its own action, such as “Send the pricing reply” or “Decline the offer”; recommend one. A generic Approve button cannot choose among alternatives. Hidden button instructions must match the visible scope.
 - **Ideas and projects:** show the problem, why it matters, the proposed outcome, limits and tradeoffs. A sketch or mockup can explain a change before it exists. “Build this” or “Fix this” starts the shown scope; a finished implementation is not required.
 - **Merge a change:** show the behavior change and a selectable current-head diff: SHA, paths, context and totals. Use soft red/green and +/- signs. Include the human-written patch; name omitted generated files. UI merge decisions need real before/after proof.
 
@@ -28,6 +28,6 @@ Separate observed impact from possible reach. Show the relevant source or observ
 
 ## Look at it
 
-Open the actual card at desktop and 390px, including expanded evidence. Check every asset, label and action. The first phone screen should show the reason and start of the result, not several introductions. Reduce headings, padding and repetition before text size. Keep the first useful action close to the result.
+Open the actual card at desktop and 390px, including expanded evidence. Check every asset, label and action. The first phone screen should show the reason and start of the result. Put the main action immediately after the draft or proposed outcome; move supporting detail below it. Cut repeated headings and padding before shrinking text.
 
 Have a reviewer read only the card: what happened, why act, and what will the button do? Fix any answer that depends on your notes. Save liked design features in the user's private `LAYOUT_PATH`; carry the useful feature to later cards without copying one layout onto every problem. Preview broad appearance changes first. Design feedback never widens approval.

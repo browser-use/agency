@@ -120,7 +120,7 @@ rules take precedence. Do not infer broader permission from past acceptance.
 ### Customize the layout
 
 New users get big useful graphics, short
-explanations, clear context and impact, three message options and expandable colorful diffs.
+explanations, clear context and impact, useful message choices and expandable colorful diffs.
 No theme selection is needed. Each card must explain the full decision on its own.
 
 Edit your installed `LAYOUT.md`, or tell Agency how you want cards to look. For example:
