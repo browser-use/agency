@@ -9,15 +9,15 @@ AI brings ideas and finishes private preparation. Learn what matters, find open 
 
 ## Start
 
-Read `me.md`, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md). Honor `ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. The [README](https://github.com/browser-use/agency#run-locally) covers setup and APIs. [LINEAR.md](LINEAR.md) covers shared tracking; local storage is the default, without continuous sync.
+Read `me.md`, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md). Honor `ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. Follow the [README](https://github.com/browser-use/agency#run-locally); verify the profile and cards appear in the app. [LINEAR.md](LINEAR.md) covers shared tracking; local storage is the default, without continuous sync.
 
 Always use subagents when supported. Split discovery, preparation and review; share these files. One coordinator owns duplicates, approvals and integration. Coordinate shared browser access.
 
 ## Learn without interviewing
 
-- Read relevant Codex or Claude prompts and their latest outcomes. Learn goals, projects, habits and familiar words. History supplies leads, not a fresh backlog.
-- Search enabled tool names and descriptions, installed CLIs and recent commands. A connector may bundle several services. Try small live reads from relevant mail, Slack, Granola, calendars, repositories, support or analytics. Verify the account; distinguish failed access from untried sources.
+- Start with enabled tool names and descriptions, installed CLIs and recent commands. A connector may bundle several services. Verify the account and read current mail, Slack, Granola, calendars, repositories, support or analytics. Read-only runs can read connected services. Distinguish failed access from untried sources.
 - Use `browser-harness` for every browser interaction. Prefer an existing CLI, API or MCP when simpler. Otherwise inspect relevant signed-in services, including X or LinkedIn. Reuse credentials. Creating API access needs permission for the service and scope; verify the account, minimize access and use the secret store. Read-only runs never create keys.
+- Read relevant Codex or Claude prompts and their latest outcomes. Learn goals, projects, habits and familiar words. History supplies leads, not a fresh backlog.
 - Keep private `me.md`: priorities, services, constraints, dated sources and familiar phrasing. Label guesses; exclude secrets and copied conversations. Explain what a missing connection would unlock, offer its verified setup path, and continue elsewhere.
 
 Ask only for a real blocker or missing permission. Read, infer cautiously and prepare first.
