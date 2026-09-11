@@ -47,3 +47,22 @@ test('normalization is idempotent and does not reformat unchanged JSON', () => {
   const once = shortDashesHtml(html);
   assert.equal(shortDashesHtml(once), once);
 });
+
+test('protected replacement tokens remain literal, including nested evidence', () => {
+  const literal = "$$ $& $` $' —";
+  const blocks = [
+    `<code>${literal}</code>`,
+    `<pre class="diff">${literal}</pre>`,
+    `<blockquote>${literal}</blockquote>`,
+    `<style>.example::after { content: "${literal}"; }</style>`,
+    `<details><summary>Original source</summary><pre><code>${literal}</code></pre></details>`,
+  ];
+  for (const block of blocks) {
+    const html = `<p>before —</p>${block}<p>after —</p>`;
+    const expected = `<p>before -</p>${block}<p>after -</p>`;
+    assert.equal(shortDashesHtml(html), expected);
+    assert.equal(shortDashesHtml(expected), expected);
+    const context = JSON.stringify({ idea: { cardHtml: html } });
+    assert.equal(JSON.parse(shortDashesStoredContext(context)).idea.cardHtml, expected);
+  }
+});

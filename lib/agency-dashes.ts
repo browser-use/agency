@@ -35,7 +35,7 @@ export function shortDashesHtml(html: string): string {
       (_attribute, prefix: string, quote: string, value: string) => `${prefix}${quote}${shortDashes(value)}${quote}`);
   });
   // Protected sections may contain placeholders for protected child elements.
-  for (let index = saved.length - 1; index >= 0; index--) output = output.replaceAll(`${marker}${index}_END`, saved[index]);
+  for (let index = saved.length - 1; index >= 0; index--) output = output.replaceAll(`${marker}${index}_END`, () => saved[index]);
   return output;
 }
 
