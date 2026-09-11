@@ -87,11 +87,13 @@ analytics and Linear. For a useful missing connection, it explains the benefit a
 setup path while continuing elsewhere. It follows fresh and older leads to prepare replies, posts,
 fixes, outreach or briefs, checking why each matters now. Setup chores do not count as suggestions.
 
-The agent does short research and prepares drafts before asking. A project idea needs a clear problem,
-benefit and scope, not a finished implementation. A Send button approves the shown message; Build or
-Fix starts the proposed work; Merge needs the actual diff. Before a message, post or shared change is
-visible to others, it needs your approval for that action. Clear feedback can approve edits and
-execution together, such as "shorten this and send it". There is no need to approve the same scope twice.
+The agent investigates, writes small fixes, builds private briefs and prepares demos before asking.
+Cards show the result and the remaining decision. Larger projects can start with a researched scope.
+Replies include the incoming message; uncertain decisions offer useful alternatives. Send approves
+the shown reply, Apply approves the shown change, and Merge needs the actual diff. Before a message,
+post or shared change is visible to others, it needs your approval for that action. Clear feedback can approve edits and
+execution together, such as "shorten this and send it". Before acting, the agent checks for newer replies,
+fixes or changed plans. It reuses approval through harmless changes and revisits material ones.
 
 If ongoing work is useful, agree to a four-hour cadence or choose another. The agent uses its
 runner's scheduler, reuses any matching schedule and records the real checkout, app URL, profile
@@ -119,8 +121,8 @@ rules take precedence. Do not infer broader permission from past acceptance.
 
 ### Customize the layout
 
-New users get big useful graphics, short
-explanations, clear context and impact, useful message choices and expandable colorful diffs.
+The default asks for big useful graphics, short labels, original messages, exact changes and
+clear choices. Cards use as little text as needed; supporting evidence can expand.
 No theme selection is needed. Each card must explain the full decision on its own.
 
 Edit your installed `LAYOUT.md`, or tell Agency how you want cards to look. For example:

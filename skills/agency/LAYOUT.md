@@ -1,33 +1,35 @@
 # Agency layout
 
-The card is the whole conversation. Make the draft or idea easy to understand, with a clear action to approve.
+Make the choice obvious with as little reading as possible. The card contains everything needed to decide.
 
-## Explain first
+## Show, then explain
 
-Start with the person or product, what happened and why acting helps. The first sentence should make sense without knowing your workflow. Use familiar words, short sentences and one idea at a time. Cut vague claims, repeated headings, internal process labels and phrases such as “prepared work” or “next gate”. State uncertainty beside the claim it limits.
+Start with the concrete problem in familiar words. Prefer “These lines disagree” over abstract labels. Use a large screenshot, diagram, comparison or demo when it explains the result. Use big icons and one- or two-word labels where clear. Keep useful context; cut sentences the picture already explains.
 
-Explain once, then show the reply, comparison or proposed change. Do not repeat a diagram in prose and a table. Keep the action beside what it approves; expand supporting evidence under a specific label. Keep decision-changing facts visible. A local file link cannot replace the explanation.
+For a conflict, show the two short source excerpts together and highlight only the conflicting words. Put the exact replacement beside them. A small wording fix should already be written, not a request to prepare it.
 
-## Draw the idea
+For a reply, show the incoming message first, with its author and date. Summarize it briefly if long; keep the full message expandable. Show any existing answer that changes the decision and what the new reply adds. Then show the exact reply, sending account, recipients including CC, and channel or thread. Keep facts that could change the decision visible.
 
-Choose a visual because of what it explains. A bug might need an annotated screenshot; a handoff needs a timeline; a product change needs a before/after. Label actual people, screens, steps or outcomes; leave research-stage labels out. Use a real product image when it helps. Label mockups and expected outcomes.
+For private preparation, show the completed brief, finding, patch or demo. A small interview pack or existing-feature walkthrough need not wait for approval to be prepared. Label mockups, incomplete findings and untested changes accurately. Never invent a screenshot, result or root cause.
 
-A large slogan, “evidence → prepared”, or the same boxes on every card adds no explanation. Show the proposed screen or workflow, not just paragraphs describing it. Remove graphics that repeat the title. A short message often needs no extra picture. Emojis can help identify things; keep text labels.
+## Draw what matters
 
-Use clear hierarchy, aligned edges, comfortable text and space between groups. Avoid nested panels and repeated badges. Give the result more space than the decoration. Choose the composition for the content; keep shared controls familiar.
+Choose the layout for the content: two phrases for a wording conflict, annotated screenshots for a bug, a timeline for a handoff, a real demonstration for a working feature. Use the user's actual screens and objects when authorized. Do not repeat the same panels on every card.
 
-For SVGs, put original files in ignored `public/agent-assets/` and embed with `<img>` or `<picture>`; inline SVG and scripts are rejected. Never shrink a desktop diagram until its labels become tiny. Rearrange it for mobile. Animate only to explain a change, keep a useful still frame and respect reduced motion. Do not copy private design text, code or assets.
+Make the result larger than the decoration. Use readable type, aligned edges and space between groups. Remove repeated headings, badges and nested boxes. A short message may need no picture. Icons and emojis must help recognition, not replace essential labels.
 
-## Make choices concrete
+Put original SVG files in ignored `public/agent-assets/` and embed with `<img>` or `<picture>`; inline SVG and scripts are rejected. Rearrange diagrams for phones instead of shrinking labels. Animate only to explain a change; provide a useful still frame and respect reduced motion. Do not copy private design source or assets.
 
-- **Messages:** show the sending account, recipients including CC, channel and exact text. Offer two or three options when they differ in substance. Give each its own action, such as “Send the pricing reply” or “Decline the offer”; recommend one. A generic Approve button cannot choose among alternatives. Hidden button instructions must match the visible scope.
-- **Ideas and projects:** show the problem, why it matters, the proposed outcome, limits and tradeoffs. A sketch or mockup can explain a change before it exists. “Build this” or “Fix this” starts the shown scope; a finished implementation is not required.
-- **Merge a change:** show the behavior change and a selectable current-head diff: SHA, paths, context and totals. Use soft red/green and +/- signs. Include the human-written patch; name omitted generated files. UI merge decisions need real before/after proof.
+## Make the next click count
 
-Separate observed impact from possible reach. Show the relevant source or observation; a test count alone does not prove a fix. Green means verified success, not a future plan. Never use placeholder copy or an unknown recipient in a send action. The host owns navigation, feedback, Improve and Skip; do not duplicate those controls.
+Put the main action immediately after what it approves. Name the outcome: “Send this reply”, “Apply this wording” or “Share this demo”. Avoid “Prepare the fix” when the fix is small enough to show now. Hidden instructions must match the visible choice.
 
-## Look at it
+More uncertainty means more meaningful choices, usually two or three. Recommend one and show each tradeoff. A limited trial or “Investigate deeper” can be useful after easy checks are done. Show trial cost, account and behavior before offering to start it. Each option needs its own action; a generic Approve cannot select between alternatives.
 
-Open the actual card at desktop and 390px, including expanded evidence. Check every asset, label and action. The first phone screen should show the reason and start of the result. Put the main action immediately after the draft or proposed outcome; move supporting detail below it. Cut repeated headings and padding before shrinking text.
+A substantial project can have a scoped Build action. A Merge needs the current-head diff: SHA, paths, context, totals and selectable additions/deletions. Name omitted generated files. UI merges need real before/after proof. Keep supporting evidence expandable; never replace the decision with a file link.
 
-Have a reviewer read only the card: what happened, why act, and what will the button do? Fix any answer that depends on your notes. Save liked design features in the user's private `LAYOUT_PATH`; carry the useful feature to later cards without copying one layout onto every problem. Preview broad appearance changes first. Design feedback never widens approval.
+## Read it as the user
+
+Inspect the actual card at desktop and 390px, including evidence and assets. Show the problem and useful result early. Cut text and padding before shrinking type. Keep the action close. The host owns navigation, feedback, Improve and Skip.
+
+Give a reviewer only the card. Can they tell what happened, what changes and what each button does? Remove unnecessary words; repair missing context. Keep successful design features in the user's private layout without forcing every card into the same shape. Design feedback does not approve external actions.
