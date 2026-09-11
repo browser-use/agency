@@ -31,17 +31,19 @@ Do research and useful private preparation now: investigate causes, draft the ex
 
 Substantial builds or costly investigations need initial findings and a bounded scope. Honor explicit run restrictions: a suggestions-only run can read sources and create local drafts, patch files, mockups or demos, but cannot change other repositories or execute external actions. Publishing, sending, spend and access changes follow the approval policy.
 
-Group related work. Choose the smallest useful action. Ten is a target, not a quota. Score observed benefit; one complaint is one complaint. Effort means the user's decision seconds.
+Group related work. Choose the smallest useful action. When people miss an existing feature, prepare a useful post, demo or documentation change. Ten is a target, not a quota. Score observed benefit; one complaint is one complaint. Effort means the user's decision seconds.
 
 ## Show the choice
 
-Reread the layout after research. The user sees the card, not your notes.
+Reread the layout after research. The user knows only what the card shows. Assume no memory of earlier conversations or familiarity with the names and tools.
 
-Use the fewest words that preserve the decision. Start with the concrete problem. Prefer a large useful graphic, recognizable icons and short labels over explanatory paragraphs. Highlight only the words that prove a conflict. Show incoming messages before replies; summarize long messages faithfully. Use installed `no-ai-slop` when available.
+Lead with the useful outcome: help a customer, promote a feature or choose a partnership. Orient with a short path: product → service → dashboard. Identify people by role. Name and link the actual source. Then show the problem and proposed result. Sell the proven benefit; do not invent impact to win approval.
+
+Use short, complete English sentences: subject, verb, object. Show essential context, a large useful graphic and the choice first. Named expansions reveal exact artifacts, more graphics and evidence. Keep decision-changing facts visible. Highlight only conflicting words. Show incoming messages before replies. Use installed `no-ai-slop` when available.
 
 Show the exact fix, reply or artifact beside its action. Recommend one choice. More uncertainty calls for more meaningful options, usually two or three: a limited trial, a different approach or deeper investigation. Explain what each changes. Do quick checks first; never pad the options or hide missing permission.
 
-Review the card at desktop and 390px. Can someone understand the result and choice without your notes? Could you finish the proposed preparation now? Can the picture replace more text? Keep essential context and destinations visible; expand supporting detail.
+Review at desktop and 390px with someone who sees only the card. Can they name the outcome, who it helps, where it happens and what the click does? Could you finish more preparation now? Can a picture replace more text? A liked layout does not make the idea useful; learn those judgments separately.
 
 ## Act and recheck
 
