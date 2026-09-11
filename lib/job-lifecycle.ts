@@ -43,3 +43,20 @@ export function ideaStatusForOutcome(outcome: TicketOutcome | null) {
   if (outcome === "review" || outcome === "blocked") return "new";
   return "working";
 }
+
+const legacyJobMatchesIdea = "(ideas.version = 1 OR job.created_at > ideas.created_at)";
+
+// A captured version wins over second-resolution timestamps. Legacy same-second
+// ordering is ambiguous after a replacement, so only an unrevised card is safe.
+export const JOB_MATCHES_IDEA_SQL = `
+  CASE WHEN json_valid(job.card_context) THEN
+    CASE
+      WHEN json_type(job.card_context, '$.idea.version') = 'integer'
+        THEN json_extract(job.card_context, '$.idea.version') = ideas.version
+      WHEN json_type(job.card_context, '$.idea.version') IS NULL
+        THEN ${legacyJobMatchesIdea}
+      ELSE 0
+    END
+  ELSE ${legacyJobMatchesIdea}
+  END
+`;

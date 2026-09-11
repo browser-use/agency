@@ -260,6 +260,14 @@ only after that action and its validation succeed.
 Terminal updates cannot resurrect a job; a same-terminal-status retry does not rewrite the result.
 Results are limited to 20,000 characters. Check newer jobs before finalizing or acting on old approval.
 
+A terminal outcome updates only the job's captured card version by default. If you published your own
+replacement while doing that job, pass its exact returned `version` as `expectedIdeaVersion` when
+finishing. A newer job, an intervening card revision or Skip prevents that outcome changing the card;
+the completed job and its result remain recorded. `ideaStatus: null` means no card state was changed.
+A competing terminal update returns 409 if its job-status comparison lost. Do not blindly retry it.
+For legacy jobs without a captured version, automatic reconciliation requires an unrevised card or
+a job created strictly after that card revision. Same-second ordering after a replacement is ambiguous.
+
 If work is complete, record the result without inventing a new decision. If the premise changed or
 work is blocked, replace the misleading card with the current facts and any meaningful next option.
 Never add an Acknowledge/Keep blocked no-op. Keep actual in-flight checks Working until they finish.

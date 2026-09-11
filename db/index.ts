@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { JOB_MATCHES_IDEA_SQL } from "../lib/job-lifecycle";
 
 export function getD1() {
   if (!env.DB) throw new Error("The local Agency database is unavailable.");
@@ -103,32 +104,26 @@ async function runMaintenance(db: ReturnType<typeof getD1>) {
   if (!jobNames.has("ticket_outcome")) {
     await db.prepare("ALTER TABLE agent_jobs ADD COLUMN ticket_outcome TEXT").run();
   }
-  // A replacement card can set an idea back to New before the agent posts its
-  // terminal outcome. Reconcile from the latest explicit marker so completed,
-  // review, and blocked remain card states instead of agent-run states. Never
-  // revive a card the user already dismissed.
+  // Only the latest terminal job for this card version may reconcile its state.
+  // A fresh reply must not inherit completion from an older card version.
   await db.prepare(`
     UPDATE ideas
-    SET status = CASE (
-      SELECT latest.ticket_outcome
-      FROM agent_jobs latest
-      WHERE latest.idea_id = ideas.id
-      ORDER BY latest.id DESC
-      LIMIT 1
-    )
+    SET status = CASE job.ticket_outcome
       WHEN 'completed' THEN 'done'
       WHEN 'review' THEN 'new'
       WHEN 'blocked' THEN 'new'
-      ELSE status
+      ELSE ideas.status
     END
-    WHERE status IN ('new', 'working', 'done')
+    FROM agent_jobs job
+    WHERE job.idea_id = ideas.id
+      AND job.id = (SELECT MAX(latest.id) FROM agent_jobs latest WHERE latest.idea_id = ideas.id)
+      AND ideas.status IN ('new', 'working', 'done')
+      AND job.action <> 'no'
       AND (
-        SELECT latest.ticket_outcome
-        FROM agent_jobs latest
-        WHERE latest.idea_id = ideas.id
-        ORDER BY latest.id DESC
-        LIMIT 1
-      ) IS NOT NULL
+        (job.status = 'done' AND job.ticket_outcome IN ('completed', 'review'))
+        OR (job.status = 'failed' AND job.ticket_outcome = 'blocked')
+      )
+      AND (${JOB_MATCHES_IDEA_SQL})
   `).run();
   // Early Agency audits used the same decision fields as real user clicks. Mark
   // those known maintenance labels once so decision timing measures the user.

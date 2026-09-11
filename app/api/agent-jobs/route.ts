@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { ensureDatabase } from "../../../db";
-import { canUpdateJob, ideaStatusForOutcome, jobLeaseWindow, MAX_CONCURRENT_JOBS, resolveTicketOutcome, type StoredJobStatus, type TicketOutcome } from "../../../lib/job-lifecycle";
+import { canUpdateJob, ideaStatusForOutcome, JOB_MATCHES_IDEA_SQL, jobLeaseWindow, MAX_CONCURRENT_JOBS, resolveTicketOutcome, type StoredJobStatus, type TicketOutcome } from "../../../lib/job-lifecycle";
 
 function canUseQueue(request: Request) {
   const origin = request.headers.get("origin");
@@ -63,11 +63,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   if (!canUseQueue(request)) return Response.json({ error: "Missing agent key" }, { status: 401 });
-  const payload = (await request.json()) as { id?: number; status?: "running" | "done" | "failed"; result?: string; ticketOutcome?: TicketOutcome };
+  const payload = (await request.json()) as { id?: number; status?: "running" | "done" | "failed"; result?: string; ticketOutcome?: TicketOutcome; expectedIdeaVersion?: number };
   if (!payload.id || !["running", "done", "failed"].includes(payload.status ?? "")) return Response.json({ error: "Invalid job update" }, { status: 400 });
   if (payload.ticketOutcome && !["completed", "review", "blocked"].includes(payload.ticketOutcome)) return Response.json({ error: "Invalid ticket outcome" }, { status: 400 });
   if (payload.status === "done" && payload.ticketOutcome === "blocked") return Response.json({ error: "A done job cannot be blocked" }, { status: 400 });
   if (payload.status === "failed" && payload.ticketOutcome && payload.ticketOutcome !== "blocked") return Response.json({ error: "A failed job must be blocked" }, { status: 400 });
+  if (payload.expectedIdeaVersion !== undefined && (!Number.isInteger(payload.expectedIdeaVersion) || payload.expectedIdeaVersion < 1)) return Response.json({ error: "Invalid expected idea version" }, { status: 400 });
   const db = await ensureDatabase();
   const job = await db.prepare("SELECT idea_id AS ideaId, action, status FROM agent_jobs WHERE id = ?").bind(payload.id).first<{ ideaId: number; action: string; status: StoredJobStatus }>();
   if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
@@ -84,15 +85,26 @@ export async function POST(request: Request) {
   ];
   if ((payload.status === "done" || payload.status === "failed") && job.action !== "no") {
     const ideaStatus = ideaStatusForOutcome(ticketOutcome);
+    // In this atomic batch, changes() is the preceding job CAS, not another request.
     updates.push(db.prepare(`
       UPDATE ideas SET status = ?
       WHERE id = ? AND status IN ('new', 'working')
+        AND changes() = 1
         AND NOT EXISTS (
           SELECT 1 FROM agent_jobs newer
           WHERE newer.idea_id = ? AND newer.id > ?
         )
-    `).bind(ideaStatus, job.ideaId, job.ideaId, payload.id));
+        AND EXISTS (
+          SELECT 1 FROM agent_jobs job
+          WHERE job.id = ? AND job.status = ? AND job.ticket_outcome = ?
+            AND CASE WHEN ? IS NOT NULL THEN ideas.version = ?
+              ELSE (${JOB_MATCHES_IDEA_SQL}) END
+        )
+    `).bind(ideaStatus, job.ideaId, job.ideaId, payload.id, payload.id, payload.status, ticketOutcome, payload.expectedIdeaVersion ?? null, payload.expectedIdeaVersion ?? null));
   }
-  await db.batch(updates);
-  return Response.json({ ok: true, ticketOutcome, ideaStatus: ideaStatusForOutcome(ticketOutcome) });
+  const [updatedJob, updatedIdea] = await db.batch(updates);
+  if (updatedJob.meta.changes !== 1) {
+    return Response.json({ error: "Job changed while completing it" }, { status: 409 });
+  }
+  return Response.json({ ok: true, ticketOutcome, ideaStatus: updatedIdea?.meta.changes ? ideaStatusForOutcome(ticketOutcome) : null });
 }
