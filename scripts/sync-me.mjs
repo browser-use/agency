@@ -3,8 +3,8 @@
 // side changed last wins. Run it at the start and the end of every Agency wave.
 //
 //   node scripts/sync-me.mjs          # sync, newest wins
-//   node scripts/sync-me.mjs --pull   # force file  -> app
-//   node scripts/sync-me.mjs --push   # force app   -> file
+//   node scripts/sync-me.mjs --file-to-app
+//   node scripts/sync-me.mjs --app-to-file
 //   node scripts/sync-me.mjs --check  # report only, exit 1 if they differ
 
 import { readFile, writeFile, stat } from "node:fs/promises";
@@ -12,9 +12,10 @@ import { fileURLToPath } from "node:url";
 
 const ME = process.env.ME_PATH ?? fileURLToPath(new URL("../me.md", import.meta.url));
 const RADAR = process.env.RADAR_URL ?? "http://localhost:3100";
-const mode = process.argv[2] ?? "--sync";
+const argument = process.argv[2] ?? "--sync";
+const mode = ({ "--file-to-app": "--pull", "--app-to-file": "--push" })[argument] ?? argument;
 if (!["--sync", "--pull", "--push", "--check"].includes(mode)) {
-  throw new Error("Use --pull (file to app), --push (app to file), --check, or no flag (newest wins).");
+  throw new Error("Use --file-to-app, --app-to-file, --check, or no flag (newest wins). Legacy --pull/--push are also supported.");
 }
 
 async function readApp() {
@@ -45,8 +46,8 @@ const [file, app] = await Promise.all([
   readApp(),
 ]);
 
-if (file.missing && mode === "--pull") throw new Error(`Profile does not exist: ${ME}. Add your dream in Settings and run --push, or create the file first.`);
-if (file.missing && !app.text.trim()) throw new Error("No profile yet. Add your dream in Settings, then run --push.");
+if (file.missing && mode === "--pull") throw new Error(`Profile does not exist: ${ME}. Create the file first, or use --app-to-file for an existing app dream.`);
+if (file.missing && !app.text.trim()) throw new Error("No profile yet. Let the agent create me.md from relevant context, or add your dream in Settings.");
 if (!file.missing && file.text.trim() === app.text.trim()) {
   console.log("in sync");
   process.exit(0);
@@ -57,6 +58,11 @@ if (mode === "--check") {
 }
 
 const fileWins = mode === "--pull" || (mode !== "--push" && file.at >= app.at);
+const source = fileWins ? file : app;
+const target = fileWins ? app : file;
+if (!source.text.trim() && target.text.trim()) {
+  throw new Error("Refusing to replace a nonempty profile with empty content. Neither copy was changed. Choose --file-to-app or --app-to-file from the copy you want to keep.");
+}
 if (fileWins) {
   await writeApp(file.text);
   console.log(`me.md -> app (${file.text.length} chars)`);

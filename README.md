@@ -70,7 +70,9 @@ Keep one coding-agent session responsible for Agency. Use the [prompt at the top
 Use the checkout and app URL chosen during setup. A cloud worker cannot automatically reach your
 laptop's localhost, files or signed-in browser.
 
-The first-run website asks for your dream. **Start saves that brief; it does not launch an agent.**
+The coding agent starts by reading [the skill](skills/agency/SKILL.md), infers a short editable profile
+from relevant context, and creates the first cards. The website also lets you enter a dream.
+**Save dream saves that brief; it does not launch an agent.**
 There is no installed background worker, automatic thread injection or built-in connector wizard.
 The active coding agent reads jobs, assigns workers and verifies their results.
 
@@ -147,11 +149,12 @@ export ME_PATH=/absolute/path/to/me.md
 node scripts/sync-me.mjs --check
 ```
 
-- Existing file into a fresh app: `node scripts/sync-me.mjs --pull`.
-- Newly entered app dream into a new file: `node scripts/sync-me.mjs --push`.
+- Existing file into a fresh app: `node scripts/sync-me.mjs --file-to-app`.
+- Newly entered app dream into a new file: `node scripts/sync-me.mjs --app-to-file`.
 - No flag: synchronize whichever side has the newer timestamp.
 
-Never force a new app's content over an existing profile you want to keep.
+An empty source cannot overwrite a nonempty profile. Legacy `--pull` (file to app) and `--push`
+(app to file) remain supported. The agent handles this copying; the user need not manage it.
 Synchronize before work waves and after authorized profile edits. The agent learns from evidence
 and edits the relevant profile section; it does not keep a diary or copy whole private threads.
 

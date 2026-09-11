@@ -4,7 +4,7 @@ The card is the whole conversation. Make the draft or idea easy to understand, w
 
 ## Explain first
 
-Start with the person or product, what happened and why acting helps. Use familiar words, short sentences and one idea at a time. Cut vague claims, repeated headings, internal process labels and phrases such as “prepared work” or “next gate”. State uncertainty beside the claim it limits.
+Start with the person or product, what happened and why acting helps. The first sentence should make sense without knowing your workflow. Use familiar words, short sentences and one idea at a time. Cut vague claims, repeated headings, internal process labels and phrases such as “prepared work” or “next gate”. State uncertainty beside the claim it limits.
 
 Explain once, then show the reply, comparison or proposed change. Do not repeat a diagram in prose and a table. Keep the action beside what it approves; expand supporting evidence under a specific label. Keep decision-changing facts visible. A local file link cannot replace the explanation.
 
@@ -24,7 +24,7 @@ For SVGs, put original files in ignored `public/agent-assets/` and embed with `<
 - **Ideas and projects:** show the problem, why it matters, the proposed outcome, limits and tradeoffs. A sketch or mockup can explain a change before it exists. “Build this” or “Fix this” starts the shown scope; a finished implementation is not required.
 - **Merge a change:** show the behavior change and a selectable current-head diff: SHA, paths, context and totals. Use soft red/green and +/- signs. Include the human-written patch; name omitted generated files. UI merge decisions need real before/after proof.
 
-Separate observed impact from possible reach. Green means verified success, not a future plan. Never use placeholder copy or an unknown recipient in a send action. The host owns navigation, feedback, Improve and Skip; do not duplicate those controls.
+Separate observed impact from possible reach. Show the relevant source or observation; a test count alone does not prove a fix. Green means verified success, not a future plan. Never use placeholder copy or an unknown recipient in a send action. The host owns navigation, feedback, Improve and Skip; do not duplicate those controls.
 
 ## Look at it
 

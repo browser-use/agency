@@ -774,11 +774,11 @@ export function Agency() {
         <section className="radar-context">
           <header>
             <p>What&rsquo;s your dream right now?</p>
-            <small>Agency reads this before every wave. Say what you are aiming at, what it should keep watching (Slack channels, X, Reddit, email, repos, a customer), and what to leave alone. You can change it any time in Settings.</small>
+            <small>Your coding agent can learn this from your recent work and fill it in. Or write a few words below. This page saves your dream; your coding agent creates the cards.</small>
           </header>
-          <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="e.g. Browser Use becomes the default browser agent. Watch #a-customer-support, #social-mentions, X mentions of browser use, and our GitHub issues. Never send anything without asking me." />
+          <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What do you want to achieve? What should your agent pay attention to?" />
           {composerError && <p className="radar-task-error" role="alert">{composerError}</p>}
-          <footer><div><button className="is-dark" disabled={taskSubmitting || !contextDraft.trim()} onClick={() => void submitTell()}>{taskSubmitting ? "Saving…" : "Start"}</button></div></footer>
+          <footer><div><button className="is-dark" disabled={taskSubmitting || !contextDraft.trim()} onClick={() => void submitTell()}>{taskSubmitting ? "Saving…" : "Save dream"}</button></div></footer>
         </section>
       </main>
     );
@@ -912,13 +912,13 @@ export function Agency() {
           </div>
         </section>
       ) : (
-        <section className="radar-empty"><strong>{view === "new" ? "No new cards." : view === "working" ? "No agents working." : "Nothing done yet."}</strong></section>
+        <section className="radar-empty"><strong>{view === "new" ? "No new cards. Ask your coding agent to start Agency." : view === "working" ? "No agents working." : "Nothing done yet."}</strong></section>
       )}
 
       {!composer && message && <div className="radar-message" role="status">{message}</div>}
 
       <footer className="radar-footer">
-        <i /> {data.jobs.running ? `${data.jobs.running} agents working` : data.jobs.queued ? `${data.jobs.queued} queued` : "Agents ready"}
+        <i /> {data.jobs.running ? `${data.jobs.running} jobs running` : data.jobs.queued ? `${data.jobs.queued} queued for your coding agent` : "No queued work"}
         {data.decisionMetrics.tracked > 0 && <> · you decide in {formatDuration(data.decisionMetrics.medianAcceptedActiveMs)} on average</>}
       </footer>
     </main>
