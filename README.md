@@ -21,7 +21,8 @@ Start agency. Create a me.md file and make the first 10 suggestions.
 <br>
 
 Agency finds useful work without waiting for you to think of another prompt. It learns what you
-care about, prepares the result privately, and asks you for a decision in a clear visual card.
+care about and brings you strong drafts or concrete ideas in clear visual cards. You choose an
+action; the agent carries it out.
 
 The package starts empty. It includes no personal profile, tickets, customer media or credentials.
 
@@ -84,9 +85,11 @@ analytics and Linear. For a useful missing connection, it explains the benefit a
 setup path while continuing elsewhere. It follows fresh and older leads to prepare replies, posts,
 fixes, outreach or briefs, checking why each matters now. Setup chores do not count as suggestions.
 
-The agent prepares privately as far as possible. Before anyone else can see a message, post or shared
-change, it needs your approval for that action. Clear feedback can approve edits and execution together,
-such as "shorten this and send it". Existing permission applies; there is no need to approve twice.
+The agent does short research and prepares drafts before asking. A project idea needs a clear problem,
+benefit and scope, not a finished implementation. A Send button approves the shown message; Build or
+Fix starts the proposed work; Merge needs the actual diff. Before a message, post or shared change is
+visible to others, it needs your approval for that action. Clear feedback can approve edits and
+execution together, such as "shorten this and send it". There is no need to approve the same scope twice.
 
 If ongoing work is useful, agree to a four-hour cadence or choose another. The agent uses its
 runner's scheduler, reuses any matching schedule and records the real checkout, app URL, profile
@@ -197,7 +200,7 @@ Documented APIs and CLIs need no browser.
 
 ## Cards and shortcuts
 
-Cards show who is affected, the problem, finished result and exact action. They can use real
+Cards show who is affected, the problem, draft or proposed outcome and exact action. They can use real
 screenshots, short diagrams, SVG animations, messages, full colorful diffs or recorded demos.
 The body may vary; feedback and navigation stay consistent. New arrivals preserve the selected card.
 
