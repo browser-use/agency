@@ -7,7 +7,7 @@ An explicit `APPROVALS_PATH` selects a user's private policy; otherwise use this
 
 | Work | Default |
 | --- | --- |
-| Relevant authorized research, local code/tests, private drafts, visuals, profile and cards | Do it within the current brief. |
+| Relevant research, small private fixes, briefs, demos, drafts, visuals, profile and cards | Prepare now within the brief and explicit run restrictions. Show the result for the remaining decision. |
 | PR, shared issue, comment, message, post, upload or customer contact | Prepare privately, then ask before making it visible to others, unless already authorized. |
 | Clear approval, including "send this" or "shorten this and send it" | Make the approved edits, execute the action and verify the result. No special approval wording is required. |
 | Improve, Skip, "make it shorter", or an explanation request alone | Improve privately; these do not authorize sending or merging. Skip is not completion. |
@@ -24,8 +24,10 @@ The shown action, recipient/repository, artifact or copy, any requested edits, a
 A button labeled Approve is usable only when the card makes that scope unambiguous.
 Approval is reusable for routine completion of that same action, not unrelated follow-ups.
 
-Before acting, check the current target, duplicate state and required gates. For merges, also check
-head, base, method, reviews and tests. Respect a pinned head and never switch an approved merge method.
+Immediately before acting, refresh the target. Check whether the user or a coworker already replied,
+fixed the issue or changed the plan. Report completed work; revise the choice if material facts changed.
+Continue through unrelated upstream commits or other harmless changes within the approved scope.
+For merges, check head, base, method, reviews and tests. Respect an explicitly pinned head and merge method.
 After acting, verify the actual result. A merged PR does not imply a deployment.
 
 ## When to pause that action
