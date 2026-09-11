@@ -21,7 +21,8 @@ Start agency. Create a me.md file and make the first 10 suggestions.
 <br>
 
 Agency finds useful work without waiting for you to think of another prompt. It learns what you
-care about, prepares the result privately, and asks you for a decision in a clear visual card.
+care about and brings you strong drafts or concrete ideas in clear visual cards. You choose an
+action; the agent carries it out.
 
 The package starts empty. It includes no personal profile, tickets, customer media or credentials.
 
@@ -69,7 +70,9 @@ Keep one coding-agent session responsible for Agency. Use the [prompt at the top
 Use the checkout and app URL chosen during setup. A cloud worker cannot automatically reach your
 laptop's localhost, files or signed-in browser.
 
-The first-run website asks for your dream. **Start saves that brief; it does not launch an agent.**
+The coding agent starts by reading [the skill](skills/agency/SKILL.md), infers a short editable profile
+from relevant context, and creates the first cards. The website also lets you enter a dream.
+**Save dream saves that brief; it does not launch an agent.**
 There is no installed background worker, automatic thread injection or built-in connector wizard.
 The active coding agent reads jobs, assigns workers and verifies their results.
 
@@ -84,9 +87,11 @@ analytics and Linear. For a useful missing connection, it explains the benefit a
 setup path while continuing elsewhere. It follows fresh and older leads to prepare replies, posts,
 fixes, outreach or briefs, checking why each matters now. Setup chores do not count as suggestions.
 
-The agent prepares privately as far as possible. Before anyone else can see a message, post or shared
-change, it needs your approval for that action. Clear feedback can approve edits and execution together,
-such as "shorten this and send it". Existing permission applies; there is no need to approve twice.
+The agent does short research and prepares drafts before asking. A project idea needs a clear problem,
+benefit and scope, not a finished implementation. A Send button approves the shown message; Build or
+Fix starts the proposed work; Merge needs the actual diff. Before a message, post or shared change is
+visible to others, it needs your approval for that action. Clear feedback can approve edits and
+execution together, such as "shorten this and send it". There is no need to approve the same scope twice.
 
 If ongoing work is useful, agree to a four-hour cadence or choose another. The agent uses its
 runner's scheduler, reuses any matching schedule and records the real checkout, app URL, profile
@@ -115,7 +120,7 @@ rules take precedence. Do not infer broader permission from past acceptance.
 ### Customize the layout
 
 New users get big useful graphics, short
-explanations, clear context and impact, three message options and expandable colorful diffs.
+explanations, clear context and impact, useful message choices and expandable colorful diffs.
 No theme selection is needed. Each card must explain the full decision on its own.
 
 Edit your installed `LAYOUT.md`, or tell Agency how you want cards to look. For example:
@@ -144,11 +149,12 @@ export ME_PATH=/absolute/path/to/me.md
 node scripts/sync-me.mjs --check
 ```
 
-- Existing file into a fresh app: `node scripts/sync-me.mjs --pull`.
-- Newly entered app dream into a new file: `node scripts/sync-me.mjs --push`.
+- Existing file into a fresh app: `node scripts/sync-me.mjs --file-to-app`.
+- Newly entered app dream into a new file: `node scripts/sync-me.mjs --app-to-file`.
 - No flag: synchronize whichever side has the newer timestamp.
 
-Never force a new app's content over an existing profile you want to keep.
+An empty source cannot overwrite a nonempty profile. Legacy `--pull` (file to app) and `--push`
+(app to file) remain supported. The agent handles this copying; the user need not manage it.
 Synchronize before work waves and after authorized profile edits. The agent learns from evidence
 and edits the relevant profile section; it does not keep a diary or copy whole private threads.
 
@@ -197,7 +203,7 @@ Documented APIs and CLIs need no browser.
 
 ## Cards and shortcuts
 
-Cards show who is affected, the problem, finished result and exact action. They can use real
+Cards show who is affected, the problem, draft or proposed outcome and exact action. They can use real
 screenshots, short diagrams, SVG animations, messages, full colorful diffs or recorded demos.
 The body may vary; feedback and navigation stay consistent. New arrivals preserve the selected card.
 

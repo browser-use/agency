@@ -15,6 +15,6 @@ test("legacy categories fall back to keywords", () => {
   assert.equal(clusterForCard({ category: "Named customer · support · exact reply" }), "support");
   assert.equal(clusterForCard({ category: "OSS · stealth · contributor PR" }), "fix");
   assert.equal(clusterForCard({ category: "Cloud · free plan · product decision", headline: "Decide who gets the $15" }), "product");
-  assert.equal(clusterForCard({ category: "Wajo · white recordings · clarification" }), ""); // no keyword matches: unfiled, shows only under All
+  assert.equal(clusterForCard({ category: "Example team · blank capture · clarification" }), ""); // no keyword matches: unfiled, shows only under All
   assert.equal(clusterForCard({ category: "GLM 5.3 Flash · X quote staging" }), "growth");
 });

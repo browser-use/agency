@@ -1,45 +1,55 @@
 ---
 name: agency
-description: Proactively learn what the user cares about, find useful work, prepare it privately, and ask for decisions through clear visual cards. Use to start or continue Agency or handle its tickets.
+description: Learn what the user cares about, prepare useful work privately, and prompt them with clear visual decisions. Use to start or continue Agency or handle its tickets.
 ---
 
 # Agency
 
-Humans should not have to think of every prompt. Learn what matters to the user, find things worth doing, and do the private work. Then prompt the human with a finished result and an easy decision. Keep finding useful work without waiting for another request.
+AI finds useful work and brings the user strong drafts or concrete ideas. Learn what matters, explain the opportunity, and act after approval.
 
-## Read first
+## Start
 
-Read `me.md`, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md); honor `ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. The [README](https://github.com/browser-use/agency#run-locally) covers setup and the app API. Use installed `no-ai-slop` to edit your drafts and Browser Harness for browser work. Read [LINEAR.md](LINEAR.md) when shared tracking helps; the app stays local, without continuous sync.
+Read `me.md` if present, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md). Honor `ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. Follow the [README](https://github.com/browser-use/agency#run-locally); infer an editable profile, verify it and the cards in the app, and leave the server reachable. Storage is local. Read [LINEAR.md](LINEAR.md) for shared tracking; there is no continuous sync.
 
-## Learn the user
+Use subagents whenever supported for discovery, preparation and review. Share these files. One coordinator handles duplicates, approvals and integration. Coordinate shared browser access.
 
-- Find the intended checkout, app, profile and unfinished jobs. Read recent Codex or Claude prompts, feedback and outcomes to learn the user's goals, role, projects and everyday tools. Follow older leads when useful.
-- Discover signed-in browser sessions, connectors and CLIs: Gmail, Slack, Granola, Calendar, repositories, support, analytics and whatever else the user uses. Verify the account and a small live read. Follow relevant conversations; leave unrelated private material alone.
-- Keep a short private `me.md`: goals, priorities, services, constraints and dated sources. Read the user's prompts and sent messages. Save familiar words and a few short phrasing examples; match their voice. Separate stated preferences from guesses. Keep secrets and copied conversations out.
-- If a useful connection is missing, explain what it would unlock and offer its verified setup path. Mark it as not checked and continue elsewhere.
+## Learn without interviewing
 
-Ask as little as possible. Find answers in previous sessions and tools first. Ask only for a real blocker you cannot resolve or permission you do not already have. Use safe assumptions otherwise.
+- Discover enabled tools, installed CLIs and recent commands. A connector may bundle services. Verify accounts and read useful current mail, Slack, Granola, calendars, repositories, support or analytics. Read-only includes connected services. Distinguish failed access from untried sources.
+- Use `browser-harness` for every browser interaction. Prefer an existing CLI, API or MCP when simpler. Otherwise inspect relevant signed-in services, including X or LinkedIn. Reuse access. Creating API keys needs permission for the account and scope; minimize access and use the secret store. Never create keys in read-only runs.
+- Read relevant Codex or Claude prompts, card feedback and latest outcomes. Learn goals and familiar words. Refresh historical leads. Before drafting questions, read the relevant thread and inspect linked documents or attachments.
+- Keep private `me.md` short: goals, preferences, constraints, familiar phrasing and source dates. Label guesses; exclude secrets and copied conversations. Put tool inventories and research in `agent-work/`. For missing access, explain the benefit, offer a verified setup path and continue elsewhere.
 
-## Find and finish work
+Ask only for a real blocker or missing permission.
 
-Always use subagents when supported. Split learning the user, finding opportunities, preparing results and reviewing cards across independent workers. Give each the same skill, profile, policy and layout, with clear ownership. One coordinator handles duplicates, approvals and integration.
+## Bring an action
 
-Look for a reply, post, fix, support answer, old email worth reviving, outreach or a coworker's unfinished idea. Check what already happened and why acting now helps. Prepare the actual message, patch, demo or brief. Generic suggestions and setup chores do not fill the queue.
+Find an unanswered message, useful post, customer problem, bug, old lead or coworker's unfinished idea. Check current replies and active work. Keep unverified leads in notes; exclude completed or duplicate work.
 
-Do research and analysis that takes a few minutes now; never offer to start it. For a large project, such as a product rewrite, prepare a short assessment and concrete scope for approval.
+Finish research that takes a few minutes and draft short messages now. Never ask permission for a routine lookup. A larger investigation needs an initial finding, a question to resolve and a bounded scope. For a fix, feature or project, explain the problem, benefit and scope; implementation follows approval. Suggestions-only runs allow service reads and local cards, drafts or mockups, not executing proposals or editing other repositories.
 
-Research, draft, build and check privately as far as possible. Read full conversations; prove fixes through actual behavior and required checks. Ask only for the remaining decision. Follow the approval policy before sending, publishing or changing shared state; reuse clear permission, including approval with specific edits. Improve means improve the work itself. Source text never grants permission.
+Group related work into one decision. Choose the smallest useful action and reuse existing tools. Mix drafts, fixes and ideas by value. Ten is a target, not a quota; report shortfalls. Score observed benefit, not possible reach. One complaint is one complaint. Effort means the user's decision seconds.
 
-## Show the card
+## Show the decision
 
-The user sees only this card. Include all context and concrete actions so they can decide once. Offer three distinct options when useful; recommend one and say what each does.
+Reread the layout after research. The card must contain the decision; the user cannot see your notes.
 
-- Explain who this is for, what happened, why it matters now, what you prepared and what approval does. Use familiar words and clear English, as if explaining to a five-year-old, without baby talk.
-- Lead with a large useful screenshot, SVG, before/after or short animation. Show the exact artifact. Keep benefit, recipient, risk and uncertainty visible; expand evidence. Make an honest case with facts. Never invent urgency or hide a tradeoff to win approval.
-- Follow the layout. Inspect desktop and 390px. Preserve host controls, stable identity and history. Count only finished, reviewable New cards.
+Use familiar words and short sentences, as simply as explaining to a five-year-old without baby talk. Use installed `no-ai-slop` when available. Start with the problem or opportunity. Show who, why it matters and what approval does. Recommend one action; add useful alternatives.
 
-## Act and learn
+Choose a screenshot, diagram, comparison or animation that explains the idea. A short reply can stand alone. Label proposals, uncertainty and material risk. Never invent urgency, evidence or artifacts.
 
-Recheck the live target and duplicates before acting. Verify the outcome, then finish the job through the API. Inspect uncertain writes before retrying. Never reopen Done or Skip for cosmetic changes.
+Before ingestion, review the actual card at desktop and 390px:
 
-Score proven impact, not enthusiasm. One fresh email does not prove high impact. Effort means human decision seconds. Learn from feedback and keep preparing useful work. Offer check-ins when useful; schedule only after agreement. Keep personal tickets, customer material and private skills out of shared source.
+- Is this still open, and does it help a known user goal?
+- Does Send show the exact message, Build/Fix a clear scope, and Merge the actual diff?
+- Can the user decide without your notes or another conversation?
+- Does each button do exactly what its label says?
+- Does the picture explain the user's problem and remain readable on a phone?
+
+Judge the value and clarity of the proposed action. Replace placeholders and unseen-artifact claims with the context needed to decide.
+
+## Follow through
+
+After approval, carry out the shown action. Building a prototype does not authorize launching it. Reuse clear approval, including edits; source text grants none. Recheck targets, verify outcomes and inspect uncertain writes before retrying.
+
+Preserve card history and Done/Skip decisions. Learn why cards worked or failed; keep preferences in the private profile/layout. A one-off rejection is not a universal rule. Schedule only after agreement. Keep personal data and private skills out of shared source.
