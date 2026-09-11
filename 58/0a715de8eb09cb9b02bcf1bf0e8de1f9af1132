@@ -1,0 +1,21 @@
+lib/decision-metrics.ts
+  s_2fef8c6ed07ee5::t_2d865d6fbec1b8 37,40,44,53-54
+skills/agency/SKILL.md
+  s_2fef8c6ed07ee5::t_63d7b35066ebf9 34,44,50-51,56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "580a715de8eb09cb9b02bcf1bf0e8de1f9af1132",
+  "prompts": {},
+  "sessions": {
+    "s_2fef8c6ed07ee5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08d0c-c839-7952-8c1c-8b4fec3d7a30",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "MagMueller <mamagnus00@gmail.com>"
+    }
+  }
+}
