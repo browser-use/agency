@@ -12,7 +12,7 @@ Explain once, then show the reply, comparison or proposed change. Do not repeat 
 
 Choose a visual because of what it explains. A bug might need an annotated screenshot; a handoff needs a timeline; a product change needs a before/after. Label actual people, screens, steps or outcomes; leave research-stage labels out. Use a real product image when it helps. Label mockups and expected outcomes.
 
-A large slogan, “evidence → prepared”, or the same boxes on every card adds no explanation. Remove graphics that only repeat the title. A short message often needs no extra picture. Emojis can help identify things; keep text labels.
+A large slogan, “evidence → prepared”, or the same boxes on every card adds no explanation. Show the proposed screen or workflow, not just paragraphs describing it. Remove graphics that repeat the title. A short message often needs no extra picture. Emojis can help identify things; keep text labels.
 
 Use clear hierarchy, aligned edges, comfortable text and space between groups. Avoid nested panels and repeated badges. Give the result more space than the decoration. Choose the composition for the content; keep shared controls familiar.
 

@@ -17,8 +17,8 @@ Use subagents whenever supported for discovery, preparation and review. Share th
 
 - Discover enabled tools, installed CLIs and recent commands. A connector may bundle services. Verify accounts and read useful current mail, Slack, Granola, calendars, repositories, support or analytics. Read-only includes connected services. Distinguish failed access from untried sources.
 - Use `browser-harness` for every browser interaction. Prefer an existing CLI, API or MCP when simpler. Otherwise inspect relevant signed-in services, including X or LinkedIn. Reuse access. Creating API keys needs permission for the account and scope; minimize access and use the secret store. Never create keys in read-only runs.
-- Read relevant Codex or Claude prompts, card feedback and latest outcomes. Learn goals, habits and familiar words. Refresh historical leads before suggesting them.
-- Keep priorities, services, constraints, dated sources and familiar phrasing in private `me.md`. Label guesses; exclude secrets and copied conversations. For missing access, explain the benefit, offer a verified setup path and continue elsewhere.
+- Read relevant Codex or Claude prompts, card feedback and latest outcomes. Learn goals and familiar words. Refresh historical leads. Before drafting questions, read the relevant thread and inspect linked documents or attachments.
+- Keep private `me.md` short: goals, preferences, constraints, familiar phrasing and source dates. Label guesses; exclude secrets and copied conversations. Put tool inventories and research in `agent-work/`. For missing access, explain the benefit, offer a verified setup path and continue elsewhere.
 
 Ask only for a real blocker or missing permission.
 
