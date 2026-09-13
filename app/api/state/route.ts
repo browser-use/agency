@@ -3,6 +3,13 @@ import { parseTopicRow } from "../../../lib/card-cluster";
 import { summarizeDecisionMetrics } from "../../../lib/decision-metrics";
 import { estimateDecisionTime, type DecisionCardInput } from "../../../lib/decision-time";
 import { jobLeaseWindow } from "../../../lib/job-lifecycle";
+import { getAgentSettings } from "../../../lib/agent-settings";
+import {
+  parseStoredAgentConfig,
+  parseStoredAgentRun,
+  parseStoredSelection,
+  tryResolveAgentConfig,
+} from "../../../lib/agent-models";
 
 type IdeaRow = DecisionCardInput & Record<string, unknown>;
 type DecisionHistoryRow = DecisionCardInput & {
@@ -66,6 +73,7 @@ export async function GET(request: Request) {
   const light = url.searchParams.get("light") === "1";
   const requestedOnlyId = Number(url.searchParams.get("only"));
   const onlyId = Number.isInteger(requestedOnlyId) && requestedOnlyId > 0 ? requestedOnlyId : null;
+  const agentSettings = await getAgentSettings(db);
   const context = await db.prepare("SELECT text, created_at AS createdAt FROM contexts ORDER BY id DESC LIMIT 1").first();
   const topicRows = await db.prepare("SELECT id, label, hint FROM topics ORDER BY position, created_at").all<{ id: string; label: string; hint: string }>();
   const ideas = await db.prepare(`
@@ -78,6 +86,8 @@ export async function GET(request: Request) {
         i.headline,
         CASE WHEN ? THEN '' ELSE i.card_html END AS cardHtml,
         i.agent_context AS agentContext,
+        i.agent_selection AS storedAgentSelection,
+        i.agent_revision AS agentRevision,
         i.score,
         i.rise_reach AS riseReach,
         i.rise_impact AS riseImpact,
@@ -102,6 +112,8 @@ export async function GET(request: Request) {
         j.result AS jobResult,
         j.ticket_outcome AS jobOutcome,
         j.button_label AS jobLabel,
+        j.agent_config AS storedAgentConfig,
+        j.agent_run AS storedAgentRun,
         j.updated_at AS jobUpdatedAt,
         a.active_ms AS decisionActiveMs,
         a.wall_ms AS decisionWallMs,
@@ -174,22 +186,45 @@ export async function GET(request: Request) {
     LEFT JOIN latest_jobs ON latest_jobs.idea_id = i.id
   `).first<{ verified: number | null; legacy: number | null; reviewReady: number | null; dismissed: number | null; points: number | null; pointsToday: number | null; verifiedToday: number | null }>();
   const decisionRows = await cachedDecisionRows(db);
-  const enrichedIdeas = ideas.results.map((idea) => {
+  const enrichedIdeas = ideas.results.map((idea: IdeaRow) => {
     const estimate = estimateDecisionTime(idea);
+    const storedSelection = idea.storedAgentSelection as string | null;
+    const agentSelection = parseStoredSelection(storedSelection);
+    const storedSelectionInvalid = Boolean(storedSelection) && !agentSelection;
+    const storedConfig = parseStoredAgentConfig(idea.storedAgentConfig as string | null);
+    const storedRun = parseStoredAgentRun(idea.storedAgentRun as string | null);
+    const useJobSnapshot = idea.status === "working" || idea.status === "done";
+    const {
+      storedAgentSelection: _storedAgentSelection,
+      storedAgentConfig: _storedAgentConfig,
+      storedAgentRun: _storedAgentRun,
+      ...publicIdea
+    } = idea;
+    void _storedAgentSelection;
+    void _storedAgentConfig;
+    void _storedAgentRun;
     return {
-      ...idea,
+      ...publicIdea,
       decisionEstimateMs: estimate.estimatedMs,
       decisionEstimateReason: estimate.reason,
+      agentSelection,
+      agentConfig: useJobSnapshot
+        ? storedConfig
+        : storedSelectionInvalid
+          ? null
+          : tryResolveAgentConfig(agentSettings, "execution", agentSelection, Number(idea.agentRevision ?? 0)),
+      agentRun: useJobSnapshot ? storedRun : null,
     };
   });
-  const metricRows = decisionRows.results.map((row) => ({
+  const metricRows = decisionRows.results.map((row: DecisionHistoryRow) => ({
     ...row,
     estimatedMs: estimateDecisionTime(row).estimatedMs,
   }));
-  const jobCounts = Object.fromEntries(jobs.results.map((row) => [row.status, row.total]));
-  const laneCounts = Object.fromEntries(laneRows.results.map((row) => [row.status, row.total]));
+  const jobCounts = Object.fromEntries(jobs.results.map((row: { status: string; total: number }) => [row.status, row.total]));
+  const laneCounts = Object.fromEntries(laneRows.results.map((row: { status: string; total: number }) => [row.status, row.total]));
   return Response.json({
     context,
+    agentSettings,
     topics: topicRows.results.map(parseTopicRow),
     ideas: enrichedIdeas,
     laneCounts: {

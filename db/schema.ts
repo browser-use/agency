@@ -19,6 +19,8 @@ export const ideas = sqliteTable("ideas", {
   secondaryAction: text("secondary_action").notNull().default("See proof"),
   cardHtml: text("card_html").notNull().default(""),
   agentContext: text("agent_context").notNull().default("{}"),
+  agentSelection: text("agent_selection"),
+  agentRevision: integer("agent_revision").notNull().default(0),
   externalAction: text("external_action").notNull(),
   score: integer("score").notNull(),
   riseReach: integer("rise_reach").notNull().default(0),
@@ -56,11 +58,22 @@ export const agentJobs = sqliteTable("agent_jobs", {
   instruction: text("instruction").notNull().default(""),
   userFeedback: text("user_feedback").notNull().default(""),
   cardContext: text("card_context").notNull(),
+  agentConfig: text("agent_config"),
+  agentRun: text("agent_run"),
   status: text("status").notNull().default("queued"),
   result: text("result").notNull().default(""),
   ticketOutcome: text("ticket_outcome"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const agentSettings = sqliteTable("agent_settings", {
+  id: integer("id").primaryKey(),
+  revision: integer("revision").notNull().default(0),
+  models: text("models").notNull().default("[]"),
+  runnerDefault: text("runner_default"),
+  discovery: text("discovery"),
+  execution: text("execution"),
 });
 
 export const cardAttention = sqliteTable("card_attention", {

@@ -94,7 +94,60 @@ runner's scheduler, reuses any matching schedule and records the real checkout, 
 and approval-policy/layout paths. It reports a meaningful result or blocker, not empty periodic updates.
 A cadence written in a profile does not itself run anything.
 
-### Profile, layout and approval settings
+### Models and thinking levels
+
+Agency separates **Discovery**, which finds and prepares new ideas, from **Execution**, which handles
+approved actions, feedback and Auto-improve. Choose an independent model and thinking level for each
+in Settings. On a New card, use the model controls to override the execution default for that card,
+then save before approving. New Task also supports an override. Resetting a card to **Use execution
+default** makes its next action inherit the saved execution profile again.
+
+The model list comes from the runner installed on your computer, including its supported thinking
+levels. For Codex, with Agency running:
+
+```sh
+RADAR_URL=http://localhost:3100 npm run models:sync
+```
+
+This reads the [Codex App Server model catalog](https://learn.chatgpt.com/docs/app-server#models).
+It does not start inference, copy credentials, change your global Codex settings or create a worker.
+Refresh it after a runner update. An unavailable saved choice remains visible and blocks new work
+until you select a valid replacement. Other runners can register their own catalog with
+`POST /api/agent-models`; a catalog entry is not proof that a coordinator for that runner is installed.
+
+Without an explicit profile, Agency uses the registered runner default. Existing installations with
+no registered catalog retain their previous coordinator workflow until models are configured.
+
+The active coordinator still launches workers. Saving a setting or clicking a card does not install
+a background runner. The selected profile is captured when a job is queued; changing a default later
+does not alter that queued job. A worker must claim the job with the exact model, thinking level and
+a fresh context. The app keeps the requested selection separate from claimed worker metadata.
+
+For a Codex coordinator, prepare a brief containing the scope, project and resolved skill/profile/
+policy/layout paths, then obtain the host's fresh-worker arguments:
+
+```sh
+RADAR_URL=http://localhost:3100 npm run agent:dispatch -- --phase discovery --brief agent-work/discovery.md
+RADAR_URL=http://localhost:3100 npm run agent:dispatch -- --job 123 --brief agent-work/execution.md
+```
+
+These commands print a dispatch plan; they do not execute or claim work. The coordinator invokes its
+`spawn_agent` tool with the returned unique task name, `model`, `reasoning_effort` and
+`fork_turns: "none"`. A job worker waits for claim confirmation. The coordinator supplies the actual
+worker identifier with the claim, confirms it to the worker, and later verifies the result. A host
+that cannot honor the selected model must report that limitation instead of inheriting the parent.
+If the claim fails, stop the waiting worker rather than authorizing it to proceed.
+Keep dispatch output private because it includes the job's original context and approval.
+
+Model selection does not widen the approved action, change account access or authorize a schedule.
+
+Run `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` to check the source. The
+optional `AGENCY_TEST_URL=http://localhost:3101 npm run test:integration` exercises the real local
+database API on a separate fixture server. It refuses the everyday port 3100 and a personal profile,
+restores model settings and dismisses its synthetic cards. API tests do not perform model inference;
+verify your coordinator separately with a bounded local worker before using it for real actions.
+
+### Profile, layout and approval files
 
 | File | Purpose |
 | --- | --- |
@@ -232,12 +285,30 @@ Include `x-radar-local-agent: 1` for local agent requests.
 - `GET /api/agent-jobs` returns available latest jobs, not an exclusive claim. Read `cardContext`,
   `userFeedback`, `buttonLabel`, `instruction` and ordered `history`. History results are truncated
   to 600 characters; use full local history read-only when a missing detail matters.
+- Jobs also return `agentConfig` (the immutable queued selection) and `agentRun` (claimed worker
+  metadata). For a configured job, a running update requires `agentRun` with matching `runner`,
+  `model`, `thinkingLevel` and `contextMode: "fresh"`. Include the actual host's `workerId` once known.
+  Missing or mismatched metadata is rejected. Earlier jobs without a profile remain compatible.
+- If the selected runtime cannot start, report a truthful preflight failure with the queued job's
+  `id`, `status: "failed"`, `ticketOutcome: "blocked"`, `failureStage: "dispatch"` and a nonempty
+  `result`. Omit `agentRun`. This returns the unstarted job as visibly blocked without pretending a
+  worker ran. It cannot complete a queued job or replace an already-running worker's outcome.
+- `GET /api/agent-settings` reads the current catalog and separate defaults. Save defaults with
+  `POST /api/agent-settings`, providing `expectedRevision`, `discovery` and `execution`. A selection
+  is `{modelId, thinkingLevel}`; `null` uses the runner default. Refresh on a 409 conflict.
+- `POST /api/agent-models` registers `{models, runnerDefault, expectedRevision}` through the local
+  agent interface. Each model has `id`, `runner`, `model`, `label`, `thinkingLevels` and
+  `defaultThinkingLevel`. No model names are built into the app.
+- `POST /api/ideas/agent` saves `{id, version, expectedAgentRevision, selection}` on an idle New card.
+  It preserves the card's content, ordering, approval and completion state. UI action requests also
+  include `expectedAgentRevision` and `expectedSettingsRevision` to reject stale selections.
 - `GET /api/state` exposes current context, cards and decisions with view/light-dependent coverage.
   Inspect its response and route before treating it as the complete archive. Search all statuses,
   versions, feedback, jobs and source anchors for duplicates; fall back to bounded read-only local
   database queries when necessary.
-- One coordinator assigns each job. `POST /api/agent-jobs` with
-  `{"id":123,"status":"running"}` starts work; repeated running updates renew its six-hour lease.
+- One coordinator assigns each job. `POST /api/agent-jobs` with the job's `id`, `status: "running"`
+  and matching `agentRun` starts work; repeated running updates renew its six-hour lease. The bare
+  `{"id":123,"status":"running"}` format applies only to legacy jobs without an `agentConfig`.
   GET may return expired running work as `reclaimed: true`, subject to ten concurrent slots.
   The API has no exclusive worker token. Coordinate other active agents and recheck live state;
   do not assume a successful running update prevents another worker from acting.

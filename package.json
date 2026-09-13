@@ -10,6 +10,11 @@
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "test": "node --experimental-strip-types --test tests/*.test.*",
+    "test:integration": "node --test tests/integration/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "models:sync": "node scripts/sync-models.mjs",
+    "agent:dispatch": "node --experimental-strip-types scripts/agent-dispatch.mjs",
     "db:generate": "drizzle-kit generate",
     "card:push": "node scripts/push-card.mjs"
   },
@@ -20,6 +25,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
+    "@cloudflare/workers-types": "4.20260515.1",
     "@eslint/js": "9.39.4",
     "@next/eslint-plugin-next": "16.2.6",
     "@tailwindcss/postcss": "4.2.1",

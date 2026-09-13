@@ -7,6 +7,9 @@ import { cardShortcut } from "../lib/card-shortcut";
 import { clusterForCard, type Topic } from "../lib/card-cluster";
 import { compareByImpact, impactPoints } from "../lib/rise";
 import { MAX_TASK_LENGTH, submitNewTask } from "../lib/task-submission";
+import { AgentPicker, selectionLabel } from "./components/agent-picker";
+import { selectionCanRun, selectionCanStartWork, selectionValidity } from "./components/agent-picker-state";
+import type { AgentConfig, AgentRun, AgentSelection, AgentSettings } from "../lib/agent-models";
 
 type Idea = {
   id: number;
@@ -37,6 +40,10 @@ type Idea = {
   decisionAction: "do" | "change" | "no" | null;
   decisionEstimateMs: number | null;
   decisionEstimateReason: string;
+  agentSelection: AgentSelection | null;
+  agentRevision: number;
+  agentConfig: AgentConfig | null;
+  agentRun: AgentRun | null;
 };
 
 type RadarState = {
@@ -58,6 +65,7 @@ type RadarState = {
     medianFirstActionMs: number | null;
     medianEstimateErrorMs: number | null;
   };
+  agentSettings: AgentSettings;
 };
 
 type CardAction = {
@@ -95,6 +103,7 @@ const emptyState: RadarState = {
     medianFirstActionMs: null,
     medianEstimateErrorMs: null,
   },
+  agentSettings: { revision: 0, models: [], runnerDefault: null, discovery: null, execution: null },
 };
 
 function formatDuration(milliseconds: number | null) {
@@ -110,6 +119,20 @@ function decisionLabel(action: Idea["decisionAction"]) {
   if (action === "do") return "Accepted";
   if (action === "no") return "Skipped";
   return "Changed";
+}
+
+function sameAgentSelection(left: AgentSelection | null, right: AgentSelection | null) {
+  return left?.modelId === right?.modelId && left?.thinkingLevel === right?.thinkingLevel;
+}
+
+function configLabel(config: AgentConfig | null) {
+  if (!config) return "No model was requested";
+  return `${config.runner} / ${config.model} · ${config.thinkingLevel}`;
+}
+
+function runLabel(run: AgentRun | null) {
+  if (!run) return "Not claimed yet";
+  return `${run.runner} / ${run.model} · ${run.thinkingLevel}`;
 }
 
 
@@ -296,6 +319,10 @@ function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; t
                     {open && (
                       <div className="radar-done-card">
                         {idea.jobResult && <p className="radar-done-result">{summarizeJobResult(idea.jobResult)}</p>}
+                        {(idea.agentConfig || idea.agentRun) && <div className="radar-card-agent-readout" aria-label="Agent model details">
+                          <span><b>Requested</b>{configLabel(idea.agentConfig)}</span>
+                          <span><b>Actual</b>{runLabel(idea.agentRun)}</span>
+                        </div>}
                         {cardHtml[idea.id] || idea.cardHtml
                           ? <AgentCard idea={{ ...idea, cardHtml: cardHtml[idea.id] || idea.cardHtml }} actionable={false} onAction={(action) => onAction(idea, action)} onInteraction={(action, label) => onInteraction(idea, action, label)} />
                           : <p className="radar-done-empty">Loading card…</p>}
@@ -316,6 +343,7 @@ function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; t
 export function Agency() {
   const [data, setData] = useState<RadarState>(emptyState);
   const [view, setView] = useState<"new" | "working" | "done">("new");
+  const viewRef = useRef<"new" | "working" | "done">("new");
   const [cluster, setCluster] = useState<string>("all");
   const [sort, setSort] = useState<SortMode>(readSortMode);
   const sortRef = useRef<SortMode>(sort);
@@ -323,6 +351,7 @@ export function Agency() {
     sortRef.current = sort;
     try { window.localStorage.setItem(SORT_KEY, JSON.stringify(sort)); } catch { /* private mode */ }
   }, [sort]);
+  useEffect(() => { viewRef.current = view; }, [view]);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   // Poll responses may resolve after the user has already moved to another card.
   // Keep the navigation anchor outside React's render timing so a refresh can
@@ -331,21 +360,28 @@ export function Agency() {
   const [composer, setComposer] = useState<"task" | "context" | null>(null);
   const [contextDraft, setContextDraft] = useState("");
   const [taskDraft, setTaskDraft] = useState("");
+  const [taskAgentSelection, setTaskAgentSelection] = useState<AgentSelection | null>(null);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
   const taskSubmittingRef = useRef(false);
   const [composerError, setComposerError] = useState("");
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>({});
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [agentSelectionDrafts, setAgentSelectionDrafts] = useState<Record<string, AgentSelection | null>>({});
+  const [agentSavingKey, setAgentSavingKey] = useState("");
+  const [agentSettingsRefreshing, setAgentSettingsRefreshing] = useState(false);
+  const [agentSelectionError, setAgentSelectionError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [, setLiveDecision] = useState({ key: "", activeMs: 0 });
   const liveDecisionByCardRef = useRef<Record<string, number>>({});
   const attentionTrackerRef = useRef<AttentionTracker | null>(null);
   const loadRequestRef = useRef(0);
+  const agentSettingsRefreshAfterRef = useRef(0);
   // `?card=<id>` opens one exact card on first load, whatever lane it sits in.
   const deepLinkHandledRef = useRef(false);
 
   const selectIdea = useCallback((idea: Idea | null) => {
+    if (selectedIdeaRef.current?.id !== idea?.id || selectedIdeaRef.current?.agentRevision !== idea?.agentRevision) setAgentSelectionError("");
     selectedIdeaRef.current = idea;
     setSelectedIdea(idea);
   }, []);
@@ -365,7 +401,7 @@ export function Agency() {
     if (requestedCardId) stateUrl.searchParams.set("card", String(requestedCardId));
     const response = await fetch(stateUrl, { cache: "no-store" });
     const next = (await response.json()) as RadarState;
-    if (requestId !== loadRequestRef.current) return;
+    if (requestId !== loadRequestRef.current) return false;
     if (!deepLinkHandledRef.current) {
       deepLinkHandledRef.current = true;
       const requestedId = Number(new URLSearchParams(window.location.search).get("card"));
@@ -375,7 +411,11 @@ export function Agency() {
         setView(requested.status);
         selectIdea(requested);
         setLoading(false);
-        return;
+        if (agentSettingsRefreshAfterRef.current && requestId >= agentSettingsRefreshAfterRef.current) {
+          agentSettingsRefreshAfterRef.current = 0;
+          setAgentSettingsRefreshing(false);
+        }
+        return true;
       }
     }
     const visible = ideasForView(next.ideas, targetView, sortRef.current).filter((idea) => idea.id !== selection?.excludeId);
@@ -383,7 +423,30 @@ export function Agency() {
     const anchor = selection ? selection.preferred : selectedIdeaRef.current;
     selectIdea(keepSelectedCard(anchor, visible, next.ideas));
     setLoading(false);
+    if (agentSettingsRefreshAfterRef.current && requestId >= agentSettingsRefreshAfterRef.current) {
+      agentSettingsRefreshAfterRef.current = 0;
+      setAgentSettingsRefreshing(false);
+    }
+    return true;
   }, [selectIdea, view]);
+
+  const refreshAgentSettingsSnapshot = useCallback(async () => {
+    setAgentSettingsRefreshing(true);
+    agentSettingsRefreshAfterRef.current = loadRequestRef.current + 1;
+    try {
+      await load(viewRef.current);
+      return agentSettingsRefreshAfterRef.current === 0;
+    } catch {
+      return false;
+    }
+  }, [load]);
+
+  const retryAgentSettingsSnapshot = useCallback(async () => {
+    setAgentSelectionError("");
+    if (!await refreshAgentSettingsSnapshot()) {
+      setAgentSelectionError("Could not load the latest model defaults. Retry the refresh before starting work.");
+    }
+  }, [refreshAgentSettingsSnapshot]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -437,6 +500,22 @@ export function Agency() {
   const feedbackKey = active ? cardDraftKey(active) : "";
   const feedback = feedbackKey ? feedbackDrafts[feedbackKey] ?? "" : "";
   const activeLiveState = latestSelected ?? active;
+  const activeAgentKey = active ? `${active.id}:${active.agentRevision}` : "";
+  const hasAgentDraft = Boolean(activeAgentKey && Object.hasOwn(agentSelectionDrafts, activeAgentKey));
+  const activeAgentSelection = active
+    ? (hasAgentDraft ? agentSelectionDrafts[activeAgentKey] : active.agentSelection)
+    : null;
+  const activeAgentValidity = selectionValidity(data.agentSettings.models, activeAgentSelection);
+  const agentSelectionSaving = Boolean(activeAgentKey && agentSavingKey === activeAgentKey);
+  const agentSelectionDirty = Boolean(active && hasAgentDraft && !sameAgentSelection(active.agentSelection, activeAgentSelection));
+  const inheritedExecutionSelection = data.agentSettings.execution ?? data.agentSettings.runnerDefault;
+  const activeEffectiveSelection = activeAgentSelection ?? inheritedExecutionSelection;
+  const cardConfigUnavailable = Boolean(active && !selectionCanStartWork(data.agentSettings.models, activeEffectiveSelection, agentSettingsRefreshing));
+  const effectiveSelectionUnavailable = activeEffectiveSelection !== null && !selectionCanRun(data.agentSettings.models, activeEffectiveSelection);
+  const cardAgentBlocked = agentSelectionDirty || agentSelectionSaving || agentSettingsRefreshing || !activeAgentValidity.valid || cardConfigUnavailable;
+  const executionInheritedLabel = "Use execution default";
+  const executionEffectiveLabel = selectionLabel(data.agentSettings.models, inheritedExecutionSelection, "No execution default configured");
+  const taskAgentAvailable = selectionCanStartWork(data.agentSettings.models, taskAgentSelection ?? inheritedExecutionSelection, agentSettingsRefreshing);
   const activeJob = activeLiveState?.jobId ? {
     id: activeLiveState.jobId,
     status: activeLiveState.jobStatus,
@@ -445,6 +524,9 @@ export function Agency() {
     label: activeLiveState.jobLabel?.trim() ?? "",
   } : null;
   const jobInFlight = activeJob?.status === "queued" || activeJob?.status === "running";
+  const blockedTaskResult = activeJob?.outcome === "blocked" && !jobInFlight
+    ? activeJob.result || "This task is blocked."
+    : "";
   const attentionIdeaId = active?.id ?? null;
   const attentionIdeaVersion = active?.version ?? null;
   const attentionDecisionAction = active?.decisionAction ?? null;
@@ -472,6 +554,7 @@ export function Agency() {
     if (attentionIdeaId === null || attentionIdeaVersion === null || attentionDecisionAction || composer) return;
     const id = attentionIdeaId;
     const version = attentionIdeaVersion;
+    // eslint-disable-next-line react-hooks/purity -- this timer baseline is created only after the effect mounts.
     const now = Date.now();
     const totalActiveMs = Math.max(attentionInitialActiveMs, liveDecisionByCardRef.current[`${id}:${version}`] ?? 0);
     const tracker: AttentionTracker = { id, version, lastInteractionAt: now, lastTickAt: now, pendingActiveMs: 0, totalActiveMs };
@@ -522,12 +605,68 @@ export function Agency() {
     }).catch(() => undefined);
   }, [takePendingActiveMs]);
 
+  const saveCardAgentSelection = useCallback(async () => {
+    const target = selectedIdeaRef.current;
+    if (!target) return false;
+    const key = `${target.id}:${target.agentRevision}`;
+    if (!Object.hasOwn(agentSelectionDrafts, key) || agentSavingKey === key) return true;
+    const selection = agentSelectionDrafts[key];
+    const validity = selectionValidity(data.agentSettings.models, selection);
+    if (!validity.valid) return false;
+    // Ignore a state refresh that began before this compare-and-swap save. It
+    // may contain the prior agent revision and would otherwise reopen a stale
+    // draft after the server has accepted this one.
+    ++loadRequestRef.current;
+    setAgentSavingKey(key);
+    setAgentSettingsRefreshing(true);
+    setAgentSelectionError("");
+    try {
+      const response = await fetch("/api/ideas/agent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: target.id, version: target.version, expectedAgentRevision: target.agentRevision, selection }),
+      });
+      const result = await response.json().catch(() => null) as {
+        ok?: boolean;
+        agentRevision?: number;
+        error?: string;
+      } | null;
+      if (!response.ok || !result?.ok || typeof result.agentRevision !== "number" || !Number.isInteger(result.agentRevision)) {
+        throw new Error(result?.error || "This model choice was not saved.");
+      }
+      if (await refreshAgentSettingsSnapshot()) {
+        setAgentSelectionDrafts((current) => {
+          const next = { ...current };
+          delete next[key];
+          return next;
+        });
+      } else {
+        setAgentSelectionError("The model choice was saved, but the latest defaults could not be loaded. Retry the refresh before starting work.");
+      }
+      return true;
+    } catch (error) {
+      setAgentSelectionError(error instanceof Error ? error.message : "This model choice was not saved.");
+      if (!await refreshAgentSettingsSnapshot()) {
+        setAgentSelectionError("Could not confirm the latest model defaults. Retry the refresh before starting work.");
+      }
+      return false;
+    } finally {
+      setAgentSavingKey((current) => current === key ? "" : current);
+    }
+  }, [agentSavingKey, agentSelectionDrafts, data.agentSettings.models, refreshAgentSettingsSnapshot]);
+
   const sendToAgent = useCallback(async (target: Idea, action: "do" | "change" | "no", label: string, prompt = "", note = "") => {
+    const targetKey = `${target.id}:${target.agentRevision}`;
+    const targetSelection = Object.hasOwn(agentSelectionDrafts, targetKey) ? agentSelectionDrafts[targetKey] : target.agentSelection;
+    if (action !== "no" && (agentSettingsRefreshing || agentSavingKey === targetKey || !sameAgentSelection(target.agentSelection, targetSelection) || !selectionValidity(data.agentSettings.models, targetSelection).valid || !selectionCanRun(data.agentSettings.models, targetSelection ?? inheritedExecutionSelection))) {
+      setAgentSelectionError("Save a valid model choice before starting this work.");
+      return false;
+    }
     const activeMs = takePendingActiveMs(target.id, target.version);
     const response = await fetch("/api/ideas/action", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id: target.id, version: target.version, status: target.status, action, label, prompt, note, activeMs }),
+      body: JSON.stringify({ id: target.id, version: target.version, status: target.status, action, label, prompt, note, activeMs, expectedAgentRevision: target.agentRevision, expectedSettingsRevision: data.agentSettings.revision }),
     });
     if (response.status === 409) {
       const tracker = attentionTrackerRef.current;
@@ -556,30 +695,31 @@ export function Agency() {
     const nextSelection = targetView === view
       ? nextCardAfterRemoval(target.id, visibleIdeas)
       : ideasForView(data.ideas, targetView, sortRef.current)[0] ?? null;
+    viewRef.current = targetView;
     setView(targetView);
     selectIdea(nextSelection);
     await load(targetView, { preferred: nextSelection, excludeId: target.id });
     return true;
-  }, [data.ideas, load, selectIdea, takePendingActiveMs, view, visibleIdeas]);
+  }, [agentSavingKey, agentSelectionDrafts, agentSettingsRefreshing, data.agentSettings.models, data.agentSettings.revision, data.ideas, inheritedExecutionSelection, load, selectIdea, takePendingActiveMs, view, visibleIdeas]);
 
-  const handleCardAction = useCallback((payload: CardAction) => {
-      if (!active) return;
-      const label = payload.label?.slice(0, 120) || payload.action;
-      const prompt = payload.prompt?.slice(0, 5000) || "";
-      if (payload.action === "open") {
-        if (!payload.url) return;
-        recordCardInteraction(active, "open", label);
-        const url = new URL(payload.url, window.location.origin);
-        if (url.protocol === "http:" || url.protocol === "https:") window.open(url.href, "_blank", "noopener,noreferrer");
-        return;
-      }
-      void sendToAgent(active, payload.action, label, prompt);
-  }, [active, recordCardInteraction, sendToAgent]);
+  function handleCardAction(payload: CardAction) {
+    if (!active) return;
+    const label = payload.label?.slice(0, 120) || payload.action;
+    const prompt = payload.prompt?.slice(0, 5000) || "";
+    if (payload.action === "open") {
+      if (!payload.url) return;
+      recordCardInteraction(active, "open", label);
+      const url = new URL(payload.url, window.location.origin);
+      if (url.protocol === "http:" || url.protocol === "https:") window.open(url.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    void sendToAgent(active, payload.action, label, prompt);
+  }
 
   const submitFeedback = useCallback(async () => {
     const note = feedback.trim();
     const target = active;
-    if (!target || !note || jobInFlight || feedbackSubmitting) return;
+    if (!target || !note || jobInFlight || feedbackSubmitting || cardAgentBlocked) return;
 
     setFeedbackSubmitting(true);
     try {
@@ -593,10 +733,10 @@ export function Agency() {
     } finally {
       setFeedbackSubmitting(false);
     }
-  }, [active, feedback, feedbackSubmitting, jobInFlight, sendToAgent]);
+  }, [active, cardAgentBlocked, feedback, feedbackSubmitting, jobInFlight, sendToAgent]);
 
   const submitImprove = useCallback(async () => {
-    if (!active || jobInFlight || feedbackSubmitting) return;
+    if (!active || jobInFlight || feedbackSubmitting || cardAgentBlocked) return;
 
     setFeedbackSubmitting(true);
     try {
@@ -609,7 +749,7 @@ export function Agency() {
     } finally {
       setFeedbackSubmitting(false);
     }
-  }, [active, feedbackSubmitting, jobInFlight, sendToAgent]);
+  }, [active, cardAgentBlocked, feedbackSubmitting, jobInFlight, sendToAgent]);
 
   const submitSkip = useCallback(async () => {
     if (!active || feedbackSubmitting) return;
@@ -622,8 +762,27 @@ export function Agency() {
     }
   }, [active, feedbackSubmitting, sendToAgent]);
 
+  function move(direction: number) {
+    if (!visibleIdeas.length) return;
+    recordCardInteraction(active, direction > 0 ? "next" : "back", direction > 0 ? "Next card" : "Previous card");
+    const currentIndex = active ? visibleIdeas.findIndex((idea) => idea.id === active.id) : -1;
+    const startingIndex = currentIndex >= 0 ? currentIndex : direction > 0 ? -1 : 0;
+    const nextIndex = (startingIndex + direction + visibleIdeas.length) % visibleIdeas.length;
+    selectIdea(visibleIdeas[nextIndex]);
+    setMessage("");
+  }
+
   useEffect(() => {
     if (!active || composer) return;
+    const moveWithKeyboard = (direction: number) => {
+      if (!visibleIdeas.length) return;
+      recordCardInteraction(active, direction > 0 ? "next" : "back", direction > 0 ? "Next card" : "Previous card");
+      const currentIndex = visibleIdeas.findIndex((idea) => idea.id === active.id);
+      const startingIndex = currentIndex >= 0 ? currentIndex : direction > 0 ? -1 : 0;
+      const nextIndex = (startingIndex + direction + visibleIdeas.length) % visibleIdeas.length;
+      selectIdea(visibleIdeas[nextIndex]);
+      setMessage("");
+    };
     const shortcut = (event: KeyboardEvent) => {
       if (event.key === "Escape" && composer) {
         event.preventDefault();
@@ -648,10 +807,10 @@ export function Agency() {
         void submitImprove();
       } else if (action === "previous") {
         event.preventDefault();
-        move(-1);
+        moveWithKeyboard(-1);
       } else if (action === "next") {
         event.preventDefault();
-        move(1);
+        moveWithKeyboard(1);
       } else if (action === "focus") {
         const box = document.querySelector<HTMLTextAreaElement>(".radar-inline-change textarea");
         if (box && !box.disabled) {
@@ -662,7 +821,7 @@ export function Agency() {
     };
     window.addEventListener("keydown", shortcut);
     return () => window.removeEventListener("keydown", shortcut);
-  }, [active, composer, submitImprove, submitSkip]);
+  }, [active, composer, recordCardInteraction, selectIdea, submitImprove, submitSkip, visibleIdeas]);
 
 
   async function submitTell() {
@@ -675,14 +834,21 @@ export function Agency() {
     setComposerError("");
     try {
       if (composer === "task") {
-        const { jobId } = await submitNewTask(task);
+        const taskSelectionValidity = selectionValidity(data.agentSettings.models, taskAgentSelection);
+        if (!taskSelectionValidity.valid || !taskAgentAvailable) {
+          setComposerError(taskSelectionValidity.valid ? "Choose an execution default or a model override before sending this task." : taskSelectionValidity.message);
+          return;
+        }
+        const { jobId } = await submitNewTask(task, { agentSelection: taskAgentSelection, expectedSettingsRevision: data.agentSettings.revision });
         const newIdeas = ideasForView(data.ideas, "new", sort);
         const filtered = newIdeas.filter((idea) => cluster === "all" || clusterForCard(idea, data.topics) === cluster);
         const candidates = filtered.length ? filtered : newIdeas;
         const next = active ? nextCardAfterRemoval(active.id, candidates) ?? candidates[0] ?? null : candidates[0] ?? null;
         if (!filtered.length) setCluster("all");
         setTaskDraft("");
+        setTaskAgentSelection(null);
         setComposer(null);
+        viewRef.current = "new";
         setView("new");
         selectIdea(next);
         setMessage(`Task queued · #${jobId}. You can keep reviewing.`);
@@ -707,19 +873,10 @@ export function Agency() {
     }
   }
 
-  function move(direction: number) {
-    if (!visibleIdeas.length) return;
-    recordCardInteraction(active, direction > 0 ? "next" : "back", direction > 0 ? "Next card" : "Previous card");
-    const currentIndex = active ? visibleIdeas.findIndex((idea) => idea.id === active.id) : -1;
-    const startingIndex = currentIndex >= 0 ? currentIndex : direction > 0 ? -1 : 0;
-    const nextIndex = (startingIndex + direction + visibleIdeas.length) % visibleIdeas.length;
-    selectIdea(visibleIdeas[nextIndex]);
-    setMessage("");
-  }
-
   function selectView(next: "new" | "working" | "done") {
     setComposer(null);
     recordCardInteraction(active, "lane", next);
+    viewRef.current = next;
     setView(next);
     selectIdea(null);
     setMessage("");
@@ -736,6 +893,7 @@ export function Agency() {
     setMessage("");
     setComposerError("");
     setContextDraft(data.context?.text ?? "");
+    setTaskAgentSelection(null);
     setComposer("task");
   }
 
@@ -820,10 +978,21 @@ export function Agency() {
             <span>New task</span>
             <textarea value={taskDraft} disabled={taskSubmitting} maxLength={MAX_TASK_LENGTH} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Agency carries your dream with it." />
           </label>
+          <AgentPicker
+            id="new-task-agent"
+            label="Model override"
+            models={data.agentSettings.models}
+            selection={taskAgentSelection}
+            inheritedLabel={executionInheritedLabel}
+            inheritedSelection={inheritedExecutionSelection}
+            onChange={(selection) => { setTaskAgentSelection(selection); setComposerError(""); }}
+            disabled={taskSubmitting || agentSettingsRefreshing}
+            description={agentSettingsRefreshing ? "Refreshing model defaults…" : taskAgentAvailable ? "Optional. This task otherwise uses the saved execution default when it is sent." : inheritedExecutionSelection ? "The saved execution choice is unavailable. Refresh available models before sending." : "Choose a model override. No available execution default is configured."}
+          />
           {composerError && <p className="radar-task-error" role="alert">{composerError}</p>}
           <footer>
             <Link className="radar-settings-link" href="/settings">Edit my dream and topics in Settings</Link>
-            <button className="is-dark" disabled={taskSubmitting || !taskDraft.trim()} onClick={() => void submitTell()}>{taskSubmitting ? "Sending…" : "Send"}</button>
+            <button className="is-dark" disabled={taskSubmitting || !taskDraft.trim() || !taskAgentAvailable} onClick={() => void submitTell()}>{taskSubmitting ? "Sending…" : "Send"}</button>
           </footer>
         </section>
       ) : view === "done" ? (
@@ -831,16 +1000,60 @@ export function Agency() {
       ) : active ? (
         <section className="radar-workspace">
           {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}
+          {blockedTaskResult && <section className="radar-task-blocked" role="alert">
+            <strong>Task blocked</strong>
+            <p>{blockedTaskResult.length > 260 ? `${blockedTaskResult.slice(0, 257).trimEnd()}…` : blockedTaskResult}</p>
+            {blockedTaskResult.length > 260 && <details><summary>Show full reason</summary><p>{blockedTaskResult}</p></details>}
+          </section>}
           <section className="radar-card-host">
-            <AgentCard idea={active} actionable={!jobInFlight} onAction={handleCardAction} onInteraction={(action, label) => recordCardInteraction(active, action, label)} />
+            <AgentCard idea={active} actionable={!jobInFlight && !cardAgentBlocked} onAction={handleCardAction} onInteraction={(action, label) => recordCardInteraction(active, action, label)} />
           </section>
+
+          {active.status === "new" && !jobInFlight ? (
+            <section className="radar-card-agent" aria-label="Model for this card">
+              <AgentPicker
+                id={`card-agent-${active.id}`}
+                label="Model for this card"
+                models={data.agentSettings.models}
+                selection={activeAgentSelection}
+                inheritedLabel={executionInheritedLabel}
+                inheritedSelection={inheritedExecutionSelection}
+                onChange={(selection) => {
+                  if (!activeAgentKey) return;
+                  setAgentSelectionDrafts((current) => {
+                    const next = { ...current };
+                    if (sameAgentSelection(active.agentSelection, selection)) delete next[activeAgentKey];
+                    else next[activeAgentKey] = selection;
+                    return next;
+                  });
+                  setAgentSelectionError("");
+                }}
+                disabled={agentSelectionSaving || agentSettingsRefreshing}
+                description={agentSettingsRefreshing ? "Refreshing model defaults…" : agentSelectionDirty ? "Unsaved choice. Save it before approving or improving this card." : cardConfigUnavailable ? effectiveSelectionUnavailable ? "The saved model choice is unavailable. Refresh available models before starting work." : "Choose a model for this card. No available execution default is configured." : `Current effective choice: ${active.agentConfig ? configLabel(active.agentConfig) : executionEffectiveLabel}.`}
+              />
+              <div className="radar-card-agent-actions">
+                <span className={agentSelectionDirty ? "is-dirty" : ""} role="status">{agentSelectionSaving ? "Saving model…" : agentSettingsRefreshing ? "Refreshing defaults…" : !activeAgentValidity.valid ? "Unavailable selection" : cardConfigUnavailable ? "Choose a model" : agentSelectionDirty ? "Unsaved model choice" : "Saved"}</span>
+                {agentSettingsRefreshing ? (
+                  <button className="is-dark" disabled={!agentSelectionError} onClick={() => void retryAgentSettingsSnapshot()}>Retry refresh</button>
+                ) : (
+                  <button className="is-dark" disabled={!agentSelectionDirty || agentSelectionSaving || !activeAgentValidity.valid} onClick={() => void saveCardAgentSelection()}>{agentSelectionSaving ? "Saving…" : "Save model"}</button>
+                )}
+              </div>
+              {agentSelectionError && <p className="radar-card-agent-error" role="alert">{agentSelectionError}</p>}
+            </section>
+          ) : (
+            <section className="radar-card-agent-readout" aria-label="Agent model details">
+              <span><b>Requested</b>{configLabel(active.agentConfig)}</span>
+              <span><b>Actual</b>{runLabel(active.agentRun)}</span>
+            </section>
+          )}
 
           <section className="radar-inline-change">
             <textarea
               aria-label="Change this card"
               value={feedback}
               rows={1}
-              disabled={jobInFlight || feedbackSubmitting}
+              disabled={jobInFlight || feedbackSubmitting || cardAgentBlocked}
               onChange={(event) => { updateFeedback(event.target.value); event.target.style.height = "auto"; event.target.style.height = `${Math.min(event.target.scrollHeight, 180)}px`; }}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
@@ -849,6 +1062,8 @@ export function Agency() {
               }}
               placeholder={jobInFlight || feedbackSubmitting
                 ? "Agency is already changing this card."
+                : cardAgentBlocked
+                  ? "Save a valid model choice before changing this card."
                 : "Add context or say what to change… Enter to start typing, Enter sends, Shift+Enter adds a line"}
             />
             <div className="radar-inline-actions">
@@ -862,7 +1077,7 @@ export function Agency() {
               ><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none"/></svg></button>
               <button
                 className="is-improve radar-shortcut-hint"
-                disabled={jobInFlight || feedbackSubmitting}
+                disabled={jobInFlight || feedbackSubmitting || cardAgentBlocked}
                 aria-keyshortcuts="I"
                 onClick={() => void submitImprove()}
                 aria-label="Auto-improve this card"
@@ -870,7 +1085,7 @@ export function Agency() {
               ><span aria-hidden="true">✦</span> Auto-improve</button>
               <button
                 className="is-send radar-shortcut-hint"
-                disabled={jobInFlight || feedbackSubmitting || !feedback.trim()}
+                disabled={jobInFlight || feedbackSubmitting || cardAgentBlocked || !feedback.trim()}
                 aria-label="Send"
                 data-shortcut-hint="Send · Enter in feedback"
                 onClick={() => void submitFeedback()}
