@@ -97,8 +97,12 @@ test("model routing through the real local D1 API", { skip: !target }, async (t)
     });
     await t.test("resetting a card inherits the next execution default", async () => {
       const current = await card(initial.id); await override(current, null);
-      const next = await card(initial.id); assert.equal(next.agentConfig.source, "execution-default"); assert.equal(next.agentConfig.thinkingLevel, "low");
-      const { jobId } = await queue(next); const job = await queued(jobId); await finish(jobId, job.agentConfig);
+      const next = await card(initial.id);
+      assert.deepEqual(next.agentConfig, current.agentConfig, "Retain the previous run separately from the next selection");
+      assert.equal(next.agentSelection, null);
+      const { jobId } = await queue(next); const job = await queued(jobId);
+      assert.equal(job.agentConfig.source, "execution-default"); assert.equal(job.agentConfig.thinkingLevel, "low");
+      await finish(jobId, job.agentConfig);
     });
     await t.test("New Task snapshots its override and rejects stale defaults", async () => {
       const revision = (await settings()).revision;

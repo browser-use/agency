@@ -68,7 +68,18 @@ export async function POST(request: Request) {
       generalContext: context || latestContext?.text || "",
       source: "Agency New Task",
     });
-    const idea = await db.prepare(`
+    const cardHtml = taskCard(task);
+    const cardContext = JSON.stringify({
+      idea: {
+        project: "Agency", category: "Quick task", headline, cardHtml, agentContext,
+        sourceLabel: "User-created task", sourceUrl: "", dedupeKey: taskKey,
+        agentSelection, agentRevision: 0,
+      },
+      agentConfig,
+      task: { request: task, generalContext: context || latestContext?.text || "", source: "New Task" },
+      click: { action: "task", label: "New Task", instruction: task, note: "" },
+    });
+    const insertIdea = db.prepare(`
       INSERT INTO ideas (
         project, category, headline, why_matters, impact, finished_work,
         primary_action, secondary_action, external_action, card_html, agent_context,
@@ -79,55 +90,45 @@ export async function POST(request: Request) {
       SELECT 'Agency', 'Quick task', ?, '', '', '', '', '', '', ?, ?, ?,
         0, 0, 0, 0, 0, 'User-created task', '', 'Agency · Task Runner',
         'html', '', '', '', ?, 'working'
-      WHERE (? IS NULL OR (SELECT revision FROM agent_settings WHERE id = 1) = ?)
-      RETURNING id, project, category, headline, card_html AS cardHtml,
-        agent_context AS agentContext, source_label AS sourceLabel,
-        source_url AS sourceUrl, dedupe_key AS dedupeKey
+      WHERE (SELECT revision FROM agent_settings WHERE id = 1) = ?
+      RETURNING id
     `).bind(
       headline,
-      taskCard(task),
+      cardHtml,
       agentContext,
       agentSelection ? JSON.stringify(agentSelection) : null,
       taskKey,
-      expectedSettingsRevision ?? null,
-      expectedSettingsRevision ?? null,
-    ).first<Record<string, unknown> & { id: number }>();
-    if (!idea?.id) {
-      const latest = await getAgentSettings(db);
-      return Response.json({ error: "Agent settings changed while you were editing", settingsRevision: latest.revision }, { status: 409 });
-    }
-
-    const cardContext = JSON.stringify({
-      idea: { ...idea, agentSelection, agentRevision: 0 },
-      agentConfig,
-      task: { request: task, generalContext: context || latestContext?.text || "", source: "New Task" },
-      click: { action: "task", label: "New Task", instruction: task, note: "" },
-    });
-    const job = await db.prepare(`
+      settings.revision,
+    );
+    const insertJob = db.prepare(`
       INSERT INTO agent_jobs (
         idea_id, action, button_label, instruction, user_feedback, card_context, agent_config
       )
-      SELECT ?, 'task', 'New Task', ?, '', ?, ?
-      WHERE (? IS NULL OR (SELECT revision FROM agent_settings WHERE id = 1) = ?)
+      SELECT id, 'task', 'New Task', ?, '', json_set(?, '$.idea.id', id), ?
+      FROM ideas WHERE dedupe_key = ?
       RETURNING id
     `).bind(
-      idea.id,
       task,
       cardContext,
       agentConfig ? JSON.stringify(agentConfig) : null,
-      expectedSettingsRevision ?? null,
-      expectedSettingsRevision ?? null,
-    ).first<{ id: number }>();
-    if (!job?.id) {
-      await db.prepare("DELETE FROM ideas WHERE id = ? AND status = 'working' AND NOT EXISTS (SELECT 1 FROM agent_jobs WHERE idea_id = ?)")
-        .bind(idea.id, idea.id).run();
+      taskKey,
+    );
+    const writes = [insertIdea, insertJob];
+    if (context && context !== latestContext?.text) {
+      writes.push(db.prepare(`
+        INSERT INTO contexts (text) SELECT ?
+        WHERE EXISTS (SELECT 1 FROM ideas WHERE dedupe_key = ?)
+      `).bind(context, taskKey));
+    }
+    // A failed context/job write must not leave a queued task behind. Each
+    // dependent insert also does nothing if the initial revision check loses.
+    const [ideas, jobs] = await db.batch<{ id: number }>(writes);
+    const idea = ideas.results[0];
+    const job = jobs.results[0];
+    if (!idea || !job) {
       const latest = await getAgentSettings(db);
       return Response.json({ error: "Agent settings changed before the task was queued", settingsRevision: latest.revision }, { status: 409 });
     }
-    if (context && context !== latestContext?.text) {
-      await db.prepare("INSERT INTO contexts (text) VALUES (?)").bind(context).run();
-    }
-
     return Response.json({ ok: true, ideaId: idea.id, jobId: job.id }, { status: 201 });
   } catch (error) {
     if (error instanceof AgentInputError) return Response.json({ error: error.message }, { status: 400 });

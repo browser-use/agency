@@ -9,7 +9,17 @@ import { compareByImpact, impactPoints } from "../lib/rise";
 import { MAX_TASK_LENGTH, submitNewTask } from "../lib/task-submission";
 import { AgentPicker, selectionLabel, selectionSummary } from "./components/agent-picker";
 import { ModelControls } from "./components/model-controls";
-import { selectionCanRun, selectionCanStartWork, selectionValidity } from "./components/agent-picker-state";
+import {
+  cardAgentDraftState,
+  discardCardAgentDraft,
+  finishCardAgentDraftSave,
+  reapplyCardAgentDraft,
+  selectionCanRun,
+  selectionCanStartWork,
+  selectionValidity,
+  updateCardAgentDraft,
+  type CardAgentDrafts,
+} from "./components/agent-picker-state";
 import type { AgentConfig, AgentRun, AgentSelection, AgentSettings } from "../lib/agent-models";
 
 type Idea = {
@@ -122,10 +132,6 @@ function decisionLabel(action: Idea["decisionAction"]) {
   return "Changed";
 }
 
-function sameAgentSelection(left: AgentSelection | null, right: AgentSelection | null) {
-  return left?.modelId === right?.modelId && left?.thinkingLevel === right?.thinkingLevel;
-}
-
 function configLabel(config: AgentConfig | null) {
   if (!config) return "No model was requested";
   return `${config.runner} / ${config.model} · ${config.thinkingLevel}`;
@@ -137,9 +143,9 @@ function runLabel(run: AgentRun | null) {
 }
 
 
-function AgentReadout({ config, run }: { config: AgentConfig | null; run: AgentRun | null }) {
+function AgentReadout({ config, run, label = "Model details" }: { config: AgentConfig | null; run: AgentRun | null; label?: string }) {
   return <details className="radar-card-agent-readout">
-    <summary>Model details</summary>
+    <summary>{label}</summary>
     <div><span><b>Requested</b>{configLabel(config)}</span><span><b>Actual</b>{runLabel(run)}</span></div>
   </details>;
 }
@@ -371,7 +377,7 @@ export function Agency() {
   const [composerError, setComposerError] = useState("");
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>({});
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
-  const [agentSelectionDrafts, setAgentSelectionDrafts] = useState<Record<string, AgentSelection | null>>({});
+  const [agentSelectionDrafts, setAgentSelectionDrafts] = useState<CardAgentDrafts>({});
   const [agentSavingKey, setAgentSavingKey] = useState("");
   const [agentSettingsRefreshing, setAgentSettingsRefreshing] = useState(false);
   const [agentSelectionError, setAgentSelectionError] = useState("");
@@ -505,23 +511,23 @@ export function Agency() {
   const feedbackKey = active ? cardDraftKey(active) : "";
   const feedback = feedbackKey ? feedbackDrafts[feedbackKey] ?? "" : "";
   const activeLiveState = latestSelected ?? active;
-  const activeAgentKey = active ? `${active.id}:${active.agentRevision}` : "";
-  const hasAgentDraft = Boolean(activeAgentKey && Object.hasOwn(agentSelectionDrafts, activeAgentKey));
-  const activeAgentSelection = active
-    ? (hasAgentDraft ? agentSelectionDrafts[activeAgentKey] : active.agentSelection)
-    : null;
+  const activeAgentKey = active ? String(active.id) : "";
+  const activeAgentDraft = active ? cardAgentDraftState(active, agentSelectionDrafts) : null;
+  const activeAgentSelection = activeAgentDraft?.selection ?? null;
   const activeAgentValidity = selectionValidity(data.agentSettings.models, activeAgentSelection);
   const agentSelectionSaving = Boolean(activeAgentKey && agentSavingKey === activeAgentKey);
-  const agentSelectionDirty = Boolean(active && hasAgentDraft && !sameAgentSelection(active.agentSelection, activeAgentSelection));
+  const agentSelectionDirty = Boolean(activeAgentDraft?.dirty);
+  const agentSelectionStale = Boolean(activeAgentDraft?.stale);
   const inheritedExecutionSelection = data.agentSettings.execution ?? data.agentSettings.runnerDefault;
   const activeEffectiveSelection = activeAgentSelection ?? inheritedExecutionSelection;
   const cardConfigUnavailable = Boolean(active && !selectionCanStartWork(data.agentSettings.models, activeEffectiveSelection, agentSettingsRefreshing));
   const effectiveSelectionUnavailable = activeEffectiveSelection !== null && !selectionCanRun(data.agentSettings.models, activeEffectiveSelection);
-  const cardAgentBlocked = agentSelectionDirty || agentSelectionSaving || agentSettingsRefreshing || !activeAgentValidity.valid || cardConfigUnavailable;
+  const cardAgentBlocked = Boolean(activeAgentDraft?.blocksWork) || agentSelectionSaving || agentSettingsRefreshing || !activeAgentValidity.valid || cardConfigUnavailable;
   const executionInheritedLabel = "Use execution default";
   const executionEffectiveLabel = selectionLabel(data.agentSettings.models, inheritedExecutionSelection, "No execution default configured");
   const taskAgentAvailable = selectionCanStartWork(data.agentSettings.models, taskAgentSelection ?? inheritedExecutionSelection, agentSettingsRefreshing);
   const cardModelNotice = agentSelectionSaving ? "Saving model choice…" : agentSettingsRefreshing ? "Refreshing defaults. Work is paused."
+    : agentSelectionStale ? "This card changed. Your model choice is kept. Review it before continuing."
     : !activeAgentValidity.valid ? activeAgentValidity.message
     : cardConfigUnavailable ? effectiveSelectionUnavailable ? "Saved model unavailable. Choose a model to continue." : "Choose a model. No execution default is available."
     : agentSelectionDirty ? "Unsaved model choice. Save to continue." : "";
@@ -619,9 +625,16 @@ export function Agency() {
   const saveCardAgentSelection = useCallback(async () => {
     const target = selectedIdeaRef.current;
     if (!target) return false;
-    const key = `${target.id}:${target.agentRevision}`;
-    if (!Object.hasOwn(agentSelectionDrafts, key) || agentSavingKey === key) return true;
-    const selection = agentSelectionDrafts[key];
+    const key = String(target.id);
+    const draftState = cardAgentDraftState(target, agentSelectionDrafts);
+    if (agentSettingsRefreshing || agentSavingKey === key) return false;
+    if (!draftState.draft) return true;
+    if (draftState.stale) {
+      setAgentSelectionError("This card changed. Review your model choice, then keep it or discard it before saving.");
+      return false;
+    }
+    const draft = draftState.draft;
+    const selection = draft.selection;
     const validity = selectionValidity(data.agentSettings.models, selection);
     if (!validity.valid) return false;
     // Ignore a state refresh that began before this compare-and-swap save. It
@@ -635,7 +648,7 @@ export function Agency() {
       const response = await fetch("/api/ideas/agent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: target.id, version: target.version, expectedAgentRevision: target.agentRevision, selection }),
+        body: JSON.stringify({ id: target.id, version: draft.expectedVersion, expectedAgentRevision: draft.expectedAgentRevision, selection }),
       });
       const result = await response.json().catch(() => null) as {
         ok?: boolean;
@@ -646,11 +659,7 @@ export function Agency() {
         throw new Error(result?.error || "This model choice was not saved.");
       }
       if (await refreshAgentSettingsSnapshot()) {
-        setAgentSelectionDrafts((current) => {
-          const next = { ...current };
-          delete next[key];
-          return next;
-        });
+        setAgentSelectionDrafts((current) => finishCardAgentDraftSave(current, target.id, draft));
       } else {
         setAgentSelectionError("The model choice was saved, but the latest defaults could not be loaded. Retry the refresh before starting work.");
       }
@@ -664,12 +673,13 @@ export function Agency() {
     } finally {
       setAgentSavingKey((current) => current === key ? "" : current);
     }
-  }, [agentSavingKey, agentSelectionDrafts, data.agentSettings.models, refreshAgentSettingsSnapshot]);
+  }, [agentSavingKey, agentSelectionDrafts, agentSettingsRefreshing, data.agentSettings.models, refreshAgentSettingsSnapshot]);
 
   const sendToAgent = useCallback(async (target: Idea, action: "do" | "change" | "no", label: string, prompt = "", note = "") => {
-    const targetKey = `${target.id}:${target.agentRevision}`;
-    const targetSelection = Object.hasOwn(agentSelectionDrafts, targetKey) ? agentSelectionDrafts[targetKey] : target.agentSelection;
-    if (action !== "no" && (agentSettingsRefreshing || agentSavingKey === targetKey || !sameAgentSelection(target.agentSelection, targetSelection) || !selectionValidity(data.agentSettings.models, targetSelection).valid || !selectionCanRun(data.agentSettings.models, targetSelection ?? inheritedExecutionSelection))) {
+    const targetKey = String(target.id);
+    const targetDraft = cardAgentDraftState(target, agentSelectionDrafts);
+    const targetSelection = targetDraft.selection;
+    if (action !== "no" && (agentSettingsRefreshing || agentSavingKey === targetKey || targetDraft.blocksWork || !selectionValidity(data.agentSettings.models, targetSelection).valid || !selectionCanRun(data.agentSettings.models, targetSelection ?? inheritedExecutionSelection))) {
       setAgentSelectionError("Save a valid model choice before starting this work.");
       return false;
     }
@@ -1039,26 +1049,33 @@ export function Agency() {
                 inheritedLabel={executionInheritedLabel}
                 inheritedSelection={inheritedExecutionSelection}
                 onChange={(selection) => {
-                  if (!activeAgentKey) return;
-                  setAgentSelectionDrafts((current) => {
-                    const next = { ...current };
-                    if (sameAgentSelection(active.agentSelection, selection)) delete next[activeAgentKey];
-                    else next[activeAgentKey] = selection;
-                    return next;
-                  });
+                  setAgentSelectionDrafts((current) => updateCardAgentDraft(current, active, selection));
                   setAgentSelectionError("");
                 }}
                 disabled={agentSelectionSaving || agentSettingsRefreshing}
-                description={agentSelectionDirty ? `Saved: ${selectionLabel(data.agentSettings.models, active.agentSelection ?? inheritedExecutionSelection, "Runner default")}.` : activeAgentSelection ? "Override for this card only." : `Uses execution default: ${executionEffectiveLabel}.`}
+                description={agentSelectionDirty || agentSelectionStale ? `Saved: ${selectionLabel(data.agentSettings.models, active.agentSelection ?? inheritedExecutionSelection, "Runner default")}.` : activeAgentSelection ? "Override for this card only." : `Uses execution default: ${executionEffectiveLabel}.`}
               />
+              {activeAgentDraft?.draft && <div className="radar-card-agent-actions">
+                <button disabled={agentSelectionSaving || agentSettingsRefreshing} onClick={() => {
+                  setAgentSelectionDrafts((current) => discardCardAgentDraft(current, active.id));
+                  setAgentSelectionError("");
+                }}>Discard changes</button>
+                {agentSelectionStale && <button disabled={agentSelectionSaving || agentSettingsRefreshing || !activeAgentValidity.valid} onClick={() => {
+                  setAgentSelectionDrafts((current) => reapplyCardAgentDraft(current, active));
+                  setAgentSelectionError("");
+                }}>Keep my choice</button>}
+              </div>}
               <div className="radar-card-agent-actions">
-                <span className={agentSelectionDirty ? "is-dirty" : ""} role="status">{agentSelectionSaving ? "Saving model…" : agentSettingsRefreshing ? "Refreshing defaults…" : !activeAgentValidity.valid ? "Unavailable selection" : cardConfigUnavailable ? "Choose a model" : agentSelectionDirty ? "Unsaved model choice" : "Saved"}</span>
+                <span className={agentSelectionDirty || agentSelectionStale ? "is-dirty" : ""} role="status">{agentSelectionSaving ? "Saving model…" : agentSettingsRefreshing ? "Refreshing defaults…" : agentSelectionStale ? "Review your model choice" : !activeAgentValidity.valid ? "Unavailable selection" : cardConfigUnavailable ? "Choose a model" : agentSelectionDirty ? "Unsaved model choice" : "Saved"}</span>
                 {agentSettingsRefreshing ? (
                   <button className="is-dark" disabled={!agentSelectionError} onClick={() => void retryAgentSettingsSnapshot()}>Retry refresh</button>
                 ) : (
-                  <button className="is-dark" disabled={!agentSelectionDirty || agentSelectionSaving || !activeAgentValidity.valid} onClick={() => void saveCardAgentSelection()}>{agentSelectionSaving ? "Saving…" : "Save model"}</button>
+                  <button className="is-dark" disabled={!agentSelectionDirty || agentSelectionStale || agentSelectionSaving || !activeAgentValidity.valid} onClick={() => void saveCardAgentSelection()}>{agentSelectionSaving ? "Saving…" : "Save model"}</button>
                 )}
               </div>
+              {(active.jobStatus === "done" || active.jobStatus === "failed") && (active.agentConfig || active.agentRun) && (
+                <AgentReadout config={active.agentConfig} run={active.agentRun} label="Last run details" />
+              )}
             </ModelControls>
           ) : (
             <AgentReadout key={`${active.id}:${active.version}`} config={active.agentConfig} run={active.agentRun} />

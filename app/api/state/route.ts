@@ -193,7 +193,8 @@ export async function GET(request: Request) {
     const storedSelectionInvalid = Boolean(storedSelection) && !agentSelection;
     const storedConfig = parseStoredAgentConfig(idea.storedAgentConfig as string | null);
     const storedRun = parseStoredAgentRun(idea.storedAgentRun as string | null);
-    const useJobSnapshot = idea.status === "working" || idea.status === "done";
+    const useJobSnapshot = idea.status === "working" || idea.status === "done"
+      || idea.jobStatus === "done" || idea.jobStatus === "failed";
     const {
       storedAgentSelection: _storedAgentSelection,
       storedAgentConfig: _storedAgentConfig,

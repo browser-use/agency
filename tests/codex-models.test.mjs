@@ -5,6 +5,7 @@ import { PassThrough, Writable } from "node:stream";
 import { discoverCodexModels, normalizeCodexModels } from "../scripts/lib/codex-models.mjs";
 import { agencyUrl } from "../scripts/lib/agency-client.mjs";
 import { mergeCodexCatalog } from "../scripts/sync-models.mjs";
+import { parseAgentCatalog } from "../lib/agent-models.ts";
 
 const model = { model: "fixture-model", displayName: "Fixture model", defaultReasoningEffort: "low", supportedReasoningEfforts: [{ reasoningEffort: "low" }, { reasoningEffort: "high" }], isDefault: true };
 function fakeServer(reply) {
@@ -42,6 +43,37 @@ test("repeated cursors cannot loop forever", async () => {
   const server = fakeServer((message) => message.method === "initialize" ? {} : message.method === "model/list" ? { data: [model], nextCursor: "stuck" } : undefined);
   await assert.rejects(discoverCodexModels({ spawnProcess: server.spawnProcess }), /did not advance/);
   assert.equal(server.child.killed, true);
+});
+
+test("the complete 100-model discovery boundary is accepted by the API catalog parser", async () => {
+  const rows = Array.from({ length: 100 }, (_, index) => ({ ...model, model: `fixture-${index}` }));
+  const server = fakeServer((message) => message.method === "initialize" ? {} : message.method === "model/list" ? {
+    data: message.params.cursor ? rows.slice(50) : rows.slice(0, 50), nextCursor: message.params.cursor ? null : "page-two",
+  } : undefined);
+  const catalog = await discoverCodexModels({ spawnProcess: server.spawnProcess });
+  assert.equal(catalog.models.length, 100);
+  assert.deepEqual(parseAgentCatalog(catalog.models), catalog.models);
+  assert.equal(catalog.models[99].model, "fixture-99");
+  assert.throws(() => parseAgentCatalog([...catalog.models, {
+    ...catalog.models[0], id: "codex/fixture-100", model: "fixture-100",
+  }]), /at most 100 entries/);
+  assert.equal(server.child.killed, true);
+});
+
+test("discovery rejects a 101-model catalog explicitly without truncating a page", async () => {
+  const rows = Array.from({ length: 101 }, (_, index) => ({ ...model, model: `fixture-${index}` }));
+  const server = fakeServer((message) => message.method === "initialize" ? {} : message.method === "model/list" ? {
+    data: message.params.cursor ? rows.slice(100) : rows.slice(0, 100), nextCursor: message.params.cursor ? null : "page-two",
+  } : undefined);
+  await assert.rejects(discoverCodexModels({ spawnProcess: server.spawnProcess }), /more than 100 visible models.*No models were registered/);
+  assert.equal(server.messages.filter((message) => message.method === "model/list").length, 2);
+  assert.equal(server.child.killed, true);
+});
+
+test("hidden models do not consume the API's visible catalog allowance", () => {
+  const rows = Array.from({ length: 100 }, (_, index) => ({ ...model, model: `fixture-${index}` }));
+  const catalog = normalizeCodexModels([...rows, { ...model, model: "hidden", hidden: true }]);
+  assert.equal(parseAgentCatalog(catalog.models).length, 100);
 });
 
 test("only runtime-supported thinking levels and visible models are registered", () => {

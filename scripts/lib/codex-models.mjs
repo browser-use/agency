@@ -2,6 +2,9 @@ import { spawn } from "node:child_process";
 
 export function normalizeCodexModels(rows) {
   const visible = rows.filter((row) => !row.hidden);
+  if (visible.length > 100) {
+    throw new Error("Codex returned more than 100 visible models, exceeding Agency's catalog limit. No models were registered.");
+  }
   const models = visible.map((row) => ({
     id: `codex/${row.model}`,
     runner: "codex",

@@ -233,8 +233,6 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
   .stats-hero, .stats-kinds { grid-template-columns: 1fr; }
   .stats-two { grid-template-columns: 1fr; }
   .agent-picker-fields { grid-template-columns: 1fr; }
-  .radar-card-agent-readout { display: grid; gap: 6px; }
-  .radar-card-agent-readout span { display: grid; gap: 2px; }
 }
 
 /* ===== Top bar: one row. wordmark · lanes · dream · points · new task ===== */
@@ -375,7 +373,7 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-card-agent-readout { display: block; margin-top: 6px; padding: 0 8px; border: 0; border-radius: 0; background: none; }
 .radar-card-agent-readout summary { width: fit-content; max-width: 100%; padding: 6px 0; cursor: pointer; color: var(--ink-3); font-size: .74rem; }
 .radar-card-agent-readout > div { display: grid; gap: 5px; padding: 2px 0 8px; }
-.radar-card-agent-readout span { min-width: 0; flex-wrap: wrap; overflow-wrap: anywhere; }
+.radar-card-agent-readout span { display: flex; min-width: 0; flex-wrap: wrap; gap: 6px; overflow-wrap: anywhere; }
 .radar-done-card > .radar-card-agent-readout { margin: 8px 12px; }
 .settings-models-block { gap: 10px; }
 .settings-models > summary { display: flex; align-items: center; gap: 12px; padding: 2px 0; list-style: none; cursor: pointer; }
@@ -391,6 +389,9 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .settings-agent-help { margin: 0; color: var(--ink-3); font-size: .78rem; line-height: 1.4; }
 .settings-agent-defaults .agent-picker { padding: 0; border: 0; border-radius: 0; background: none; }
 .settings-agent-actions { flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .radar-card-agent-readout span { display: grid; gap: 2px; }
+}
 @media (max-width: 450px) {
   .settings-models > summary { flex-wrap: wrap; gap: 6px 10px; }
   .settings-models-summary { flex: 1 1 calc(100% - 28px); }

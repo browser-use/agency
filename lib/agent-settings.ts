@@ -7,7 +7,7 @@ import {
   type AgentModel,
   type AgentSelection,
   type AgentSettings,
-} from "./agent-models";
+} from "./agent-models.ts";
 
 type AgencyDatabase = Awaited<ReturnType<typeof ensureDatabase>>;
 
@@ -77,11 +77,14 @@ export async function saveAgentCatalog(
   const runnerDefaultJson = runnerDefault ? JSON.stringify(runnerDefault) : null;
   const updated = await db.prepare(`
     UPDATE agent_settings
-    SET models = ?, runner_default = ?, revision = revision + 1
+    SET models = ?, runner_default = ?,
+        revision = revision + CASE
+          WHEN models != ? OR COALESCE(runner_default, '') != COALESCE(?, '') THEN 1
+          ELSE 0
+        END
     WHERE id = 1
-      AND (models != ? OR COALESCE(runner_default, '') != COALESCE(?, ''))
       AND (? IS NULL OR revision = ?)
-    RETURNING revision
+    RETURNING revision, models, runner_default AS runnerDefault, discovery, execution
   `).bind(
     modelsJson,
     runnerDefaultJson,
@@ -89,12 +92,8 @@ export async function saveAgentCatalog(
     runnerDefaultJson,
     expectedRevision ?? null,
     expectedRevision ?? null,
-  ).first<{ revision: number }>();
-  const settings = await getAgentSettings(db);
-  const unchanged = JSON.stringify(settings.models) === modelsJson
-    && JSON.stringify(settings.runnerDefault) === JSON.stringify(runnerDefault);
-  if (!updated && !unchanged && expectedRevision !== undefined && settings.revision !== expectedRevision) return null;
-  return settings;
+  ).first<SettingsRow>();
+  return updated ? settingsFromRow(updated) : null;
 }
 
 export function parseSettingsProfiles(payload: Record<string, unknown>) {

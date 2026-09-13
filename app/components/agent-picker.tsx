@@ -1,7 +1,7 @@
 "use client";
 
 import type { AgentModel, AgentSelection } from "../../lib/agent-models";
-import { selectionValidity } from "./agent-picker-state";
+import { selectionValidity, thinkingLevelOptions } from "./agent-picker-state";
 
 export { selectionValidity } from "./agent-picker-state";
 
@@ -97,9 +97,7 @@ export function AgentPicker({
             disabled={isDisabled || !model}
             onChange={(event) => selection && onChange({ ...selection, thinkingLevel: event.target.value })}
           >
-            {!selection && <option value={thinking}>{thinking ? `From default · ${thinking}` : "From default"}</option>}
-            {!model && selection && <option value={selection.thinkingLevel}>{selection.thinkingLevel} (unavailable)</option>}
-            {model?.thinkingLevels.map((level) => <option key={level} value={level}>{level}</option>)}
+            {thinkingLevelOptions(model, selection, inheritedSelection).map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
       </div>

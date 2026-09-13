@@ -25,8 +25,8 @@ function parseAction(payload: Record<string, unknown>): CardAction {
   const id = Number(payload.id);
   const version = Number(payload.version);
   if (!Number.isInteger(id) || id < 1 || !Number.isInteger(version) || version < 1
-    || !["new", "working", "done"].includes(String(payload.status))
-    || !["do", "change", "no"].includes(String(payload.action))) {
+    || typeof payload.status !== "string" || !["new", "working", "done"].includes(payload.status)
+    || typeof payload.action !== "string" || !["do", "change", "no"].includes(payload.action)) {
     throw new AgentInputError("Invalid action");
   }
   let expectedAgentRevision: number | undefined;
@@ -63,6 +63,41 @@ function isSameOrigin(request: Request) {
   return !origin || origin === new URL(request.url).origin;
 }
 
+// These writes run before the final card compare-and-set, in the same batch.
+// A stale decision must not create attention, interaction or feedback records.
+function decisionAuditWrites(
+  db: Awaited<ReturnType<typeof ensureDatabase>>,
+  payload: CardAction,
+  condition: string,
+  bindings: (string | number)[],
+) {
+  const eligible = `EXISTS (SELECT 1 FROM ideas WHERE ${condition})`;
+  return [
+    db.prepare(`
+      INSERT INTO card_attention (idea_id, idea_version, view_count)
+      SELECT ?, ?, 0 WHERE ${eligible}
+      ON CONFLICT(idea_id, idea_version) DO NOTHING
+    `).bind(payload.id, payload.version, ...bindings),
+    db.prepare(`
+      UPDATE card_attention SET active_ms = active_ms + ?,
+        decision_action = CASE WHEN decided_at IS NULL THEN ? ELSE decision_action END,
+        decision_label = CASE WHEN decided_at IS NULL THEN ? ELSE decision_label END,
+        decided_at = COALESCE(decided_at, CURRENT_TIMESTAMP),
+        wall_ms = COALESCE(wall_ms, MAX(0, CAST((julianday(CURRENT_TIMESTAMP) - julianday(first_seen_at)) * 86400000 AS INTEGER))),
+        last_seen_at = CURRENT_TIMESTAMP
+      WHERE idea_id = ? AND idea_version = ? AND ${eligible}
+    `).bind(payload.activeMs, payload.action, payload.label, payload.id, payload.version, ...bindings),
+    db.prepare(`
+      INSERT INTO card_interactions (idea_id, idea_version, action, label, active_ms, wall_ms)
+      SELECT idea_id, idea_version, ?, ?, active_ms,
+        MAX(0, CAST((julianday(CURRENT_TIMESTAMP) - julianday(first_seen_at)) * 86400000 AS INTEGER))
+      FROM card_attention WHERE idea_id = ? AND idea_version = ? AND ${eligible}
+    `).bind(payload.action, payload.label, payload.id, payload.version, ...bindings),
+    db.prepare(`INSERT INTO feedback (idea_id, decision, note) SELECT ?, ?, ? WHERE ${eligible}`)
+      .bind(payload.id, payload.action, payload.note || payload.instruction || payload.label, ...bindings),
+  ];
+}
+
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return Response.json({ error: "Blocked origin" }, { status: 403 });
   try {
@@ -91,18 +126,13 @@ export async function POST(request: Request) {
     }
 
     if (payload.action === "no") {
-      const updated = await db.prepare(`
-        UPDATE ideas SET status = 'rejected'
-        WHERE id = ? AND version = ? AND status = ?
-        RETURNING id
-      `).bind(payload.id, payload.version, payload.status).first();
-      if (!updated) return Response.json({ error: "Card changed while you were reading" }, { status: 409 });
-      await db.batch([
-        db.prepare("INSERT INTO card_attention (idea_id, idea_version, view_count) VALUES (?, ?, 0) ON CONFLICT(idea_id, idea_version) DO NOTHING").bind(payload.id, idea.version),
-        db.prepare("UPDATE card_attention SET active_ms = active_ms + ?, decision_action = CASE WHEN decided_at IS NULL THEN ? ELSE decision_action END, decision_label = CASE WHEN decided_at IS NULL THEN ? ELSE decision_label END, decided_at = COALESCE(decided_at, CURRENT_TIMESTAMP), wall_ms = COALESCE(wall_ms, MAX(0, CAST((julianday(CURRENT_TIMESTAMP) - julianday(first_seen_at)) * 86400000 AS INTEGER))), last_seen_at = CURRENT_TIMESTAMP WHERE idea_id = ? AND idea_version = ?").bind(payload.activeMs, payload.action, payload.label, payload.id, idea.version),
-        db.prepare("INSERT INTO card_interactions (idea_id, idea_version, action, label, active_ms, wall_ms) SELECT idea_id, idea_version, ?, ?, active_ms, MAX(0, CAST((julianday(CURRENT_TIMESTAMP) - julianday(first_seen_at)) * 86400000 AS INTEGER)) FROM card_attention WHERE idea_id = ? AND idea_version = ?").bind(payload.action, payload.label, payload.id, idea.version),
-        db.prepare("INSERT INTO feedback (idea_id, decision, note) VALUES (?, ?, ?)").bind(payload.id, payload.action, payload.note || payload.instruction || payload.label),
+      const condition = "id = ? AND version = ? AND status = ?";
+      const bindings = [payload.id, payload.version, payload.status];
+      const results = await db.batch([
+        ...decisionAuditWrites(db, payload, condition, bindings),
+        db.prepare(`UPDATE ideas SET status = 'rejected' WHERE ${condition} RETURNING id`).bind(...bindings),
       ]);
+      if (!results.at(-1)?.results.length) return Response.json({ error: "Card changed while you were reading" }, { status: 409 });
       return Response.json({ ok: true, status: "rejected" });
     }
 
@@ -133,33 +163,32 @@ export async function POST(request: Request) {
         note: payload.note,
       },
     });
-    const job = await db.prepare(`
-      INSERT INTO agent_jobs (
-        idea_id, action, button_label, instruction, user_feedback, card_context, agent_config
-      )
-      SELECT id, ?, ?, ?, ?, ?, ?
-      FROM ideas
-      WHERE id = ? AND version = ? AND status = ? AND agent_revision = ?
-        AND (? IS NULL OR (SELECT revision FROM agent_settings WHERE id = 1) = ?)
-        AND NOT EXISTS (
-          SELECT 1 FROM agent_jobs
-          WHERE idea_id = ideas.id AND status IN ('queued', 'running')
+    const condition = `id = ? AND version = ? AND status = ? AND agent_revision = ?
+      AND (SELECT revision FROM agent_settings WHERE id = 1) = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM agent_jobs WHERE idea_id = ideas.id AND status IN ('queued', 'running')
+      )`;
+    const bindings = [payload.id, payload.version, payload.status, idea.agentRevision, settings.revision];
+    // All audit rows use the same eligibility check before changing the card.
+    // D1 executes this batch atomically, so a race admits none of these writes.
+    const results = await db.batch<{ id: number }>([
+      ...decisionAuditWrites(db, payload, condition, bindings),
+      db.prepare(`UPDATE ideas SET status = 'working' WHERE ${condition} RETURNING id`).bind(...bindings),
+      // changes() refers to the immediately preceding card compare-and-set.
+      db.prepare(`
+        INSERT INTO agent_jobs (
+          idea_id, action, button_label, instruction, user_feedback, card_context, agent_config
         )
-      RETURNING id
-    `).bind(
-      payload.action,
-      payload.label,
-      payload.instruction,
-      payload.note,
-      cardContext,
-      agentConfig ? JSON.stringify(agentConfig) : null,
-      payload.id,
-      payload.version,
-      payload.status,
-      idea.agentRevision,
-      payload.expectedSettingsRevision ?? null,
-      payload.expectedSettingsRevision ?? null,
-    ).first<{ id: number }>();
+        SELECT id, ?, ?, ?, ?, ?, ? FROM ideas
+        WHERE changes() = 1 AND id = ? AND version = ? AND agent_revision = ?
+        RETURNING id
+      `).bind(
+        payload.action, payload.label, payload.instruction, payload.note, cardContext,
+        agentConfig ? JSON.stringify(agentConfig) : null,
+        payload.id, payload.version, idea.agentRevision,
+      ),
+    ]);
+    const job = results.at(-1)?.results[0];
     if (!job) {
       const currentSettings = await getAgentSettings(db);
       const current = await db.prepare("SELECT version, status, agent_revision AS agentRevision FROM ideas WHERE id = ?")
@@ -175,13 +204,6 @@ export async function POST(request: Request) {
         agentRevision: current?.agentRevision,
       }, { status: 409 });
     }
-    await db.batch([
-      db.prepare("INSERT INTO card_attention (idea_id, idea_version, view_count) VALUES (?, ?, 0) ON CONFLICT(idea_id, idea_version) DO NOTHING").bind(payload.id, idea.version),
-      db.prepare("UPDATE card_attention SET active_ms = active_ms + ?, decision_action = CASE WHEN decided_at IS NULL THEN ? ELSE decision_action END, decision_label = CASE WHEN decided_at IS NULL THEN ? ELSE decision_label END, decided_at = COALESCE(decided_at, CURRENT_TIMESTAMP), wall_ms = COALESCE(wall_ms, MAX(0, CAST((julianday(CURRENT_TIMESTAMP) - julianday(first_seen_at)) * 86400000 AS INTEGER))), last_seen_at = CURRENT_TIMESTAMP WHERE idea_id = ? AND idea_version = ?").bind(payload.activeMs, payload.action, payload.label, payload.id, idea.version),
-      db.prepare("INSERT INTO card_interactions (idea_id, idea_version, action, label, active_ms, wall_ms) SELECT idea_id, idea_version, ?, ?, active_ms, MAX(0, CAST((julianday(CURRENT_TIMESTAMP) - julianday(first_seen_at)) * 86400000 AS INTEGER)) FROM card_attention WHERE idea_id = ? AND idea_version = ?").bind(payload.action, payload.label, payload.id, idea.version),
-      db.prepare("UPDATE ideas SET status = 'working' WHERE id = ? AND version = ? AND agent_revision = ?").bind(payload.id, payload.version, idea.agentRevision),
-      db.prepare("INSERT INTO feedback (idea_id, decision, note) VALUES (?, ?, ?)").bind(payload.id, payload.action, payload.note || payload.instruction || payload.label),
-    ]);
     return Response.json({ ok: true, jobId: job.id, status: "working" });
   } catch (error) {
     if (error instanceof AgentInputError) return Response.json({ error: error.message }, { status: 400 });

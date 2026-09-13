@@ -85,11 +85,11 @@ export async function POST(request: Request) {
     const payload = await readJsonObject(request);
     const id = Number(payload.id);
     const status = payload.status;
-    if (!Number.isInteger(id) || id < 1 || !["running", "done", "failed"].includes(String(status))) {
+    if (!Number.isInteger(id) || id < 1 || typeof status !== "string" || !["running", "done", "failed"].includes(status)) {
       throw new AgentInputError("Invalid job update");
     }
     const ticketOutcomeInput = payload.ticketOutcome as TicketOutcome | undefined;
-    if (ticketOutcomeInput && !["completed", "review", "blocked"].includes(ticketOutcomeInput)) {
+    if (ticketOutcomeInput !== undefined && (typeof ticketOutcomeInput !== "string" || !["completed", "review", "blocked"].includes(ticketOutcomeInput))) {
       throw new AgentInputError("Invalid ticket outcome");
     }
     if (status === "done" && ticketOutcomeInput === "blocked") throw new AgentInputError("A done job cannot be blocked");
@@ -131,10 +131,10 @@ export async function POST(request: Request) {
       }
     }
     const ticketOutcome = resolveTicketOutcome(status as Exclude<StoredJobStatus, "queued">, ticketOutcomeInput);
-    const updated = await db.prepare(`
+    const updates = [db.prepare(`
       UPDATE agent_jobs
       SET status = ?, result = ?, ticket_outcome = ?,
-          agent_run = CASE WHEN ? = 'running' THEN ? ELSE agent_run END,
+          agent_run = CASE WHEN ? = 'running' THEN COALESCE(?, agent_run) ELSE agent_run END,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND status = ?
       RETURNING id
@@ -146,19 +146,22 @@ export async function POST(request: Request) {
       status === "running" && agentRun ? JSON.stringify(agentRun) : null,
       id,
       job.status,
-    ).first();
-    if (!updated) return Response.json({ error: "Job changed before the update was saved" }, { status: 409 });
+    )];
     if ((status === "done" || status === "failed") && job.action !== "no") {
       const ideaStatus = ideaStatusForOutcome(ticketOutcome);
-      await db.prepare(`
+      // This statement immediately follows the job compare-and-set in the
+      // same transaction. A lost race must not update the card on its behalf.
+      updates.push(db.prepare(`
         UPDATE ideas SET status = ?
-        WHERE id = ? AND status IN ('new', 'working')
+        WHERE changes() = 1 AND id = ? AND status IN ('new', 'working')
           AND NOT EXISTS (
             SELECT 1 FROM agent_jobs newer
             WHERE newer.idea_id = ? AND newer.id > ?
           )
-      `).bind(ideaStatus, job.ideaId, job.ideaId, id).run();
+      `).bind(ideaStatus, job.ideaId, job.ideaId, id));
     }
+    const [updated] = await db.batch(updates);
+    if (!updated.results.length) return Response.json({ error: "Job changed before the update was saved" }, { status: 409 });
     return Response.json({ ok: true, ticketOutcome, ideaStatus: ideaStatusForOutcome(ticketOutcome) });
   } catch (error) {
     if (error instanceof AgentInputError) return Response.json({ error: error.message }, { status: 400 });
