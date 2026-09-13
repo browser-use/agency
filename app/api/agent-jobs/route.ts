@@ -1,5 +1,14 @@
 import { env } from "cloudflare:workers";
 import { ensureDatabase } from "../../../db";
+import {
+  AgentInputError,
+  agentRunMatchesConfig,
+  parseAgentRun,
+  parseStoredAgentConfig,
+  parseStoredAgentRun,
+  readJsonObject,
+  type AgentRun,
+} from "../../../lib/agent-models";
 import { canUpdateJob, ideaStatusForOutcome, jobLeaseWindow, MAX_CONCURRENT_JOBS, resolveTicketOutcome, type StoredJobStatus, type TicketOutcome } from "../../../lib/job-lifecycle";
 
 function canUseQueue(request: Request) {
@@ -37,6 +46,8 @@ export async function GET(request: Request) {
       instruction,
       user_feedback AS userFeedback,
       card_context AS cardContext,
+      agent_config AS storedAgentConfig,
+      agent_run AS storedAgentRun,
       ticket_outcome AS ticketOutcome,
       'queued' AS status,
       status = 'running' AS reclaimed,
@@ -49,7 +60,7 @@ export async function GET(request: Request) {
     LIMIT (SELECT slots FROM capacity)
   `).bind(MAX_CONCURRENT_JOBS, leaseWindow, leaseWindow).all<{ id: number; ideaId: number } & Record<string, unknown>>();
   // Include earlier feedback and results so the agent can continue from context.
-  const history = await Promise.all(jobs.results.map(async (job) => {
+  const history = await Promise.all(jobs.results.map(async (job: { id: number; ideaId: number } & Record<string, unknown>) => {
     const rows = await db.prepare(`
       SELECT id, action, button_label AS buttonLabel, user_feedback AS note, status, ticket_outcome AS outcome,
              substr(result, 1, 600) AS result, created_at AS createdAt
@@ -57,41 +68,103 @@ export async function GET(request: Request) {
     `).bind(job.ideaId, job.id).all();
     return rows.results;
   }));
-  return Response.json({ jobs: jobs.results.map((job, index) => ({ ...job, history: history[index] })) });
+  return Response.json({ jobs: jobs.results.map((job: { id: number; ideaId: number } & Record<string, unknown>, index: number) => {
+    const { storedAgentConfig, storedAgentRun, ...publicJob } = job;
+    return {
+      ...publicJob,
+      agentConfig: parseStoredAgentConfig(storedAgentConfig as string | null),
+      agentRun: parseStoredAgentRun(storedAgentRun as string | null),
+      history: history[index],
+    };
+  }) });
 }
 
 export async function POST(request: Request) {
   if (!canUseQueue(request)) return Response.json({ error: "Missing agent key" }, { status: 401 });
-  const payload = (await request.json()) as { id?: number; status?: "running" | "done" | "failed"; result?: string; ticketOutcome?: TicketOutcome };
-  if (!payload.id || !["running", "done", "failed"].includes(payload.status ?? "")) return Response.json({ error: "Invalid job update" }, { status: 400 });
-  if (payload.ticketOutcome && !["completed", "review", "blocked"].includes(payload.ticketOutcome)) return Response.json({ error: "Invalid ticket outcome" }, { status: 400 });
-  if (payload.status === "done" && payload.ticketOutcome === "blocked") return Response.json({ error: "A done job cannot be blocked" }, { status: 400 });
-  if (payload.status === "failed" && payload.ticketOutcome && payload.ticketOutcome !== "blocked") return Response.json({ error: "A failed job must be blocked" }, { status: 400 });
-  const db = await ensureDatabase();
-  const job = await db.prepare("SELECT idea_id AS ideaId, action, status FROM agent_jobs WHERE id = ?").bind(payload.id).first<{ ideaId: number; action: string; status: StoredJobStatus }>();
-  if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
-  if (job.status === payload.status && (job.status === "done" || job.status === "failed")) {
-    return Response.json({ ok: true });
+  try {
+    const payload = await readJsonObject(request);
+    const id = Number(payload.id);
+    const status = payload.status;
+    if (!Number.isInteger(id) || id < 1 || typeof status !== "string" || !["running", "done", "failed"].includes(status)) {
+      throw new AgentInputError("Invalid job update");
+    }
+    const ticketOutcomeInput = payload.ticketOutcome as TicketOutcome | undefined;
+    if (ticketOutcomeInput !== undefined && (typeof ticketOutcomeInput !== "string" || !["completed", "review", "blocked"].includes(ticketOutcomeInput))) {
+      throw new AgentInputError("Invalid ticket outcome");
+    }
+    if (status === "done" && ticketOutcomeInput === "blocked") throw new AgentInputError("A done job cannot be blocked");
+    if (status === "failed" && ticketOutcomeInput && ticketOutcomeInput !== "blocked") {
+      throw new AgentInputError("A failed job must be blocked");
+    }
+    const result = typeof payload.result === "string" ? payload.result.slice(0, 20_000) : "";
+    let agentRun: AgentRun | null = null;
+    if (payload.agentRun !== undefined) agentRun = parseAgentRun(payload.agentRun);
+    const db = await ensureDatabase();
+    const job = await db.prepare(`
+      SELECT idea_id AS ideaId, action, status, agent_config AS storedAgentConfig, agent_run AS storedAgentRun
+      FROM agent_jobs WHERE id = ?
+    `).bind(id).first<{
+      ideaId: number;
+      action: string;
+      status: StoredJobStatus;
+      storedAgentConfig: string | null;
+      storedAgentRun: string | null;
+    }>();
+    if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
+    if (job.status === status && (job.status === "done" || job.status === "failed")) {
+      return Response.json({ ok: true });
+    }
+    const dispatchFailure = payload.failureStage === "dispatch"
+      && job.status === "queued" && status === "failed" && ticketOutcomeInput === "blocked"
+      && !job.storedAgentRun && !agentRun && result.trim().length > 0;
+    if (payload.failureStage !== undefined && !dispatchFailure) {
+      throw new AgentInputError("A dispatch failure requires a queued, unstarted job, a blocked outcome, a reason, and no agentRun.");
+    }
+    if (!dispatchFailure && !canUpdateJob(job.status, status as Exclude<StoredJobStatus, "queued">)) {
+      return Response.json({ error: `Job is already ${job.status}` }, { status: 409 });
+    }
+    if (status === "running" && job.storedAgentConfig) {
+      const config = parseStoredAgentConfig(job.storedAgentConfig);
+      if (!config) return Response.json({ error: "Job model configuration is invalid" }, { status: 409 });
+      if (!agentRun || !agentRunMatchesConfig(agentRun, config)) {
+        return Response.json({ error: "Worker runtime does not match the queued model configuration", agentConfig: config }, { status: 409 });
+      }
+    }
+    const ticketOutcome = resolveTicketOutcome(status as Exclude<StoredJobStatus, "queued">, ticketOutcomeInput);
+    const updates = [db.prepare(`
+      UPDATE agent_jobs
+      SET status = ?, result = ?, ticket_outcome = ?,
+          agent_run = CASE WHEN ? = 'running' THEN COALESCE(?, agent_run) ELSE agent_run END,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND status = ?
+      RETURNING id
+    `).bind(
+      status,
+      result,
+      ticketOutcome,
+      status,
+      status === "running" && agentRun ? JSON.stringify(agentRun) : null,
+      id,
+      job.status,
+    )];
+    if ((status === "done" || status === "failed") && job.action !== "no") {
+      const ideaStatus = ideaStatusForOutcome(ticketOutcome);
+      // This statement immediately follows the job compare-and-set in the
+      // same transaction. A lost race must not update the card on its behalf.
+      updates.push(db.prepare(`
+        UPDATE ideas SET status = ?
+        WHERE changes() = 1 AND id = ? AND status IN ('new', 'working')
+          AND NOT EXISTS (
+            SELECT 1 FROM agent_jobs newer
+            WHERE newer.idea_id = ? AND newer.id > ?
+          )
+      `).bind(ideaStatus, job.ideaId, job.ideaId, id));
+    }
+    const [updated] = await db.batch(updates);
+    if (!updated.results.length) return Response.json({ error: "Job changed before the update was saved" }, { status: 409 });
+    return Response.json({ ok: true, ticketOutcome, ideaStatus: ideaStatusForOutcome(ticketOutcome) });
+  } catch (error) {
+    if (error instanceof AgentInputError) return Response.json({ error: error.message }, { status: 400 });
+    throw error;
   }
-  if (!canUpdateJob(job.status, payload.status!)) {
-    return Response.json({ error: `Job is already ${job.status}` }, { status: 409 });
-  }
-  const ticketOutcome = resolveTicketOutcome(payload.status!, payload.ticketOutcome);
-  const updates = [
-    db.prepare("UPDATE agent_jobs SET status = ?, result = ?, ticket_outcome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?")
-      .bind(payload.status, payload.result?.slice(0, 20_000) ?? "", ticketOutcome, payload.id, job.status),
-  ];
-  if ((payload.status === "done" || payload.status === "failed") && job.action !== "no") {
-    const ideaStatus = ideaStatusForOutcome(ticketOutcome);
-    updates.push(db.prepare(`
-      UPDATE ideas SET status = ?
-      WHERE id = ? AND status IN ('new', 'working')
-        AND NOT EXISTS (
-          SELECT 1 FROM agent_jobs newer
-          WHERE newer.idea_id = ? AND newer.id > ?
-        )
-    `).bind(ideaStatus, job.ideaId, job.ideaId, payload.id));
-  }
-  await db.batch(updates);
-  return Response.json({ ok: true, ticketOutcome, ideaStatus: ideaStatusForOutcome(ticketOutcome) });
 }

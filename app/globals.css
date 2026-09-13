@@ -50,7 +50,7 @@ a { color: inherit; text-decoration: none; }
 .radar-sort button { min-height: 24px; padding: 0 10px; border-radius: 999px; color: var(--ink-2); font-size: .72rem; font-weight: 600; }
 .radar-sort button.is-active { color: var(--ink); background: var(--panel); box-shadow: 0 1px 2px rgba(22,21,15,.08); }
 .radar-sort button i { margin-left: 4px; font-style: normal; color: var(--ink-3); }
-@media (min-width: 1260px) {
+@media (min-width: 1400px) {
   .radar-clusters { position: fixed; left: calc(50% - 490px - 190px); top: 66px; width: 170px; flex-direction: column; align-items: stretch; gap: 4px; padding: 0; background: transparent; border: 0; }
   .radar-clusters::before { content: "Filter"; order: 1; margin: 6px 0 6px 10px; color: var(--ink-3); font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
   .radar-side-actions { order: 0; }
@@ -123,6 +123,21 @@ a { color: inherit; text-decoration: none; }
 .radar-context button.is-dark, .radar-task button.is-dark { color: white; background: var(--ink); }
 .radar-context button.is-dark:hover, .radar-task button.is-dark:hover { background: #2b2a22; }
 .radar-context button:disabled, .radar-task button:disabled { opacity: .4; }
+
+/* Model choices: a compact, explicit control that works in cards and settings. */
+.agent-picker { min-width: 0; margin: 0; padding: 0; border: 0; }
+.agent-picker legend, .agent-picker-label { display: block; margin: 0 0 5px; color: var(--ink-2); font-size: .76rem; font-weight: 700; }
+.agent-picker-description, .agent-picker-inherited, .agent-picker small { margin: 0 0 8px; color: var(--ink-3); font-size: .74rem; line-height: 1.35; }
+.agent-picker-inherited { margin: 7px 0 0; }
+.agent-picker-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, .55fr); gap: 8px; }
+.agent-picker-fields label { display: grid; gap: 4px; min-width: 0; }
+.agent-picker-fields label > span { color: var(--ink-3); font-size: .66rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.agent-picker select { width: 100%; min-width: 0; height: 36px; padding: 0 28px 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); font: inherit; font-size: .82rem; font-weight: 600; }
+.agent-picker select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,79,233,.12); }
+.agent-picker select:disabled { color: var(--ink-3); background: #f4f2ed; }
+.agent-picker-error { margin: 8px 0 0; color: #9d3021; font-size: .74rem; line-height: 1.35; }
+.agent-picker-readonly { display: grid; gap: 3px; }
+.agent-picker-readonly strong { font-size: .82rem; }
 
 /* Empty state */
 .radar-empty { flex: 1 1 auto; min-height: 0; display: grid; place-items: center; border-radius: var(--r-lg); background: var(--panel); box-shadow: var(--shadow); }
@@ -217,6 +232,7 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
   .radar-done-row span { display: none; }
   .stats-hero, .stats-kinds { grid-template-columns: 1fr; }
   .stats-two { grid-template-columns: 1fr; }
+  .agent-picker-fields { grid-template-columns: 1fr; }
 }
 
 /* ===== Top bar: one row. wordmark · lanes · dream · points · new task ===== */
@@ -262,6 +278,11 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-card-host > div { width: 100%; height: 100%; min-height: 0; display: block; }
 .radar-agent-card { display: flex!important; flex-direction: column; }
 .radar-agent-card-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.radar-task-blocked { flex: 0 0 auto; display: grid; gap: 4px; margin: 0 0 10px; padding: 10px 12px; border: 1px solid #ead5a0; border-radius: var(--r); background: var(--warn-soft); color: #765007; font-size: .78rem; line-height: 1.4; }
+.radar-task-blocked strong { font-size: .8rem; }
+.radar-task-blocked p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.radar-task-blocked details { margin-top: 2px; }
+.radar-task-blocked summary { cursor: pointer; font-weight: 700; }
 
 /* Chat box: grows with the text. X to skip, improve, send. */
 .radar-inline-change { flex: 0 0 auto; min-height: 58px; height: auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; margin-top: 10px; padding: 8px 8px 8px 16px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s; }
@@ -279,6 +300,13 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-inline-change button.is-send:hover { background: #2b2a22; }
 .radar-inline-change button:disabled { opacity: .3; }
 .radar-message { flex: 0 0 auto; max-height: 52px; overflow: auto; margin-top: 8px; padding: 8px 12px; border-radius: var(--r); background: var(--ok-soft); color: var(--ok); font-size: .78rem; font-weight: 600; }
+.radar-card-agent-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.radar-card-agent-actions span { color: var(--ink-3); font-size: .74rem; font-weight: 600; }
+.radar-card-agent-actions span.is-dirty, .settings-agent-actions span.is-dirty { color: var(--warn); }
+.radar-card-agent-actions button { min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+.radar-card-agent-actions button.is-dark { color: white; background: var(--ink); }
+.radar-card-agent-actions button:disabled { opacity: .4; }
+.radar-card-agent-readout b { color: var(--ink-3); font-size: .66rem; letter-spacing: .07em; text-transform: uppercase; }
 
 .radar-side-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
 .radar-tell { min-height: 34px; padding: 0 14px; border-radius: 999px; color: white; background: var(--ink); font-size: .82rem; font-weight: 600; white-space: nowrap; }
@@ -310,3 +338,62 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .settings-editor label span { color: var(--ink-3); font-weight: 600; }
 .settings-editor input { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font: inherit; font-size: .88rem; }
 .settings-editor input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,79,233,.12); }
+.settings-agent-defaults { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.settings-agent-defaults .agent-picker { padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: #fbfaf8; }
+.settings-agent-actions { align-items: center; }
+.settings-agent-actions span, .settings-agent-status { margin-right: auto; color: var(--ink-3); font-size: .76rem; font-weight: 600; }
+.settings-agent-error { margin: 0; padding: 10px 12px; border: 1px solid #edc6bf; border-radius: var(--r); background: #fff2ee; color: #9d3021; font-size: .78rem; }
+
+@media (max-width: 700px) {
+  .settings-agent-defaults { grid-template-columns: 1fr; }
+}
+
+/* Model tools stay secondary to the task; only their open panel has a surface. */
+.model-controls { flex: 0 0 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; }
+.model-controls-trigger, .radar-task .model-controls-trigger { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 30px; padding: 4px 8px; border-radius: 8px; color: var(--ink-3); font-size: .74rem; font-weight: 600; }
+.model-controls-trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-controls-trigger > svg { flex: 0 0 auto; }
+.model-controls-trigger:hover, .model-controls-trigger[aria-expanded="true"] { background: #eceae4; color: var(--ink); }
+.model-controls-trigger:focus-visible, .model-controls-heading button:focus-visible, .radar-card-agent-readout summary:focus-visible, .settings-models summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.model-controls-notice, .model-controls-error { min-width: 0; margin: 0; font-size: .74rem; line-height: 1.4; overflow-wrap: anywhere; }
+.model-controls-notice { color: var(--warn); }
+.model-controls-error { flex-basis: 100%; color: #9d3021; }
+.model-controls-panel { position: fixed; inset: auto; margin: 0; width: min(340px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 14px; overflow: auto; overscroll-behavior: contain; visibility: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); box-shadow: 0 12px 40px rgba(30,28,20,.18); }
+.model-controls-panel:popover-open { display: grid; gap: 10px; }
+.model-controls-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.model-controls-heading strong { font-size: .82rem; }
+.model-controls-heading button, .radar-task .model-controls-heading button { display: grid; place-items: center; width: 28px; height: 28px; min-height: 28px; padding: 0; border-radius: 6px; color: var(--ink-3); font-size: 1.2rem; }
+.model-controls-heading button:hover { background: #eceae4; }
+.agent-picker-compact legend { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.model-controls-panel .agent-picker-fields { grid-template-columns: minmax(0, 1fr) minmax(100px, .6fr); }
+.model-controls-panel .agent-picker-description { margin-bottom: 10px; }
+.radar-task .model-controls { margin-top: 0; }
+.radar-task .model-controls-panel label { gap: 4px; }
+.radar-task .model-controls-panel label > span { font-size: .66rem; }
+.radar-card-agent-readout { display: block; margin-top: 6px; padding: 0 8px; border: 0; border-radius: 0; background: none; }
+.radar-card-agent-readout summary { width: fit-content; max-width: 100%; padding: 6px 0; cursor: pointer; color: var(--ink-3); font-size: .74rem; }
+.radar-card-agent-readout > div { display: grid; gap: 5px; padding: 2px 0 8px; }
+.radar-card-agent-readout span { display: flex; min-width: 0; flex-wrap: wrap; gap: 6px; overflow-wrap: anywhere; }
+.radar-done-card > .radar-card-agent-readout { margin: 8px 12px; }
+.settings-models-block { gap: 10px; }
+.settings-models > summary { display: flex; align-items: center; gap: 12px; padding: 2px 0; list-style: none; cursor: pointer; }
+.settings-models > summary::-webkit-details-marker { display: none; }
+.settings-models > summary > svg { flex: 0 0 auto; margin-left: auto; color: var(--ink-3); }
+.settings-models[open] > summary > svg { transform: rotate(180deg); }
+.settings-models-summary { min-width: 0; display: grid; gap: 4px; }
+.settings-models-summary strong { font-size: .95rem; }
+.settings-models-summary > span { color: var(--ink-3); font-size: .76rem; line-height: 1.4; overflow-wrap: anywhere; }
+.settings-models-state { flex: 0 0 auto; color: var(--ink-3); font-size: .72rem; }
+.settings-models-state.is-dirty { color: var(--warn); }
+.settings-models-editors { display: grid; gap: 12px; padding-top: 16px; }
+.settings-agent-help { margin: 0; color: var(--ink-3); font-size: .78rem; line-height: 1.4; }
+.settings-agent-defaults .agent-picker { padding: 0; border: 0; border-radius: 0; background: none; }
+.settings-agent-actions { flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .radar-card-agent-readout span { display: grid; gap: 2px; }
+}
+@media (max-width: 450px) {
+  .settings-models > summary { flex-wrap: wrap; gap: 6px 10px; }
+  .settings-models-summary { flex: 1 1 calc(100% - 28px); }
+  .settings-models-state { order: 1; }
+}

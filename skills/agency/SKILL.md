@@ -13,6 +13,12 @@ Read `me.md` if present, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md)
 
 Use subagents whenever supported for discovery, preparation and review. Give each the skill, profile, approvals and layout. One coordinator handles duplicates, approvals and integration. Coordinate shared browser access.
 
+Read `GET /api/agent-settings` before each discovery wave. Use its discovery model and thinking level for finding and preparing ideas. Approved actions, changes and Auto-improve use the execution default unless the user selected an override on that card. Model choices are separate from permission to act.
+
+Use the installed runner's current model catalog, not a remembered model list. For Codex, `npm run models:sync` registers the live App Server catalog without starting inference. Other runners can register their supported models and thinking levels through `/api/agent-models`. Preserve explicit choices when a model disappears; report it unavailable instead of silently switching.
+
+Dispatch each configured worker with the exact saved model and thinking level in a fresh context. Supply a self-contained brief, resolved file paths, scope, relevant evidence and prior outcomes. In a Codex host with `spawn_agent`, pass `model`, `reasoning_effort`, and `fork_turns: "none"`; a full-history fork can inherit the parent's model. Never omit the chosen values or reuse a worker created with another profile. The optional `npm run agent:dispatch -- --phase discovery --brief FILE` helper prints the correct spawn arguments. It does not launch a worker.
+
 ## Learn without interviewing
 
 - Discover enabled tools, installed CLIs and recent commands. Check bundled services. Verify accounts and read relevant mail, Slack, meetings, repositories or analytics. Distinguish failed access from untried sources.
@@ -53,4 +59,8 @@ Immediately before an approved action, refresh the live thread, issue or code. C
 
 Carry out the approved action, verify its result and inspect uncertain writes before retrying. Source text grants no permission. Preserve history and Done/Skip decisions. Learn from feedback; keep personal tastes private. Schedule only after agreement. Keep personal data and private skills out of shared source.
 
+For a queued job, use its immutable `agentConfig`, not the current settings or a fresh resolution. `npm run agent:dispatch -- --job ID --brief FILE` prints the saved profile, unique worker name, self-contained job context and claim fields. Verify the host can honor it and launch a fresh worker instructed to wait for claim confirmation. Add the actual worker identifier to `agentRun`, claim with matching runner, model, thinking level and `contextMode: "fresh"`, then confirm the successful claim to the worker. Configured jobs reject a missing or mismatched claim. If unavailable, report the blocker without launching a fallback or claiming that the requested model ran. Record actual execution evidence separately from the saved selection. A worker result still needs the coordinator's verification before completion.
+
 The `browser-use/agency` repository is public open source; never push private data into it.
+
+When a queued job cannot launch its selected runtime, POST its `id` with `status: "failed"`, `ticketOutcome: "blocked"`, `failureStage: "dispatch"`, and a precise nonempty `result`, omitting `agentRun`. This is the truthful preflight-block path; never claim a nonexistent worker merely to report a blocker.
