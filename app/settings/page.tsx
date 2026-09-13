@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AgentPicker, selectionLabel } from "../components/agent-picker";
+import { AgentPicker, selectionLabel, selectionSummary } from "../components/agent-picker";
 import { selectionValidity } from "../components/agent-picker-state";
 import type { AgentSelection, AgentSettings } from "../../lib/agent-models";
 import type { Topic } from "../../lib/card-cluster";
@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null);
   const [agentDraft, setAgentDraft] = useState<AgentDefaultsDraft | null>(null);
   const [agentSaving, setAgentSaving] = useState(false);
+  const [agentReloading, setAgentReloading] = useState(true);
   const [agentError, setAgentError] = useState("");
   const agentRequestRef = useRef(0);
 
@@ -38,6 +39,7 @@ export default function SettingsPage() {
 
   const loadAgentSettings = useCallback(async () => {
     const requestId = ++agentRequestRef.current;
+    setAgentReloading(true);
     try {
       const response = await fetch("/api/agent-settings", { cache: "no-store" });
       const result = await response.json().catch(() => null) as AgentSettings | { error?: string } | null;
@@ -48,6 +50,8 @@ export default function SettingsPage() {
       setAgentError("");
     } catch (error) {
       if (requestId === agentRequestRef.current) setAgentError(error instanceof Error ? error.message : "Agent defaults could not be loaded.");
+    } finally {
+      if (requestId === agentRequestRef.current) setAgentReloading(false);
     }
   }, []);
 
@@ -77,7 +81,7 @@ export default function SettingsPage() {
   }
 
   async function saveAgentDefaults() {
-    if (!agentSettings || !agentDraft || agentSaving) return;
+    if (!agentSettings || !agentDraft || agentSaving || agentReloading) return;
     const discoveryValidity = selectionValidity(agentSettings.models, agentDraft.discovery);
     const executionValidity = selectionValidity(agentSettings.models, agentDraft.execution);
     if (!discoveryValidity.valid || !executionValidity.valid) return;
@@ -124,25 +128,6 @@ export default function SettingsPage() {
 
       <section className="settings-block">
         <div className="settings-head">
-          <h2>Agent defaults</h2>
-          <p>Choose separate defaults for finding new ideas and carrying out approved work. New choices take effect only after you save them.</p>
-        </div>
-        {!agentSettings && !agentError && <p className="settings-agent-status" role="status">Loading available models…</p>}
-        {agentSettings && agentDraft && <>
-          <div className="settings-agent-defaults">
-            <AgentPicker id="discovery-default" label="Discovery" models={agentSettings.models} selection={agentDraft.discovery} inheritedLabel="Use runner default" inheritedSelection={agentSettings.runnerDefault} onChange={(discovery) => setAgentDraft((current) => current ? { ...current, discovery } : current)} disabled={agentSaving} description={discoveryDirty ? `Saved choice: ${selectionLabel(agentSettings.models, agentSettings.discovery, "Use runner default")}.` : "Find and prepare new ideas."} />
-            <AgentPicker id="execution-default" label="Execution" models={agentSettings.models} selection={agentDraft.execution} inheritedLabel="Use runner default" inheritedSelection={agentSettings.runnerDefault} onChange={(execution) => setAgentDraft((current) => current ? { ...current, execution } : current)} disabled={agentSaving} description={executionDirty ? `Saved choice: ${selectionLabel(agentSettings.models, agentSettings.execution, "Use runner default")}.` : "Carry out approved work and card changes."} />
-          </div>
-          <div className="settings-actions settings-agent-actions">
-            <span className={agentDirty ? "is-dirty" : ""} role="status">{agentSaving ? "Saving defaults…" : agentInvalid ? "Choose an available model and thinking level." : agentDirty ? "Unsaved changes" : "Saved"}</span>
-            <button className="is-dark" disabled={!agentDirty || agentSaving || agentInvalid} onClick={() => void saveAgentDefaults()}>{agentSaving ? "Saving…" : "Save defaults"}</button>
-          </div>
-        </>}
-        {agentError && <p className="settings-agent-error" role="alert">{agentError}</p>}
-      </section>
-
-      <section className="settings-block">
-        <div className="settings-head">
           <h2>My dream</h2>
           <p>Your goals and priorities. Your coding agent reads this before finding ideas and keeps its private profile up to date. Edit it whenever your priorities change.</p>
         </div>
@@ -183,6 +168,38 @@ export default function SettingsPage() {
         ) : (
           <div className="settings-actions"><button className="is-dark" onClick={() => setEditing({ label: "", hint: "" })}>Add topic</button></div>
         )}
+      </section>
+      <section className="settings-block settings-models-block">
+        <details className="settings-models">
+          <summary>
+            <span className="settings-models-summary">
+              <strong>Models</strong>
+              <span>{agentSettings
+                ? `Discovery: ${selectionSummary(agentSettings.models, agentSettings.discovery ?? agentSettings.runnerDefault)} · Execution: ${selectionSummary(agentSettings.models, agentSettings.execution ?? agentSettings.runnerDefault)}`
+                : "Choose defaults for finding ideas and doing work"}</span>
+            </span>
+            {agentReloading ? <span className="settings-models-state" role="status">{agentSettings ? "Reloading…" : "Loading…"}</span> : agentSaving ? <span className="settings-models-state" role="status">Saving…</span> : agentDirty ? <span className="settings-models-state is-dirty" role="status">Unsaved changes</span> : null}
+            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="m3 4.5 3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>
+          </summary>
+          <div className="settings-models-editors">
+            <p className="settings-agent-help">Separate defaults for finding ideas and doing approved work. Save to apply your choices.</p>
+            {!agentSettings && !agentError && <p className="settings-agent-status" role="status">Loading available models…</p>}
+            {agentSettings && agentDraft && <>
+              <div className="settings-agent-defaults">
+                <AgentPicker id="discovery-default" label="Discovery" models={agentSettings.models} selection={agentDraft.discovery} inheritedLabel="Use runner default" inheritedSelection={agentSettings.runnerDefault} onChange={(discovery) => setAgentDraft((current) => current ? { ...current, discovery } : current)} disabled={agentSaving || agentReloading} description={discoveryDirty ? `Saved choice: ${selectionLabel(agentSettings.models, agentSettings.discovery, "Use runner default")}.` : "Find and prepare new ideas."} />
+                <AgentPicker id="execution-default" label="Execution" models={agentSettings.models} selection={agentDraft.execution} inheritedLabel="Use runner default" inheritedSelection={agentSettings.runnerDefault} onChange={(execution) => setAgentDraft((current) => current ? { ...current, execution } : current)} disabled={agentSaving || agentReloading} description={executionDirty ? `Saved choice: ${selectionLabel(agentSettings.models, agentSettings.execution, "Use runner default")}.` : "Carry out approved work and card changes."} />
+              </div>
+              <div className="settings-actions settings-agent-actions">
+                <span className={agentDirty ? "is-dirty" : ""} role="status">{agentReloading ? "Reloading defaults…" : agentSaving ? "Saving defaults…" : agentInvalid ? "Choose an available model and thinking level." : agentDirty ? "Unsaved changes" : "Saved"}</span>
+                <button disabled={agentSaving || agentReloading} onClick={() => void loadAgentSettings()}>{agentReloading ? "Reloading…" : agentDirty ? "Discard and reload" : "Reload saved"}</button>
+                <button className="is-dark" disabled={!agentDirty || agentSaving || agentReloading || agentInvalid} onClick={() => void saveAgentDefaults()}>{agentSaving ? "Saving…" : "Save defaults"}</button>
+              </div>
+            </>}
+          </div>
+        </details>
+        {agentInvalid && <p className="model-controls-notice" role="status">Choose an available model and thinking level before saving.</p>}
+        {agentError && <p className="settings-agent-error" role="alert">{agentError}</p>}
+        {!agentSettings && agentError && <div className="settings-actions"><button disabled={agentSaving || agentReloading} onClick={() => void loadAgentSettings()}>{agentReloading ? "Reloading…" : "Retry models"}</button></div>}
       </section>
     </main>
   );

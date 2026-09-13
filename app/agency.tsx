@@ -7,7 +7,8 @@ import { cardShortcut } from "../lib/card-shortcut";
 import { clusterForCard, type Topic } from "../lib/card-cluster";
 import { compareByImpact, impactPoints } from "../lib/rise";
 import { MAX_TASK_LENGTH, submitNewTask } from "../lib/task-submission";
-import { AgentPicker, selectionLabel } from "./components/agent-picker";
+import { AgentPicker, selectionLabel, selectionSummary } from "./components/agent-picker";
+import { ModelControls } from "./components/model-controls";
 import { selectionCanRun, selectionCanStartWork, selectionValidity } from "./components/agent-picker-state";
 import type { AgentConfig, AgentRun, AgentSelection, AgentSettings } from "../lib/agent-models";
 
@@ -135,6 +136,13 @@ function runLabel(run: AgentRun | null) {
   return `${run.runner} / ${run.model} · ${run.thinkingLevel}`;
 }
 
+
+function AgentReadout({ config, run }: { config: AgentConfig | null; run: AgentRun | null }) {
+  return <details className="radar-card-agent-readout">
+    <summary>Model details</summary>
+    <div><span><b>Requested</b>{configLabel(config)}</span><span><b>Actual</b>{runLabel(run)}</span></div>
+  </details>;
+}
 
 type SortKey = "newest" | "score" | "effort";
 type SortMode = { key: SortKey; dir: "desc" | "asc" };
@@ -319,10 +327,7 @@ function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; t
                     {open && (
                       <div className="radar-done-card">
                         {idea.jobResult && <p className="radar-done-result">{summarizeJobResult(idea.jobResult)}</p>}
-                        {(idea.agentConfig || idea.agentRun) && <div className="radar-card-agent-readout" aria-label="Agent model details">
-                          <span><b>Requested</b>{configLabel(idea.agentConfig)}</span>
-                          <span><b>Actual</b>{runLabel(idea.agentRun)}</span>
-                        </div>}
+                        {(idea.agentConfig || idea.agentRun) && <AgentReadout config={idea.agentConfig} run={idea.agentRun} />}
                         {cardHtml[idea.id] || idea.cardHtml
                           ? <AgentCard idea={{ ...idea, cardHtml: cardHtml[idea.id] || idea.cardHtml }} actionable={false} onAction={(action) => onAction(idea, action)} onInteraction={(action, label) => onInteraction(idea, action, label)} />
                           : <p className="radar-done-empty">Loading card…</p>}
@@ -516,6 +521,12 @@ export function Agency() {
   const executionInheritedLabel = "Use execution default";
   const executionEffectiveLabel = selectionLabel(data.agentSettings.models, inheritedExecutionSelection, "No execution default configured");
   const taskAgentAvailable = selectionCanStartWork(data.agentSettings.models, taskAgentSelection ?? inheritedExecutionSelection, agentSettingsRefreshing);
+  const cardModelNotice = agentSelectionSaving ? "Saving model choice…" : agentSettingsRefreshing ? "Refreshing defaults. Work is paused."
+    : !activeAgentValidity.valid ? activeAgentValidity.message
+    : cardConfigUnavailable ? effectiveSelectionUnavailable ? "Saved model unavailable. Choose a model to continue." : "Choose a model. No execution default is available."
+    : agentSelectionDirty ? "Unsaved model choice. Save to continue." : "";
+  const taskModelNotice = agentSettingsRefreshing ? "Refreshing model defaults…" : !taskAgentAvailable
+    ? selectionValidity(data.agentSettings.models, taskAgentSelection).message || "Choose an available model or execution default before sending this task." : "";
   const activeJob = activeLiveState?.jobId ? {
     id: activeLiveState.jobId,
     status: activeLiveState.jobStatus,
@@ -773,9 +784,9 @@ export function Agency() {
   }
 
   useEffect(() => {
-    if (!active || composer) return;
+    if (!active && !composer) return;
     const moveWithKeyboard = (direction: number) => {
-      if (!visibleIdeas.length) return;
+      if (!active || !visibleIdeas.length) return;
       recordCardInteraction(active, direction > 0 ? "next" : "back", direction > 0 ? "Next card" : "Previous card");
       const currentIndex = visibleIdeas.findIndex((idea) => idea.id === active.id);
       const startingIndex = currentIndex >= 0 ? currentIndex : direction > 0 ? -1 : 0;
@@ -784,11 +795,16 @@ export function Agency() {
       setMessage("");
     };
     const shortcut = (event: KeyboardEvent) => {
+      // An open popover owns Escape. Once closed, Escape can dismiss New Task.
+      if (document.querySelector(".model-controls-panel:popover-open")) return;
       if (event.key === "Escape" && composer) {
         event.preventDefault();
         setComposer(null);
         return;
       }
+      if (composer || !active) return;
+      // Closed model controls still own Enter and typing, not card shortcuts.
+      if (event.composedPath().some((target) => target instanceof HTMLElement && target.closest(".model-controls, .radar-card-agent-readout"))) return;
       const action = cardShortcut({
         key: event.key,
         editable: event.composedPath().some((target) => target instanceof HTMLElement
@@ -978,17 +994,20 @@ export function Agency() {
             <span>New task</span>
             <textarea value={taskDraft} disabled={taskSubmitting} maxLength={MAX_TASK_LENGTH} onChange={(event) => setTaskDraft(event.target.value)} placeholder="One task, in your words. Agency carries your dream with it." />
           </label>
-          <AgentPicker
-            id="new-task-agent"
-            label="Model override"
-            models={data.agentSettings.models}
-            selection={taskAgentSelection}
-            inheritedLabel={executionInheritedLabel}
-            inheritedSelection={inheritedExecutionSelection}
-            onChange={(selection) => { setTaskAgentSelection(selection); setComposerError(""); }}
-            disabled={taskSubmitting || agentSettingsRefreshing}
-            description={agentSettingsRefreshing ? "Refreshing model defaults…" : taskAgentAvailable ? "Optional. This task otherwise uses the saved execution default when it is sent." : inheritedExecutionSelection ? "The saved execution choice is unavailable. Refresh available models before sending." : "Choose a model override. No available execution default is configured."}
-          />
+          <ModelControls key="new-task" label="Task model" summary={selectionSummary(data.agentSettings.models, taskAgentSelection ?? inheritedExecutionSelection)} notice={taskModelNotice}>
+            <AgentPicker
+              compact
+              id="new-task-agent"
+              label="Model override"
+              models={data.agentSettings.models}
+              selection={taskAgentSelection}
+              inheritedLabel={executionInheritedLabel}
+              inheritedSelection={inheritedExecutionSelection}
+              onChange={(selection) => { setTaskAgentSelection(selection); setComposerError(""); }}
+              disabled={taskSubmitting || agentSettingsRefreshing}
+              description={taskAgentSelection ? "This override applies only to the task you send." : `Uses execution default: ${executionEffectiveLabel}. Override it for this task if needed.`}
+            />
+          </ModelControls>
           {composerError && <p className="radar-task-error" role="alert">{composerError}</p>}
           <footer>
             <Link className="radar-settings-link" href="/settings">Edit my dream and topics in Settings</Link>
@@ -1010,8 +1029,9 @@ export function Agency() {
           </section>
 
           {active.status === "new" && !jobInFlight ? (
-            <section className="radar-card-agent" aria-label="Model for this card">
+            <ModelControls key={`${active.id}:${active.version}`} label="Card model" summary={selectionSummary(data.agentSettings.models, activeEffectiveSelection)} notice={cardModelNotice} error={agentSelectionError}>
               <AgentPicker
+                compact
                 id={`card-agent-${active.id}`}
                 label="Model for this card"
                 models={data.agentSettings.models}
@@ -1029,7 +1049,7 @@ export function Agency() {
                   setAgentSelectionError("");
                 }}
                 disabled={agentSelectionSaving || agentSettingsRefreshing}
-                description={agentSettingsRefreshing ? "Refreshing model defaults…" : agentSelectionDirty ? "Unsaved choice. Save it before approving or improving this card." : cardConfigUnavailable ? effectiveSelectionUnavailable ? "The saved model choice is unavailable. Refresh available models before starting work." : "Choose a model for this card. No available execution default is configured." : `Current effective choice: ${active.agentConfig ? configLabel(active.agentConfig) : executionEffectiveLabel}.`}
+                description={agentSelectionDirty ? `Saved: ${selectionLabel(data.agentSettings.models, active.agentSelection ?? inheritedExecutionSelection, "Runner default")}.` : activeAgentSelection ? "Override for this card only." : `Uses execution default: ${executionEffectiveLabel}.`}
               />
               <div className="radar-card-agent-actions">
                 <span className={agentSelectionDirty ? "is-dirty" : ""} role="status">{agentSelectionSaving ? "Saving model…" : agentSettingsRefreshing ? "Refreshing defaults…" : !activeAgentValidity.valid ? "Unavailable selection" : cardConfigUnavailable ? "Choose a model" : agentSelectionDirty ? "Unsaved model choice" : "Saved"}</span>
@@ -1039,13 +1059,9 @@ export function Agency() {
                   <button className="is-dark" disabled={!agentSelectionDirty || agentSelectionSaving || !activeAgentValidity.valid} onClick={() => void saveCardAgentSelection()}>{agentSelectionSaving ? "Saving…" : "Save model"}</button>
                 )}
               </div>
-              {agentSelectionError && <p className="radar-card-agent-error" role="alert">{agentSelectionError}</p>}
-            </section>
+            </ModelControls>
           ) : (
-            <section className="radar-card-agent-readout" aria-label="Agent model details">
-              <span><b>Requested</b>{configLabel(active.agentConfig)}</span>
-              <span><b>Actual</b>{runLabel(active.agentRun)}</span>
-            </section>
+            <AgentReadout key={`${active.id}:${active.version}`} config={active.agentConfig} run={active.agentRun} />
           )}
 
           <section className="radar-inline-change">

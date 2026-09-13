@@ -50,7 +50,7 @@ a { color: inherit; text-decoration: none; }
 .radar-sort button { min-height: 24px; padding: 0 10px; border-radius: 999px; color: var(--ink-2); font-size: .72rem; font-weight: 600; }
 .radar-sort button.is-active { color: var(--ink); background: var(--panel); box-shadow: 0 1px 2px rgba(22,21,15,.08); }
 .radar-sort button i { margin-left: 4px; font-style: normal; color: var(--ink-3); }
-@media (min-width: 1260px) {
+@media (min-width: 1400px) {
   .radar-clusters { position: fixed; left: calc(50% - 490px - 190px); top: 66px; width: 170px; flex-direction: column; align-items: stretch; gap: 4px; padding: 0; background: transparent; border: 0; }
   .radar-clusters::before { content: "Filter"; order: 1; margin: 6px 0 6px 10px; color: var(--ink-3); font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
   .radar-side-actions { order: 0; }
@@ -302,16 +302,12 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .radar-inline-change button.is-send:hover { background: #2b2a22; }
 .radar-inline-change button:disabled { opacity: .3; }
 .radar-message { flex: 0 0 auto; max-height: 52px; overflow: auto; margin-top: 8px; padding: 8px 12px; border-radius: var(--r); background: var(--ok-soft); color: var(--ok); font-size: .78rem; font-weight: 600; }
-.radar-card-agent { flex: 0 0 auto; display: grid; gap: 8px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
 .radar-card-agent-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .radar-card-agent-actions span { color: var(--ink-3); font-size: .74rem; font-weight: 600; }
 .radar-card-agent-actions span.is-dirty, .settings-agent-actions span.is-dirty { color: var(--warn); }
 .radar-card-agent-actions button { min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
 .radar-card-agent-actions button.is-dark { color: white; background: var(--ink); }
 .radar-card-agent-actions button:disabled { opacity: .4; }
-.radar-card-agent-error { margin: 0; color: #9d3021; font-size: .74rem; }
-.radar-card-agent-readout { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r); background: #fbfaf8; color: var(--ink-2); font-size: .74rem; }
-.radar-card-agent-readout span { display: inline-flex; gap: 6px; align-items: baseline; }
 .radar-card-agent-readout b { color: var(--ink-3); font-size: .66rem; letter-spacing: .07em; text-transform: uppercase; }
 
 .radar-side-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
@@ -352,4 +348,51 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 
 @media (max-width: 700px) {
   .settings-agent-defaults { grid-template-columns: 1fr; }
+}
+
+/* Model tools stay secondary to the task; only their open panel has a surface. */
+.model-controls { flex: 0 0 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; }
+.model-controls-trigger, .radar-task .model-controls-trigger { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 30px; padding: 4px 8px; border-radius: 8px; color: var(--ink-3); font-size: .74rem; font-weight: 600; }
+.model-controls-trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-controls-trigger > svg { flex: 0 0 auto; }
+.model-controls-trigger:hover, .model-controls-trigger[aria-expanded="true"] { background: #eceae4; color: var(--ink); }
+.model-controls-trigger:focus-visible, .model-controls-heading button:focus-visible, .radar-card-agent-readout summary:focus-visible, .settings-models summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.model-controls-notice, .model-controls-error { min-width: 0; margin: 0; font-size: .74rem; line-height: 1.4; overflow-wrap: anywhere; }
+.model-controls-notice { color: var(--warn); }
+.model-controls-error { flex-basis: 100%; color: #9d3021; }
+.model-controls-panel { position: fixed; inset: auto; margin: 0; width: min(340px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 14px; overflow: auto; overscroll-behavior: contain; visibility: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); box-shadow: 0 12px 40px rgba(30,28,20,.18); }
+.model-controls-panel:popover-open { display: grid; gap: 10px; }
+.model-controls-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.model-controls-heading strong { font-size: .82rem; }
+.model-controls-heading button, .radar-task .model-controls-heading button { display: grid; place-items: center; width: 28px; height: 28px; min-height: 28px; padding: 0; border-radius: 6px; color: var(--ink-3); font-size: 1.2rem; }
+.model-controls-heading button:hover { background: #eceae4; }
+.agent-picker-compact legend { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.model-controls-panel .agent-picker-fields { grid-template-columns: minmax(0, 1fr) minmax(100px, .6fr); }
+.model-controls-panel .agent-picker-description { margin-bottom: 10px; }
+.radar-task .model-controls { margin-top: 0; }
+.radar-task .model-controls-panel label { gap: 4px; }
+.radar-task .model-controls-panel label > span { font-size: .66rem; }
+.radar-card-agent-readout { display: block; margin-top: 6px; padding: 0 8px; border: 0; border-radius: 0; background: none; }
+.radar-card-agent-readout summary { width: fit-content; max-width: 100%; padding: 6px 0; cursor: pointer; color: var(--ink-3); font-size: .74rem; }
+.radar-card-agent-readout > div { display: grid; gap: 5px; padding: 2px 0 8px; }
+.radar-card-agent-readout span { min-width: 0; flex-wrap: wrap; overflow-wrap: anywhere; }
+.radar-done-card > .radar-card-agent-readout { margin: 8px 12px; }
+.settings-models-block { gap: 10px; }
+.settings-models > summary { display: flex; align-items: center; gap: 12px; padding: 2px 0; list-style: none; cursor: pointer; }
+.settings-models > summary::-webkit-details-marker { display: none; }
+.settings-models > summary > svg { flex: 0 0 auto; margin-left: auto; color: var(--ink-3); }
+.settings-models[open] > summary > svg { transform: rotate(180deg); }
+.settings-models-summary { min-width: 0; display: grid; gap: 4px; }
+.settings-models-summary strong { font-size: .95rem; }
+.settings-models-summary > span { color: var(--ink-3); font-size: .76rem; line-height: 1.4; overflow-wrap: anywhere; }
+.settings-models-state { flex: 0 0 auto; color: var(--ink-3); font-size: .72rem; }
+.settings-models-state.is-dirty { color: var(--warn); }
+.settings-models-editors { display: grid; gap: 12px; padding-top: 16px; }
+.settings-agent-help { margin: 0; color: var(--ink-3); font-size: .78rem; line-height: 1.4; }
+.settings-agent-defaults .agent-picker { padding: 0; border: 0; border-radius: 0; background: none; }
+.settings-agent-actions { flex-wrap: wrap; }
+@media (max-width: 450px) {
+  .settings-models > summary { flex-wrap: wrap; gap: 6px 10px; }
+  .settings-models-summary { flex: 1 1 calc(100% - 28px); }
+  .settings-models-state { order: 1; }
 }

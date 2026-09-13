@@ -11,6 +11,14 @@ export function selectionLabel(models: AgentModel[], selection: AgentSelection |
   return model ? `${model.label} · ${selection.thinkingLevel}` : `${selection.modelId} · ${selection.thinkingLevel}`;
 }
 
+export function selectionSummary(models: AgentModel[], selection: AgentSelection | null, inheritedLabel = "Runner default") {
+  if (!selection) return inheritedLabel;
+  const model = models.find((candidate) => candidate.id === selection.modelId);
+  const name = model?.label.replace(/^GPT-[\d.]+\s+|^Claude\s+/i, "") || selection.modelId;
+  const thinking = selection.thinkingLevel.charAt(0).toUpperCase() + selection.thinkingLevel.slice(1);
+  return `${name} · ${thinking}`;
+}
+
 type AgentPickerProps = {
   id: string;
   label: string;
@@ -21,6 +29,7 @@ type AgentPickerProps = {
   onChange: (selection: AgentSelection | null) => void;
   disabled?: boolean;
   readOnly?: boolean;
+  compact?: boolean;
   description?: string;
 };
 
@@ -34,6 +43,7 @@ export function AgentPicker({
   onChange,
   disabled = false,
   readOnly = false,
+  compact = false,
   description,
 }: AgentPickerProps) {
   const model = selection ? models.find((candidate) => candidate.id === selection.modelId) : undefined;
@@ -57,7 +67,7 @@ export function AgentPicker({
   }
 
   return (
-    <fieldset className="agent-picker" disabled={isDisabled} aria-describedby={`${description ? descriptionId : ""} ${!validity.valid ? errorId : ""}`.trim() || undefined}>
+    <fieldset className={`agent-picker${compact ? " agent-picker-compact" : ""}`} disabled={isDisabled} aria-describedby={`${description ? descriptionId : ""} ${!validity.valid ? errorId : ""}`.trim() || undefined}>
       <legend>{label}</legend>
       {description && <p id={descriptionId} className="agent-picker-description">{description}</p>}
       <div className="agent-picker-fields">
@@ -93,7 +103,7 @@ export function AgentPicker({
           </select>
         </label>
       </div>
-      {!selection && <p className="agent-picker-inherited">Current: {selectionLabel(models, inheritedSelection, inheritedModel ? inheritedModel.label : "No default configured")}</p>}
+      {!compact && !selection && <p className="agent-picker-inherited">Current: {selectionLabel(models, inheritedSelection, inheritedModel ? inheritedModel.label : "No default configured")}</p>}
       {!validity.valid && <p id={errorId} className="agent-picker-error" role="alert">{validity.message}</p>}
     </fieldset>
   );
