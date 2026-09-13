@@ -14,6 +14,7 @@ export async function createRouteHarness() {
       return { success: true, results };
     }
     return {
+      query,
       bind: (...values) => prepare(query, values),
       first: async () => execute().results[0] ?? null,
       all: async () => execute(),
@@ -25,8 +26,12 @@ export async function createRouteHarness() {
     prepare,
     async batch(statements) {
       const hook = beforeBatch;
-      beforeBatch = undefined;
-      hook?.();
+      // Schema maintenance can batch before the route reaches its write. Keep
+      // the race armed until the explicitly targeted transaction is reached.
+      if (hook && statements.some((statement) => hook.sqlPattern.test(statement.query))) {
+        beforeBatch = undefined;
+        hook.callback();
+      }
       sqlite.exec("BEGIN");
       try {
         const results = statements.map((statement) => statement.execute());
@@ -64,7 +69,7 @@ export async function createRouteHarness() {
   }
   return {
     sqlite,
-    beforeBatch(callback) { beforeBatch = callback; },
+    beforeBatch(sqlPattern, callback) { beforeBatch = { sqlPattern, callback }; },
     async request(path, body) {
       const route = await server.ssrLoadModule(`/app${path.split("?")[0]}/route.ts`);
       const request = new Request(`http://localhost${path}`, body === undefined ? {} : {

@@ -44,8 +44,20 @@ test("New Task rolls back context, card and job if any write fails", async (t) =
 
 test("New Task rejects a settings race without persisting context or work", async (t) => {
   const h = await fixture(t);
-  h.beforeBatch(() => h.sqlite.exec("UPDATE agent_settings SET revision = revision + 1"));
+  h.beforeBatch(/^\s*INSERT INTO ideas/, () => h.sqlite.exec("UPDATE agent_settings SET revision = revision + 1"));
   const response = await h.request("/api/tasks", { task: "Concurrent settings", context: "Do not save on conflict", expectedSettingsRevision: 0 });
+  assert.equal(response.status, 409);
+  for (const table of ["contexts", "ideas", "agent_jobs"]) assert.equal(count(h, table), 0);
+});
+
+test("schema maintenance cannot consume a race intended for the task write", async (t) => {
+  const h = await fixture(t);
+  const afterMaintenanceExpiry = Date.now() + 61_000;
+  t.mock.method(Date, "now", () => afterMaintenanceExpiry);
+  h.beforeBatch(/^\s*INSERT INTO ideas/, () => h.sqlite.exec("UPDATE agent_settings SET revision = revision + 1"));
+  // Without a caller revision, an early injection would be read as current
+  // settings and incorrectly allow this task to commit with HTTP 201.
+  const response = await h.request("/api/tasks", { task: "Race after maintenance" });
   assert.equal(response.status, 409);
   for (const table of ["contexts", "ideas", "agent_jobs"]) assert.equal(count(h, table), 0);
 });
@@ -67,7 +79,7 @@ test("losing a job compare-and-set cannot change the card", async (t) => {
   const h = await fixture(t);
   const { ideaId, jobId } = await newTask(h);
   h.sqlite.prepare("UPDATE agent_jobs SET status = 'running' WHERE id = ?").run(jobId);
-  h.beforeBatch(() => h.sqlite.prepare("UPDATE agent_jobs SET status = 'failed', ticket_outcome = 'blocked' WHERE id = ?").run(jobId));
+  h.beforeBatch(/^\s*UPDATE agent_jobs/, () => h.sqlite.prepare("UPDATE agent_jobs SET status = 'failed', ticket_outcome = 'blocked' WHERE id = ?").run(jobId));
   assert.equal((await h.request("/api/agent-jobs", { id: jobId, status: "done", ticketOutcome: "completed" })).status, 409);
   assert.equal(h.sqlite.prepare("SELECT status FROM ideas WHERE id = ?").get(ideaId).status, "working");
 });
@@ -115,7 +127,7 @@ test("stale card decisions cannot leave audit rows or jobs", async (t) => {
   for (const action of ["no", "do"]) await t.test(action, async (t) => {
     const h = await fixture(t);
     const card = await newCard(h);
-    h.beforeBatch(() => h.sqlite.prepare("UPDATE ideas SET version = version + 1 WHERE id = ?").run(card.id));
+    h.beforeBatch(/^\s*INSERT INTO card_interactions/, () => h.sqlite.prepare("UPDATE ideas SET version = version + 1 WHERE id = ?").run(card.id));
     assert.equal((await h.request("/api/ideas/action", { ...card, action })).status, 409);
     assert.equal(h.sqlite.prepare("SELECT status FROM ideas WHERE id = ?").get(card.id).status, "new");
     for (const name of ["card_attention", "card_interactions", "feedback", "agent_jobs"]) assert.equal(count(h, name), 0);
