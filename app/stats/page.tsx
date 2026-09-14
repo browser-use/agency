@@ -33,12 +33,12 @@ function dayLabel(day: string) {
 
 /** Points per day as bars, decisions as a thin line of dots underneath. */
 function PointsByDay({ rows }: { rows: Stats["days_series"] }) {
-  const w = 900, h = 180, pad = 26, gap = 6;
+  const w = Math.max(300, rows.length * 84), h = 140, pad = 26, gap = 6;
   const max = Math.max(1, ...rows.map((r) => r.points));
   const bw = Math.max(8, (w - gap * (rows.length - 1)) / Math.max(rows.length, 1));
   const today = new Date().toLocaleDateString("en-CA");
   return (
-    <svg viewBox={`0 0 ${w} ${h + pad + 46}`} width="100%" role="img" aria-label="Points earned per day">
+    <svg viewBox={`0 0 ${w} ${h + pad + 46}`} width={w} height={h + pad + 46} style={{ maxWidth: "none", display: "block" }} role="img" aria-label="Points earned per day">
       {[0.5, 1].map((f) => <line key={f} x1={0} x2={w} y1={pad + h - h * f} y2={pad + h - h * f} stroke="currentColor" strokeOpacity=".08" />)}
       {rows.map((r, i) => {
         const x = i * (bw + gap);
@@ -110,7 +110,8 @@ export default function StatsPage() {
 
       <section className="stats-block">
         <h2>Points per day</h2>
-        <PointsByDay rows={stats.days_series} />
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users need focus to scroll this overflow region. */}
+        <div className="stats-chart" role="region" aria-label="Daily points chart; scroll horizontally for more days" tabIndex={0}><PointsByDay rows={stats.days_series} /></div>
       </section>
 
       <section className="stats-block">
@@ -146,7 +147,7 @@ export default function StatsPage() {
               <li key={`${r.ideaId}-${r.decidedAt}`}>
                 <i style={{ background: ACTION[r.action].color }} title={ACTION[r.action].label} />
                 <Link href={`/?card=${r.ideaId}`}>{r.headline}</Link>
-                <span><em style={{ color: CLUSTER[r.cluster] }}>{r.cluster}</em> · {seconds(r.activeMs)}</span>
+                <span><em>{r.cluster}</em> · {seconds(r.activeMs)}</span>
               </li>
             ))}
           </ul>

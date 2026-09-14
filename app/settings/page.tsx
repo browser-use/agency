@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Topic } from "../../lib/card-cluster";
+import { AppearanceControl } from "../appearance";
 
 type Draft = { id?: string; label: string; hint: string };
 
@@ -50,8 +51,13 @@ export default function SettingsPage() {
       <header className="stats-header">
         <Link href="/" className="stats-back">← Back</Link>
         <h1 className="settings-title">Settings</h1>
-        <span />
+        <Link href="/stats" className="stats-back">Activity</Link>
       </header>
+
+      <section className="settings-block settings-appearance">
+        <div className="settings-head"><h2>Appearance</h2><p>Follow your device, or choose light or dark.</p></div>
+        <AppearanceControl />
+      </section>
 
       <section className="settings-block">
         <div className="settings-head">

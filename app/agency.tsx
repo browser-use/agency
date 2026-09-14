@@ -7,6 +7,8 @@ import { cardShortcut } from "../lib/card-shortcut";
 import { clusterForCard, type Topic } from "../lib/card-cluster";
 import { compareByImpact, impactPoints } from "../lib/rise";
 import { MAX_TASK_LENGTH, submitNewTask } from "../lib/task-submission";
+import { applyCardPresentation } from "../lib/card-presentation";
+import { AppearanceControl, useAppearance } from "./appearance";
 
 type Idea = {
   id: number;
@@ -160,6 +162,7 @@ function summarizeJobResult(result: string) {
 }
 
 function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; actionable: boolean; onAction: (action: CardAction) => void; onInteraction: (action: string, label: string) => void }) {
+  const { resolved } = useAppearance();
   const hostRef = useRef<HTMLDivElement>(null);
   const renderedCardIdRef = useRef<number | null>(null);
   const onActionRef = useRef(onAction);
@@ -177,7 +180,8 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
     const detailsState = renderedCardIdRef.current === idea.id
       ? new Map(Array.from(root.querySelectorAll("details"), (detail) => [detail.querySelector("summary")?.textContent, detail.open]))
       : new Map();
-    root.innerHTML = `<style>:host{display:block;font-family:inherit}*{box-sizing:border-box}[data-radar-action]{min-height:44px;cursor:pointer}[data-radar-action="open"]{display:inline-flex!important;align-items:center;gap:.38em}[data-radar-action="open"]::after{content:"↗";font-size:.8em;line-height:1;opacity:.68;transform:translateY(-.08em)}</style>${idea.cardHtml}`;
+    root.innerHTML = idea.cardHtml;
+    applyCardPresentation(root);
     root.querySelectorAll('[data-radar-action="change"], [data-radar-action="no"]').forEach((button) => button.remove());
     root.querySelectorAll("details").forEach((detail) => {
       const open = detailsState.get(detail.querySelector("summary")?.textContent);
@@ -221,7 +225,7 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
 
   return (
     <div className="radar-agent-card">
-      <div className="radar-agent-card-scroll" ref={hostRef} />
+      <div className="radar-agent-card-scroll" data-theme={resolved} ref={hostRef} />
     </div>
   );
 }
@@ -760,59 +764,51 @@ export function Agency() {
   return (
     <main className="radar-shell">
       <header className="radar-header">
-        <div className="radar-bar-left" aria-hidden="true" />
-        <nav aria-label="Agency queue">
-            <button aria-label={`New, ${laneCounts.new} tickets`} className={view === "new" ? "is-active" : ""} onClick={() => selectView("new")}>New <b>{laneCounts.new}</b></button>
-            <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
-            <button aria-label={`Done, ${laneCounts.done} tickets`} className={view === "done" ? "is-active" : ""} onClick={() => selectView("done")}>Done <b>{laneCounts.done}</b></button>
-        </nav>
-        <div className="radar-header-right">
-          {active && composer === null && view !== "done" && (
-            <span className="radar-card-chips" title={`This card: score ${impactPoints(active)} of 10, about ${formatDuration(active.decisionEstimateMs)} to decide.`}>
-              <span><b>{impactPoints(active)}</b><i>score</i></span>
-              <span><b>{formatDuration(active.decisionEstimateMs)}</b><i>effort</i></span>
-            </span>
-          )}
-          <Link className="radar-scores" href="/stats" title="Points today and all time. Opens stats.">
-            <span className="is-today"><b>{data.completionStats.pointsToday.toLocaleString("en-US")}</b><i>today</i></span>
-            <span><b>{data.completionStats.points.toLocaleString("en-US")}</b><i>total</i></span>
-          </Link>
+        <Link className="radar-brand" href="/" aria-label="Agency home">Agency<span aria-hidden="true">/</span></Link>
+        <div className="radar-header-actions">
+          <AppearanceControl />
+          <Link className="radar-utility" href="/settings" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6M15 14v6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></Link>
+          <button className={`radar-tell${composer ? " is-open" : ""}`} disabled={taskSubmitting} onClick={() => (composer ? setComposer(null) : openNewTask())}>{composer ? "Close" : "New task"}</button>
         </div>
       </header>
 
-
-      <nav className="radar-clusters" aria-label="Filter by kind of work">
-        <div className="radar-side-actions">
-          <button className={`radar-tell${composer ? " is-open" : ""}`} disabled={taskSubmitting} onClick={() => (composer ? setComposer(null) : openNewTask())}>New task</button>
-          <Link className="radar-settings-link" href="/settings">Settings</Link>
-        </div>
-        <div className="radar-sort" role="group" aria-label="Sort">
-          {([["newest", "Newest"], ["score", "Score"], ["effort", "Effort"]] as const).map(([key, label]) => {
-            const activeKey = sort.key === key;
-            return (
-              <button
-                key={key}
-                className={activeKey ? "is-active" : ""}
-                title={activeKey ? "Click again to flip the direction" : `Sort by ${label.toLowerCase()}`}
-                onClick={() => {
-                  setComposer(null);
-                  const next: SortMode = activeKey ? { key, dir: sort.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" };
-                  setSort(next);
-                  const reordered = ideasForView(data.ideas, view, next).filter((idea) => cluster === "all" || clusterForCard(idea, data.topics) === cluster);
-                  selectIdea(reordered[0] ?? null);
-                  recordCardInteraction(active, "lane", `sort:${next.key}:${next.dir}`);
-                }}
-              >{label}{activeKey && <i aria-label={sort.dir === "desc" ? "descending" : "ascending"}>{sort.dir === "desc" ? "↓" : "↑"}</i>}</button>
-            );
-          })}
-        </div>
-        <button className={cluster === "all" ? "is-active" : ""} onClick={() => selectCluster("all")}>All <b>{laneIdeas.length}</b></button>
-        {data.topics.map((item) => (
-          <button key={item.id} className={cluster === item.id ? "is-active" : ""} title={item.hint} onClick={() => selectCluster(item.id)}>
-            {item.label} <b>{clusterCounts[item.id] ?? 0}</b>
+      <nav className="radar-lanes" aria-label="Agency queue">
+        {(["new", "working", "done"] as const).map((lane) => (
+          <button key={lane} aria-label={`${lane === "new" ? "New" : lane === "working" ? "Working" : "Done"}, ${laneCounts[lane]} tickets`} aria-current={view === lane ? "page" : undefined} className={view === lane ? "is-active" : ""} onClick={() => selectView(lane)}>
+            {lane === "new" ? "New" : lane === "working" ? "Working" : "Done"}<b>{laneCounts[lane]}</b>
           </button>
         ))}
       </nav>
+
+      <div className="radar-filters">
+        <nav className="radar-clusters" aria-label="Filter by kind of work">
+          <button aria-pressed={cluster === "all"} className={cluster === "all" ? "is-active" : ""} onClick={() => selectCluster("all")}>All <b>{laneIdeas.length}</b></button>
+          {data.topics.map((item) => (
+            <button key={item.id} aria-pressed={cluster === item.id} className={cluster === item.id ? "is-active" : ""} title={item.hint} onClick={() => selectCluster(item.id)}>{item.label} <b>{clusterCounts[item.id] ?? 0}</b></button>
+          ))}
+        </nav>
+        <label className="radar-topic-select"><span className="sr-only">Filter by kind of work</span>
+          <select aria-label="Filter by kind of work" value={cluster} onChange={(event) => selectCluster(event.target.value)}>
+            <option value="all">All work ({laneIdeas.length})</option>
+            {data.topics.map((item) => <option key={item.id} value={item.id}>{item.label} ({clusterCounts[item.id] ?? 0})</option>)}
+          </select>
+        </label>
+        <label className="radar-sort-select"><span className="sr-only">Sort cards</span>
+          <select aria-label="Sort cards" value={`${sort.key}:${sort.dir}`} onChange={(event) => {
+            const [key, dir] = event.target.value.split(":") as [SortKey, SortMode["dir"]];
+            const next = { key, dir };
+            setComposer(null);
+            setSort(next);
+            const reordered = ideasForView(data.ideas, view, next).filter((idea) => cluster === "all" || clusterForCard(idea, data.topics) === cluster);
+            selectIdea(reordered[0] ?? null);
+            recordCardInteraction(active, "lane", `sort:${next.key}:${next.dir}`);
+          }}>
+            <option value="score:desc">Highest score</option><option value="score:asc">Lowest score</option>
+            <option value="newest:desc">Newest first</option><option value="newest:asc">Oldest first</option>
+            <option value="effort:desc">Quickest review</option><option value="effort:asc">Longest review</option>
+          </select>
+        </label>
+      </div>
 
       {composer === "task" ? (
         <section className="radar-task" aria-busy={taskSubmitting}>
@@ -830,6 +826,7 @@ export function Agency() {
         <DoneList ideas={visibleIdeas} topics={data.topics} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />
       ) : active ? (
         <section className="radar-workspace">
+          <div className="radar-card-meta"><span>{active.project}</span><span>Score {impactPoints(active)}/10</span><span title={active.decisionEstimateReason}>{formatDuration(active.decisionEstimateMs)} review</span></div>
           {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}
           <section className="radar-card-host">
             <AgentCard idea={active} actionable={!jobInFlight} onAction={handleCardAction} onInteraction={(action, label) => recordCardInteraction(active, action, label)} />
@@ -844,12 +841,13 @@ export function Agency() {
               onChange={(event) => { updateFeedback(event.target.value); event.target.style.height = "auto"; event.target.style.height = `${Math.min(event.target.scrollHeight, 180)}px`; }}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+                if (window.matchMedia("(pointer: coarse)").matches) return;
                 event.preventDefault();
                 void submitFeedback();
               }}
               placeholder={jobInFlight || feedbackSubmitting
-                ? "Agency is already changing this card."
-                : "Add context or say what to change… Enter to start typing, Enter sends, Shift+Enter adds a line"}
+                ? "Work is underway on this card."
+                : "What would you change?"}
             />
             <div className="radar-inline-actions">
               <button
@@ -859,40 +857,40 @@ export function Agency() {
                 aria-label="Skip this card"
                 data-shortcut-hint="Skip · S"
                 onClick={() => void submitSkip()}
-              ><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none"/></svg></button>
+              ><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none"/></svg><span>Skip</span></button>
               <button
                 className="is-improve radar-shortcut-hint"
                 disabled={jobInFlight || feedbackSubmitting}
                 aria-keyshortcuts="I"
                 onClick={() => void submitImprove()}
-                aria-label="Auto-improve this card"
-                data-shortcut-hint="Auto-improve · I"
-              ><span aria-hidden="true">✦</span> Auto-improve</button>
+                aria-label="Improve this card"
+                data-shortcut-hint="Improve · I"
+              >Improve</button>
               <button
                 className="is-send radar-shortcut-hint"
                 disabled={jobInFlight || feedbackSubmitting || !feedback.trim()}
                 aria-label="Send"
                 data-shortcut-hint="Send · Enter in feedback"
                 onClick={() => void submitFeedback()}
-              ><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></button>
+              ><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg><span>Send</span></button>
             </div>
           </section>
 
           <div className="radar-next">
-            <button className="radar-shortcut-hint" data-shortcut-hint="Previous card · ←" data-shortcut-side="start" aria-keyshortcuts="ArrowLeft" onClick={() => move(-1)} aria-label="Previous card">← Back</button>
+            <button className="radar-shortcut-hint" data-shortcut-hint="Previous card · ←" data-shortcut-side="start" aria-keyshortcuts="ArrowLeft" onClick={() => move(-1)} aria-label="Previous card">Previous</button>
             <span>{selectedIndex >= 0 ? `${activeIndex + 1} of ${visibleIdeas.length}` : `Pinned · ${visibleIdeas.length} ${view}`}</span>
-            <button className="radar-shortcut-hint" data-shortcut-hint="Next card · →" aria-keyshortcuts="ArrowRight" onClick={() => move(1)} aria-label="Next card">Next →</button>
+            <button className="radar-shortcut-hint" data-shortcut-hint="Next card · →" aria-keyshortcuts="ArrowRight" onClick={() => move(1)} aria-label="Next card">Next</button>
           </div>
         </section>
       ) : (
-        <section className="radar-empty"><strong>{view === "new" ? "No new cards. Ask your coding agent to start Agency." : view === "working" ? "No agents working." : "Nothing done yet."}</strong></section>
+        <section className="radar-empty"><div><h1>{view === "new" ? "All caught up." : view === "working" ? "Nothing in progress." : "Nothing completed yet."}</h1><p>{view === "new" ? "Your next suggestions will appear here. You can also give your agent a new task." : "Approved work appears here while your agent takes care of it."}</p><button className="radar-tell" onClick={openNewTask}>New task</button></div></section>
       )}
 
       {!composer && message && <div className="radar-message" role="status">{message}</div>}
 
       <footer className="radar-footer">
         <i /> {data.jobs.running ? `${data.jobs.running} jobs running` : data.jobs.queued ? `${data.jobs.queued} queued for your coding agent` : "No queued work"}
-        {data.decisionMetrics.tracked > 0 && <> · you decide in {formatDuration(data.decisionMetrics.medianAcceptedActiveMs)} on average</>}
+        <Link href="/stats">Activity <span aria-label={`${data.completionStats.pointsToday} points today`}>{data.completionStats.pointsToday.toLocaleString("en-US")}</span></Link>
       </footer>
     </main>
   );

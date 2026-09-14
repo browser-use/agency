@@ -15,6 +15,22 @@ Create a me.md file and make the first 10 suggestions.
 
 Agency finds useful work. It learns what you care about and prepares fixes, replies and ideas.
 
+### Use it on your phone
+
+The queue fits phone screens, with full-width navigation, native topic and sort pickers,
+and a feedback field above the decision controls. On touch screens, Return adds a line;
+tap Send to submit feedback. The layout makes room for the keyboard and device safe areas.
+
+Choose **System**, **Light** or **Dark** in the header or Settings. System follows your
+device appearance; an explicit choice is saved in this browser. Cards, Settings and
+Activity share the theme. Card authors can use `--ink`, `--ink-2`, `--panel`, `--panel-2`
+and `--accent` for theme-aware content; existing solid-color card surfaces are adapted
+for dark mode, while image assets keep their original colors.
+
+| Light | Dark |
+| --- | --- |
+| ![Agency at phone width in light mode, showing a fictional invoice-download proposal.](docs/readme/agency-iphone-light.png) | ![The same fictional proposal in dark mode.](docs/readme/agency-iphone-dark.png) |
+
 ## For Agents
 
 Read [the Agency skill](skills/agency/SKILL.md), then follow the setup below.
