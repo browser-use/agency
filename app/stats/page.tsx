@@ -110,6 +110,7 @@ export default function StatsPage() {
 
       <section className="stats-block">
         <h2>Points per day</h2>
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users need focus to scroll this overflow region. */}
         <div className="stats-chart" role="region" aria-label="Daily points chart; scroll horizontally for more days" tabIndex={0}><PointsByDay rows={stats.days_series} /></div>
       </section>
 
