@@ -301,6 +301,11 @@ Use standalone HTML/CSS and local assets. No scripts, event handlers, iframes, f
 meta/base/link, inline svg/math, anchor tags, remote fonts, remote media or automatic external
 requests. For navigation use an Open button; for SVG use a local image file.
 
+The ingest check only catches common mistakes. The host sanitizes every card when it renders:
+it strips scripts, event handlers, forbidden elements, and URLs or CSS that point at another origin.
+The page also sends a Content-Security-Policy that limits images, media, fonts and requests to the
+app itself. A remote asset simply disappears, so keep assets local.
+
 - `data-radar-action="do"` plus `data-radar-prompt`: queues the exact shown action.
 - `data-radar-action="open"` plus `data-radar-url`: view-only HTTP(S) link, with a visible ↗.
 - No card-level Change, Improve or Skip. The host owns those controls and the feedback field.

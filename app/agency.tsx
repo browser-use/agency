@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cardDraftKey, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus";
+import { sanitizeCardHtml } from "../lib/card-html";
 import { cardShortcut } from "../lib/card-shortcut";
 import { clusterForCard, type Topic } from "../lib/card-cluster";
 import { compareByImpact, impactPoints } from "../lib/rise";
@@ -177,7 +178,10 @@ function AgentCard({ idea, actionable, onAction, onInteraction }: { idea: Idea; 
     const detailsState = renderedCardIdRef.current === idea.id
       ? new Map(Array.from(root.querySelectorAll("details"), (detail) => [detail.querySelector("summary")?.textContent, detail.open]))
       : new Map();
-    root.innerHTML = `<style>:host{display:block;font-family:inherit}*{box-sizing:border-box}[data-radar-action]{min-height:44px;cursor:pointer}[data-radar-action="open"]{display:inline-flex!important;align-items:center;gap:.38em}[data-radar-action="open"]::after{content:"↗";font-size:.8em;line-height:1;opacity:.68;transform:translateY(-.08em)}</style>${idea.cardHtml}`;
+    const hostStyle = document.createElement("style");
+    hostStyle.textContent = `:host{display:block;font-family:inherit}*{box-sizing:border-box}[data-radar-action]{min-height:44px;cursor:pointer}[data-radar-action="open"]{display:inline-flex!important;align-items:center;gap:.38em}[data-radar-action="open"]::after{content:"↗";font-size:.8em;line-height:1;opacity:.68;transform:translateY(-.08em)}`;
+    // Agent-written HTML may carry injected content from the sources it read.
+    root.replaceChildren(hostStyle, sanitizeCardHtml(idea.cardHtml));
     root.querySelectorAll('[data-radar-action="change"], [data-radar-action="no"]').forEach((button) => button.remove());
     root.querySelectorAll("details").forEach((detail) => {
       const open = detailsState.get(detail.querySelector("summary")?.textContent);

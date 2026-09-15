@@ -36,9 +36,11 @@ function canIngest(request: Request) {
   return Boolean(expected) && request.headers.get("x-radar-agent-key") === expected;
 }
 
+// Early feedback for agents, not the security boundary: the host sanitizes card HTML when it
+// renders (lib/card-html.ts) and the page's Content-Security-Policy blocks remote loads.
 function unsafeHtml(html: string) {
   return /<\s*(script|iframe|object|embed|form|meta|base|link|svg|math|a)\b/i.test(html)
-    || /\son[a-z]+\s*=/i.test(html)
+    || /[\s"'/]on[a-z]+\s*=/i.test(html)
     || /javascript\s*:/i.test(html)
     || /@import\b/i.test(html)
     || /url\s*\(\s*["']?(?:https?:)?\/\//i.test(html)
