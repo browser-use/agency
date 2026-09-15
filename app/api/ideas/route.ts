@@ -1,10 +1,13 @@
 import { env } from "cloudflare:workers";
 import { ensureDatabase } from "../../../db";
+import { findProject, invalidProject, unknownProject } from "../../../db/projects";
 import { estimateDecisionTime } from "../../../lib/decision-time";
 import { calculateRiseScore, normalizeRise, type RiseBreakdown } from "../../../lib/rise";
 import { BLOCKED_CARD_UPDATE_SQL, cardIngestMode } from "../../../lib/blocked-card";
+import { requestProjectId } from "../../../lib/project";
 
 type NewCard = {
+  projectId?: string;
   project?: string;
   category?: string;
   headline?: string;
@@ -48,6 +51,8 @@ function unsafeHtml(html: string) {
 export async function POST(request: Request) {
   if (!canIngest(request)) return Response.json({ error: "Missing agent key" }, { status: 401 });
   const card = (await request.json()) as NewCard;
+  const projectId = requestProjectId(request, card.projectId);
+  if (!projectId) return invalidProject();
   const project = card.project?.trim() ?? "";
   const category = card.category?.trim() ?? "";
   const headline = card.headline?.trim() ?? "";
@@ -77,15 +82,18 @@ export async function POST(request: Request) {
     decisionEstimateReason: card.effortReason ?? card.decisionEstimateReason ?? "",
   });
   const db = await ensureDatabase();
+  if (!(await findProject(db, projectId))) return unknownProject(projectId);
   if (ingestMode === "blocked") {
     const result = await db.prepare(BLOCKED_CARD_UPDATE_SQL)
-      .bind(headline, cardHtml, context, dedupeKey, card.expectedVersion, card.blockedJobId).first();
+      .bind(headline, cardHtml, context, dedupeKey, projectId, card.expectedVersion, card.blockedJobId).first();
     if (!result) return Response.json({ error: "Blocked replacement is stale or does not match the card's latest failed/blocked job." }, { status: 409 });
     // Preserve status, ranking, timestamps, and the terminal blocked outcome.
     return Response.json({ ok: true, idea: result, blocked: true }, { status: 201 });
   }
-  const result = await db.prepare("INSERT INTO ideas (project, category, headline, why_matters, impact, finished_work, primary_action, secondary_action, external_action, card_html, agent_context, score, rise_reach, rise_impact, rise_strategic_fit, rise_ease, decision_estimate_ms, decision_estimate_reason, source_label, source_url, agent_name, preview_kind, preview_title, preview_body, preview_asset, dedupe_key) VALUES (?, ?, ?, '', '', '', '', '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'html', '', '', '', ?) ON CONFLICT(dedupe_key) DO UPDATE SET project=excluded.project, category=excluded.category, headline=excluded.headline, card_html=excluded.card_html, agent_context=excluded.agent_context, score=excluded.score, rise_reach=excluded.rise_reach, rise_impact=excluded.rise_impact, rise_strategic_fit=excluded.rise_strategic_fit, rise_ease=excluded.rise_ease, decision_estimate_ms=excluded.decision_estimate_ms, decision_estimate_reason=excluded.decision_estimate_reason, source_label=excluded.source_label, source_url=excluded.source_url, agent_name=excluded.agent_name, version=ideas.version+1, status='new', created_at=CURRENT_TIMESTAMP RETURNING id, version")
-    .bind(project, category, headline, cardHtml, context, score, rise.reach, rise.impact, rise.strategicFit, rise.ease, decisionEstimate.estimatedMs ?? 0, decisionEstimate.reason, card.sourceLabel?.trim() ?? "", card.sourceUrl?.trim() ?? "", card.agentName?.trim() ?? "Agency", dedupeKey).first();
+  const result = await db.prepare("INSERT INTO ideas (project_id, project, category, headline, why_matters, impact, finished_work, primary_action, secondary_action, external_action, card_html, agent_context, score, rise_reach, rise_impact, rise_strategic_fit, rise_ease, decision_estimate_ms, decision_estimate_reason, source_label, source_url, agent_name, preview_kind, preview_title, preview_body, preview_asset, dedupe_key) VALUES (?, ?, ?, ?, '', '', '', '', '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'html', '', '', '', ?) ON CONFLICT(dedupe_key) DO UPDATE SET project=excluded.project, category=excluded.category, headline=excluded.headline, card_html=excluded.card_html, agent_context=excluded.agent_context, score=excluded.score, rise_reach=excluded.rise_reach, rise_impact=excluded.rise_impact, rise_strategic_fit=excluded.rise_strategic_fit, rise_ease=excluded.rise_ease, decision_estimate_ms=excluded.decision_estimate_ms, decision_estimate_reason=excluded.decision_estimate_reason, source_label=excluded.source_label, source_url=excluded.source_url, agent_name=excluded.agent_name, version=ideas.version+1, status='new', created_at=CURRENT_TIMESTAMP WHERE ideas.project_id = excluded.project_id RETURNING id, version")
+    .bind(projectId, project, category, headline, cardHtml, context, score, rise.reach, rise.impact, rise.strategicFit, rise.ease, decisionEstimate.estimatedMs ?? 0, decisionEstimate.reason, card.sourceLabel?.trim() ?? "", card.sourceUrl?.trim() ?? "", card.agentName?.trim() ?? "Agency", dedupeKey).first();
+  // The upsert skips a dedupeKey owned by another project instead of moving that card.
+  if (!result) return Response.json({ error: "This dedupeKey belongs to a card in another project. Prefix dedupe keys with the project id." }, { status: 409 });
   // A replacement card answers a blocked job: mark that job as review so the
   // startup reconcile does not drag the fresh card back to Working forever.
   const replacedId = (result as { id?: number } | null)?.id;

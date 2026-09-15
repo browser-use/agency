@@ -1,8 +1,10 @@
 import { ensureDatabase } from "../../../db";
+import { findProject, invalidProject, listProjects, unknownProject } from "../../../db/projects";
 import { parseTopicRow } from "../../../lib/card-cluster";
 import { summarizeDecisionMetrics } from "../../../lib/decision-metrics";
 import { estimateDecisionTime, type DecisionCardInput } from "../../../lib/decision-time";
 import { jobLeaseWindow } from "../../../lib/job-lifecycle";
+import { requestProjectId } from "../../../lib/project";
 
 type IdeaRow = DecisionCardInput & Record<string, unknown>;
 type DecisionHistoryRow = DecisionCardInput & {
@@ -32,7 +34,7 @@ const DECISION_HISTORY_SQL = `
       ) AS firstActionMs
     FROM card_attention a
     JOIN ideas i ON i.id = a.idea_id
-    WHERE a.decision_source = 'user' AND (
+    WHERE i.project_id = ? AND a.decision_source = 'user' AND (
       (a.decided_at IS NOT NULL AND a.decided_at >= datetime('now', '-48 hours'))
       OR (a.decided_at IS NULL AND EXISTS (
         SELECT 1 FROM card_interactions recent_interaction
@@ -43,19 +45,24 @@ const DECISION_HISTORY_SQL = `
     )
   `;
 
-// Cache recent decision metrics across the frequent feed polls.
+// Cache recent decision metrics per project across the frequent feed polls.
 const DECISION_CACHE_MS = 30_000;
-let decisionCache: { at: number; rows: { results: DecisionHistoryRow[] } } | null = null;
+const decisionCache = new Map<string, { at: number; rows: { results: DecisionHistoryRow[] } }>();
 
-async function cachedDecisionRows(db: Awaited<ReturnType<typeof ensureDatabase>>) {
-  if (decisionCache && Date.now() - decisionCache.at < DECISION_CACHE_MS) return decisionCache.rows;
-  const rows = await db.prepare(DECISION_HISTORY_SQL).all<DecisionHistoryRow>();
-  decisionCache = { at: Date.now(), rows };
+async function cachedDecisionRows(db: Awaited<ReturnType<typeof ensureDatabase>>, projectId: string) {
+  const cached = decisionCache.get(projectId);
+  if (cached && Date.now() - cached.at < DECISION_CACHE_MS) return cached.rows;
+  const rows = await db.prepare(DECISION_HISTORY_SQL).bind(projectId).all<DecisionHistoryRow>();
+  decisionCache.set(projectId, { at: Date.now(), rows });
   return rows;
 }
 
 export async function GET(request: Request) {
+  const projectId = requestProjectId(request);
+  if (!projectId) return invalidProject();
   const db = await ensureDatabase();
+  const project = await findProject(db, projectId);
+  if (!project) return unknownProject(projectId);
   const leaseWindow = jobLeaseWindow();
   const url = new URL(request.url);
   const requestedView = url.searchParams.get("view");
@@ -66,8 +73,8 @@ export async function GET(request: Request) {
   const light = url.searchParams.get("light") === "1";
   const requestedOnlyId = Number(url.searchParams.get("only"));
   const onlyId = Number.isInteger(requestedOnlyId) && requestedOnlyId > 0 ? requestedOnlyId : null;
-  const context = await db.prepare("SELECT text, created_at AS createdAt FROM contexts ORDER BY id DESC LIMIT 1").first();
-  const topicRows = await db.prepare("SELECT id, label, hint FROM topics ORDER BY position, created_at").all<{ id: string; label: string; hint: string }>();
+  const context = await db.prepare("SELECT text, created_at AS createdAt FROM contexts WHERE project_id = ? ORDER BY id DESC LIMIT 1").bind(projectId).first();
+  const topicRows = await db.prepare("SELECT id, label, hint FROM topics WHERE project_id = ? ORDER BY position, created_at").bind(projectId).all<{ id: string; label: string; hint: string }>();
   const ideas = await db.prepare(`
     WITH visible_ideas AS (
       SELECT
@@ -111,12 +118,12 @@ export async function GET(request: Request) {
         SELECT MAX(latest.id) FROM agent_jobs latest WHERE latest.idea_id = i.id
       )
       LEFT JOIN card_attention a ON a.idea_id = i.id AND a.idea_version = i.version AND a.decision_source = 'user'
-      WHERE i.card_html != '' AND i.status IN ('new', 'working', 'done')
+      WHERE i.project_id = ? AND i.card_html != '' AND i.status IN ('new', 'working', 'done')
     )
     SELECT * FROM visible_ideas
     WHERE (status = ? OR (? IS NOT NULL AND id = ?)) AND (? IS NULL OR id = ?)
     ORDER BY score DESC, id DESC
-  `).bind(light && !onlyId ? 1 : 0, leaseWindow, view, selectedCardId, selectedCardId, onlyId, onlyId).all<IdeaRow>();
+  `).bind(light && !onlyId ? 1 : 0, leaseWindow, projectId, view, selectedCardId, selectedCardId, onlyId, onlyId).all<IdeaRow>();
   const laneRows = await db.prepare(`
     WITH latest_jobs AS (
       SELECT job.*
@@ -131,9 +138,9 @@ export async function GET(request: Request) {
       COUNT(*) AS total
     FROM ideas i
     LEFT JOIN latest_jobs ON latest_jobs.idea_id = i.id
-    WHERE i.card_html != '' AND i.status IN ('new', 'working', 'done')
+    WHERE i.project_id = ? AND i.card_html != '' AND i.status IN ('new', 'working', 'done')
     GROUP BY 1
-  `).all<{ status: string; total: number }>();
+  `).bind(projectId).all<{ status: string; total: number }>();
   const jobs = await db.prepare(`
     WITH latest_jobs AS (
       SELECT job.*
@@ -145,14 +152,15 @@ export async function GET(request: Request) {
     )
     SELECT
       CASE
-        WHEN status = 'running' AND updated_at <= datetime('now', ?) THEN 'queued'
-        ELSE status
+        WHEN latest_jobs.status = 'running' AND latest_jobs.updated_at <= datetime('now', ?) THEN 'queued'
+        ELSE latest_jobs.status
       END AS status,
       COUNT(*) AS total
     FROM latest_jobs
-    WHERE status IN ('queued', 'running')
+    JOIN ideas i ON i.id = latest_jobs.idea_id
+    WHERE latest_jobs.status IN ('queued', 'running') AND i.project_id = ?
     GROUP BY 1
-  `).bind(leaseWindow).all<{ status: string; total: number }>();
+  `).bind(leaseWindow, projectId).all<{ status: string; total: number }>();
   const completionStats = await db.prepare(`
     WITH latest_jobs AS (
       SELECT job.*
@@ -172,8 +180,9 @@ export async function GET(request: Request) {
       SUM(CASE WHEN i.status = 'rejected' THEN 1 ELSE 0 END) AS dismissed
     FROM ideas i
     LEFT JOIN latest_jobs ON latest_jobs.idea_id = i.id
-  `).first<{ verified: number | null; legacy: number | null; reviewReady: number | null; dismissed: number | null; points: number | null; pointsToday: number | null; verifiedToday: number | null }>();
-  const decisionRows = await cachedDecisionRows(db);
+    WHERE i.project_id = ?
+  `).bind(projectId).first<{ verified: number | null; legacy: number | null; reviewReady: number | null; dismissed: number | null; points: number | null; pointsToday: number | null; verifiedToday: number | null }>();
+  const decisionRows = await cachedDecisionRows(db, projectId);
   const enrichedIdeas = ideas.results.map((idea) => {
     const estimate = estimateDecisionTime(idea);
     return {
@@ -189,6 +198,8 @@ export async function GET(request: Request) {
   const jobCounts = Object.fromEntries(jobs.results.map((row) => [row.status, row.total]));
   const laneCounts = Object.fromEntries(laneRows.results.map((row) => [row.status, row.total]));
   return Response.json({
+    project,
+    projects: await listProjects(db),
     context,
     topics: topicRows.results.map(parseTopicRow),
     ideas: enrichedIdeas,

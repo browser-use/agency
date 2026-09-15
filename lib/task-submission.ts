@@ -1,13 +1,13 @@
 export const MAX_TASK_LENGTH = 5_000;
 export const MAX_CONTEXT_LENGTH = 40_000;
 
-export async function submitNewTask(task: string, fetcher: typeof fetch = fetch) {
+export async function submitNewTask(task: string, projectId: string, fetcher: typeof fetch = fetch) {
   const response = await fetcher("/api/tasks", {
     method: "POST",
     headers: { "content-type": "application/json" },
     // The server attaches the latest saved context. Sending the composer's
     // snapshot could reject a valid task or overwrite newer context.
-    body: JSON.stringify({ task: task.trim() }),
+    body: JSON.stringify({ task: task.trim(), projectId }),
   });
   const result = await response.json().catch(() => null) as { ok?: boolean; jobId?: number; ideaId?: number; error?: string } | null;
   if (!response.ok) {

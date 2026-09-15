@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { DEFAULT_PROJECT_ID, projectHref, readActiveProject } from "../../lib/project";
 
 type Bucket = { do: number; change: number; no: number; parked: number; likedPoints: number; medianActiveMs: number | null; medianDoMs: number | null; decided: number; doRate: number | null };
 type Stats = {
+  project: { id: string; label: string };
   days: number;
   total: Bucket & { donePoints: number; points: number };
   clusters: Array<Bucket & { id: string; label: string; hint: string; open: number; done: number; rejected: number; donePoints: number }>;
@@ -70,12 +72,18 @@ function Split({ b }: { b: { do: number; change: number; no: number } }) {
 
 export default function StatsPage() {
   const [days, setDays] = useState(7);
+  const [projectId, setProjectId] = useState(readActiveProject);
   const [stats, setStats] = useState<Stats | null>(null);
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/stats?days=${days}`, { cache: "no-store" }).then((r) => r.json()).then((s: Stats) => { if (!cancelled) setStats(s); });
+    fetch(`/api/stats?days=${days}&project=${encodeURIComponent(projectId)}`, { cache: "no-store" }).then(async (r) => {
+      if (cancelled) return;
+      if (r.status === 404 && projectId !== DEFAULT_PROJECT_ID) return setProjectId(DEFAULT_PROJECT_ID);
+      const s = (await r.json()) as Stats;
+      if (!cancelled) setStats(s);
+    });
     return () => { cancelled = true; };
-  }, [days]);
+  }, [days, projectId]);
   if (!stats) return <main className="stats-shell"><p className="stats-loading">Counting…</p></main>;
   const t = stats.total;
   const today = new Date().toLocaleDateString("en-CA");
@@ -86,7 +94,8 @@ export default function StatsPage() {
   return (
     <main className="stats-shell">
       <header className="stats-header">
-        <Link href="/" className="stats-back">← Back</Link>
+        <Link href={projectHref("/", projectId)} className="stats-back">← Back</Link>
+        <h1 className="settings-title">{stats.project.label}</h1>
         <nav>{[7, 30, 90].map((d) => <button key={d} className={d === days ? "is-active" : ""} onClick={() => setDays(d)}>{d} days</button>)}</nav>
       </header>
 
@@ -145,7 +154,7 @@ export default function StatsPage() {
             {stats.recent.slice(0, 20).map((r) => (
               <li key={`${r.ideaId}-${r.decidedAt}`}>
                 <i style={{ background: ACTION[r.action].color }} title={ACTION[r.action].label} />
-                <Link href={`/?card=${r.ideaId}`}>{r.headline}</Link>
+                <Link href={projectHref(`/?card=${r.ideaId}`, projectId)}>{r.headline}</Link>
                 <span><em style={{ color: CLUSTER[r.cluster] }}>{r.cluster}</em> · {seconds(r.activeMs)}</span>
               </li>
             ))}

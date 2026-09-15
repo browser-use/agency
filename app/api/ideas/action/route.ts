@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const note = payload.note?.trim().slice(0, 5000) ?? "";
   const activeMs = Math.max(0, Math.min(15_000, Math.round(Number(payload.activeMs ?? 0))));
   const db = await ensureDatabase();
-  const idea = await db.prepare("SELECT id, version, status, project, category, headline, card_html AS cardHtml, agent_context AS agentContext, score, rise_reach AS riseReach, rise_impact AS riseImpact, rise_strategic_fit AS riseStrategicFit, rise_ease AS riseEase, decision_estimate_ms AS decisionEstimateMs, decision_estimate_reason AS decisionEstimateReason, source_label AS sourceLabel, source_url AS sourceUrl, dedupe_key AS dedupeKey FROM ideas WHERE id = ? AND version = ? AND status = ?").bind(payload.id, payload.version, payload.status).first<{ id: number; version: number } & Record<string, unknown>>();
+  const idea = await db.prepare("SELECT id, version, status, project_id AS projectId, project, category, headline, card_html AS cardHtml, agent_context AS agentContext, score, rise_reach AS riseReach, rise_impact AS riseImpact, rise_strategic_fit AS riseStrategicFit, rise_ease AS riseEase, decision_estimate_ms AS decisionEstimateMs, decision_estimate_reason AS decisionEstimateReason, source_label AS sourceLabel, source_url AS sourceUrl, dedupe_key AS dedupeKey FROM ideas WHERE id = ? AND version = ? AND status = ?").bind(payload.id, payload.version, payload.status).first<{ id: number; version: number } & Record<string, unknown>>();
   if (!idea) {
     const current = await db.prepare("SELECT id FROM ideas WHERE id = ?").bind(payload.id).first();
     return current

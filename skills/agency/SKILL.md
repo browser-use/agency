@@ -9,9 +9,9 @@ AI finds useful work, prepares it privately and brings the user an easy decision
 
 ## Start
 
-Read `me.md` if present, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md). Honor `ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. Use the [README](https://github.com/browser-use/agency#run-locally) to start locally. Infer an editable profile, verify the cards and leave the app reachable. Read [LINEAR.md](LINEAR.md) for shared tracking; there is no continuous sync.
+Agency keeps separate projects, each with its own dream, topics, cards and stats. Work in one project at a time: use `AGENCY_PROJECT`, the project the user names, or `GET /api/projects`; ask only when several fit. Read the shared `me.md` if present, that project's `projects/<id>/me.md`, [APPROVALS.md](APPROVALS.md) and [LAYOUT.md](LAYOUT.md). Honor `ME_PATH`, `PROJECT_ME_PATH`, `APPROVALS_PATH` and `LAYOUT_PATH`. Use the [README](https://github.com/browser-use/agency#run-locally) to start locally. Infer an editable profile, verify the cards and leave the app reachable. Read [LINEAR.md](LINEAR.md) for shared tracking; there is no continuous sync.
 
-Use subagents whenever supported for discovery, preparation and review. Give each the skill, profile, approvals and layout. One coordinator handles duplicates, approvals and integration. Coordinate shared browser access.
+Use subagents whenever supported for discovery, preparation and review. Give each the project id, skill, both profiles, approvals and layout. One coordinator handles duplicates, approvals and integration. Coordinate shared browser access.
 
 ## Learn without interviewing
 
@@ -19,7 +19,7 @@ Use subagents whenever supported for discovery, preparation and review. Give eac
 - Use `browser-harness` for every browser interaction. Prefer an existing CLI, API or MCP when simpler. Otherwise use relevant signed-in services, including X or LinkedIn. Creating API keys needs permission for the account and scope; use the secret store. Never create keys in read-only runs.
 - Read relevant Codex or Claude prompts, card feedback and outcomes to learn goals and familiar words. Read threads, links and attachments before drafting questions. Check original source dates.
 - Before choosing cards, reconsider what the user repeatedly cares about, does or asks for. List likely sources privately. Follow clues to untried sessions, CLIs or services. Choose work with specific impact on this user.
-- Keep private `me.md` short: goals, preferences, constraints, familiar phrasing and dated sources. Label guesses; exclude secrets and copied conversations. Keep tool inventories and research in `agent-work/`. Offer a verified setup path for useful missing access and continue elsewhere.
+- Keep private profiles short. The shared `me.md` holds preferences, constraints and familiar phrasing true in every project. `projects/<id>/me.md` holds that project's goals and dated sources and matches its dream in the app. Label guesses; exclude secrets and copied conversations. Keep tool inventories and research in `agent-work/<project>/`. Offer a verified setup path for useful missing access and continue elsewhere.
 
 Ask only for a real blocker or missing permission.
 
@@ -31,7 +31,7 @@ Do research and useful private preparation now: investigate causes, draft the ex
 
 Substantial builds or costly investigations need initial findings and a bounded scope. Honor explicit run restrictions: a suggestions-only run can read sources and create local drafts, patch files, mockups or demos, but cannot change other repositories or execute external actions. Publishing, sending, spend and access changes follow the approval policy.
 
-Group related work. Choose the smallest useful action. When people miss an existing feature, prepare a useful post, demo or documentation change. Ten is a target, not a quota. Score observed benefit; one complaint is one complaint. Estimate Effort in the user's decision seconds, using their past decisions when available. Choose the project and category from context.
+Group related work. Choose the smallest useful action. When people miss an existing feature, prepare a useful post, demo or documentation change. Ten is a target, not a quota. Score observed benefit; one complaint is one complaint. Estimate Effort in the user's decision seconds, using their past decisions when available. Put every card, task and topic in the active project with `projectId`. Choose the card's area (`project`) and category from context.
 
 ## Show the choice
 

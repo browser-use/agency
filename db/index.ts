@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { DEFAULT_PROJECT_ID } from "../lib/project";
 
 export function getD1() {
   if (!env.DB) throw new Error("The local Agency database is unavailable.");
@@ -26,6 +27,8 @@ export async function ensureDatabase() {
   return db;
 }
 
+const TOPICS_COLUMNS = `project_id TEXT NOT NULL DEFAULT '${DEFAULT_PROJECT_ID}', id TEXT NOT NULL, label TEXT NOT NULL, hint TEXT NOT NULL DEFAULT '', position INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (project_id, id)`;
+
 async function runMaintenance(db: ReturnType<typeof getD1>) {
   await db.batch([
     db.prepare("CREATE TABLE IF NOT EXISTS contexts (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
@@ -36,12 +39,17 @@ async function runMaintenance(db: ReturnType<typeof getD1>) {
     db.prepare("CREATE TABLE IF NOT EXISTS card_interactions (id INTEGER PRIMARY KEY AUTOINCREMENT, idea_id INTEGER NOT NULL, idea_version INTEGER NOT NULL, action TEXT NOT NULL, label TEXT NOT NULL DEFAULT '', active_ms INTEGER NOT NULL DEFAULT 0, wall_ms INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_ideas_dedupe_key ON ideas(dedupe_key)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_ideas_status_score ON ideas(status, score DESC)"),
-    db.prepare("CREATE TABLE IF NOT EXISTS topics (id TEXT PRIMARY KEY, label TEXT NOT NULL, hint TEXT NOT NULL DEFAULT '', position INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, label TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    db.prepare("INSERT OR IGNORE INTO projects (id, label, position) VALUES (?, 'Default', 0)").bind(DEFAULT_PROJECT_ID),
+    db.prepare(`CREATE TABLE IF NOT EXISTS topics (${TOPICS_COLUMNS})`),
   ]);
   const columns = await db.prepare("PRAGMA table_info(ideas)").all<{ name: string }>();
   const names = new Set(columns.results.map((column: { name: string }) => column.name));
   if (!names.has("project")) {
     await db.prepare("ALTER TABLE ideas ADD COLUMN project TEXT NOT NULL DEFAULT ''").run();
+  }
+  if (!names.has("project_id")) {
+    await db.prepare(`ALTER TABLE ideas ADD COLUMN project_id TEXT NOT NULL DEFAULT '${DEFAULT_PROJECT_ID}'`).run();
   }
   if (!names.has("category")) {
     await db.prepare("ALTER TABLE ideas ADD COLUMN category TEXT NOT NULL DEFAULT ''").run();
@@ -85,6 +93,22 @@ async function runMaintenance(db: ReturnType<typeof getD1>) {
         rise_ease = CAST(score / 4 AS INTEGER)
     `).run();
   }
+  const contextColumns = await db.prepare("PRAGMA table_info(contexts)").all<{ name: string }>();
+  if (!contextColumns.results.some((column: { name: string }) => column.name === "project_id")) {
+    await db.prepare(`ALTER TABLE contexts ADD COLUMN project_id TEXT NOT NULL DEFAULT '${DEFAULT_PROJECT_ID}'`).run();
+  }
+  // Topics were global with `id` as the key. Each project now has its own list,
+  // so rebuild the table once with (project_id, id) and file old topics under Default.
+  const topicColumns = await db.prepare("PRAGMA table_info(topics)").all<{ name: string }>();
+  if (!topicColumns.results.some((column: { name: string }) => column.name === "project_id")) {
+    await db.batch([
+      db.prepare("DROP TABLE IF EXISTS topics_by_project"),
+      db.prepare(`CREATE TABLE topics_by_project (${TOPICS_COLUMNS})`),
+      db.prepare("INSERT INTO topics_by_project (project_id, id, label, hint, position, created_at) SELECT ?, id, label, hint, position, created_at FROM topics").bind(DEFAULT_PROJECT_ID),
+      db.prepare("DROP TABLE topics"),
+      db.prepare("ALTER TABLE topics_by_project RENAME TO topics"),
+    ]);
+  }
   const attentionColumns = await db.prepare("PRAGMA table_info(card_attention)").all<{ name: string }>();
   const attentionNames = new Set(attentionColumns.results.map((column: { name: string }) => column.name));
   if (!attentionNames.has("decision_source")) {
@@ -125,5 +149,7 @@ async function runMaintenance(db: ReturnType<typeof getD1>) {
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_agent_jobs_status_created ON agent_jobs(status, created_at)").run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_card_attention_decided ON card_attention(decided_at)").run();
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_card_interactions_card ON card_interactions(idea_id, idea_version, id)").run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_ideas_project_status_score ON ideas(project_id, status, score DESC)").run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_contexts_project ON contexts(project_id, id)").run();
   await db.prepare("PRAGMA optimize").run();
 }

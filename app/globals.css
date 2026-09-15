@@ -310,3 +310,16 @@ footer.radar-footer i { width: 6px; height: 6px; margin-right: 4px; border-radiu
 .settings-editor label span { color: var(--ink-3); font-weight: 600; }
 .settings-editor input { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font: inherit; font-size: .88rem; }
 .settings-editor input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,79,233,.12); }
+
+/* Project switcher: one select in the top bar, Settings and the first-run screen. */
+.radar-project { max-width: min(220px, 36vw); min-height: 36px; padding: 0 30px 0 14px; border: 0; border-radius: 999px; background: #eceae4 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235a5850' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center; color: var(--ink); font: inherit; font-size: .82rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; appearance: none; cursor: pointer; transition: background-color .15s; }
+.radar-project:hover { background-color: #e3e0d8; }
+.radar-project:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(91,79,233,.18); }
+.radar-first-run-project { display: flex; justify-content: center; }
+.settings-error { margin: 0 0 14px; padding: 10px 14px; border-radius: 12px; background: #fdecea; color: #c0392b; font-size: .82rem; font-weight: 600; }
+.settings-editor small { grid-column: 2; color: var(--ink-3); font-size: .74rem; }
+@media (max-width: 640px) {
+  /* The lanes and card chips keep their row; the switcher takes its own row above them. */
+  .radar-bar-left { grid-column: 1 / -1; }
+  .radar-project { max-width: 100%; }
+}

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cardDraftKey, keepSelectedCard, nextCardAfterRemoval } from "../lib/card-focus";
 import { cardShortcut } from "../lib/card-shortcut";
 import { clusterForCard, type Topic } from "../lib/card-cluster";
+import { DEFAULT_PROJECT_ID, projectHref, readActiveProject, rememberActiveProject, type Project } from "../lib/project";
 import { compareByImpact, impactPoints } from "../lib/rise";
 import { MAX_TASK_LENGTH, submitNewTask } from "../lib/task-submission";
 
@@ -40,6 +41,8 @@ type Idea = {
 };
 
 type RadarState = {
+  project: Project | null;
+  projects: Project[];
   context: { text: string; createdAt: string } | null;
   topics: Topic[];
   ideas: Idea[];
@@ -77,6 +80,8 @@ type AttentionTracker = {
 };
 
 const emptyState: RadarState = {
+  project: null,
+  projects: [],
   context: null,
   topics: [],
   ideas: [],
@@ -243,14 +248,14 @@ function dayLabel(key: string) {
   return new Date(`${key}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; topics: Topic[]; onAction: (idea: Idea, action: CardAction) => void; onInteraction: (idea: Idea, action: string, label: string) => void }) {
+function DoneList({ ideas, topics, projectId, onAction, onInteraction }: { ideas: Idea[]; topics: Topic[]; projectId: string; onAction: (idea: Idea, action: CardAction) => void; onInteraction: (idea: Idea, action: string, label: string) => void }) {
   const [day, setDay] = useState<string>("all");
   const [openId, setOpenId] = useState<number | null>(null);
   const [cardHtml, setCardHtml] = useState<Record<number, string>>({});
   useEffect(() => {
     if (!openId || cardHtml[openId]) return;
     let cancelled = false;
-    fetch(`/api/state?view=done&only=${openId}`, { cache: "no-store" })
+    fetch(`/api/state?view=done&only=${openId}&project=${encodeURIComponent(projectId)}`, { cache: "no-store" })
       .then((response) => response.json())
       .then((state: { ideas: Idea[] }) => {
         const html = state.ideas[0]?.cardHtml ?? "";
@@ -258,7 +263,7 @@ function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; t
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
-  }, [openId, cardHtml]);
+  }, [openId, cardHtml, projectId]);
   const groups = useMemo(() => {
     const map = new Map<string, Idea[]>();
     for (const idea of ideas) {
@@ -313,7 +318,29 @@ function DoneList({ ideas, topics, onAction, onInteraction }: { ideas: Idea[]; t
   );
 }
 
+const MANAGE_PROJECTS = "__manage";
+
+function ProjectSwitcher({ projects, projectId, onSelect }: { projects: Project[]; projectId: string; onSelect: (id: string) => void }) {
+  if (!projects.length) return null;
+  return (
+    <select
+      className="radar-project"
+      aria-label="Project"
+      title="Switch project"
+      value={projectId}
+      onChange={(event) => {
+        if (event.target.value === MANAGE_PROJECTS) window.location.assign(`${projectHref("/settings", projectId)}#projects`);
+        else onSelect(event.target.value);
+      }}
+    >
+      {projects.map((project) => <option key={project.id} value={project.id}>{project.label}{project.open ? ` · ${project.open}` : ""}</option>)}
+      <option value={MANAGE_PROJECTS}>Manage projects…</option>
+    </select>
+  );
+}
+
 export function Agency() {
+  const [projectId, setProjectId] = useState(readActiveProject);
   const [data, setData] = useState<RadarState>(emptyState);
   const [view, setView] = useState<"new" | "working" | "done">("new");
   const [cluster, setCluster] = useState<string>("all");
@@ -357,6 +384,7 @@ export function Agency() {
     const requestId = ++loadRequestRef.current;
     const stateUrl = new URL("/api/state", window.location.origin);
     stateUrl.searchParams.set("view", targetView);
+    stateUrl.searchParams.set("project", projectId);
     if (targetView === "done") stateUrl.searchParams.set("light", "1");
     const deepLinkedCardId = Number(new URLSearchParams(window.location.search).get("card"));
     const requestedCardId = selection?.preferred?.id
@@ -364,8 +392,17 @@ export function Agency() {
       ?? (!deepLinkHandledRef.current && Number.isInteger(deepLinkedCardId) && deepLinkedCardId > 0 ? deepLinkedCardId : null);
     if (requestedCardId) stateUrl.searchParams.set("card", String(requestedCardId));
     const response = await fetch(stateUrl, { cache: "no-store" });
+    if (response.status === 404) {
+      // A remembered project was removed. Fall back to the default project.
+      if (requestId === loadRequestRef.current && projectId !== DEFAULT_PROJECT_ID) {
+        rememberActiveProject(DEFAULT_PROJECT_ID);
+        setProjectId(DEFAULT_PROJECT_ID);
+      }
+      return;
+    }
     const next = (await response.json()) as RadarState;
     if (requestId !== loadRequestRef.current) return;
+    rememberActiveProject(projectId);
     if (!deepLinkHandledRef.current) {
       deepLinkHandledRef.current = true;
       const requestedId = Number(new URLSearchParams(window.location.search).get("card"));
@@ -383,15 +420,16 @@ export function Agency() {
     const anchor = selection ? selection.preferred : selectedIdeaRef.current;
     selectIdea(keepSelectedCard(anchor, visible, next.ideas));
     setLoading(false);
-  }, [selectIdea, view]);
+  }, [projectId, selectIdea, view]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!selectedIdea) return;
     const url = new URL(window.location.href);
-    url.searchParams.set("card", String(selectedIdea.id));
+    if (projectId === DEFAULT_PROJECT_ID) url.searchParams.delete("project");
+    else url.searchParams.set("project", projectId);
+    if (selectedIdea) url.searchParams.set("card", String(selectedIdea.id));
     window.history.replaceState(null, "", url);
-  }, [selectedIdea]);
+  }, [projectId, selectedIdea]);
 
   useEffect(() => {
     let cancelled = false;
@@ -675,7 +713,7 @@ export function Agency() {
     setComposerError("");
     try {
       if (composer === "task") {
-        const { jobId } = await submitNewTask(task);
+        const { jobId } = await submitNewTask(task, projectId);
         const newIdeas = ideasForView(data.ideas, "new", sort);
         const filtered = newIdeas.filter((idea) => cluster === "all" || clusterForCard(idea, data.topics) === cluster);
         const candidates = filtered.length ? filtered : newIdeas;
@@ -689,7 +727,7 @@ export function Agency() {
         // Refresh failure must not make a saved task look unsent.
         void load("new", { preferred: next }).catch(() => undefined);
       } else {
-        const response = await fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: dream }) });
+        const response = await fetch("/api/context", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: dream, projectId }) });
         if (!response.ok) {
           const result = await response.json().catch(() => null) as { error?: string } | null;
           throw new Error(result?.error || "Your context was not saved. Try again.");
@@ -725,6 +763,24 @@ export function Agency() {
     setMessage("");
   }
 
+  function switchProject(next: string) {
+    if (next === projectId) return;
+    recordCardInteraction(active, "lane", `project:${next}`);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("card");
+    window.history.replaceState(null, "", url);
+    rememberActiveProject(next);
+    setComposer(null);
+    setComposerError("");
+    setMessage("");
+    setView("new");
+    setCluster("all");
+    selectIdea(null);
+    setData(emptyState);
+    setLoading(true);
+    setProjectId(next);
+  }
+
   function updateFeedback(value: string) {
     if (!active) return;
     const key = cardDraftKey(active);
@@ -744,9 +800,12 @@ export function Agency() {
   if (!data.context?.text?.trim()) {
     return (
       <main className="radar-shell radar-first-run">
+        <div className="radar-first-run-project">
+          <ProjectSwitcher projects={data.projects} projectId={projectId} onSelect={switchProject} />
+        </div>
         <section className="radar-context">
           <header>
-            <p>What&rsquo;s your dream right now?</p>
+            <p>{data.projects.length > 1 && data.project ? <>What&rsquo;s your dream for {data.project.label}?</> : <>What&rsquo;s your dream right now?</>}</p>
             <small>Your coding agent can learn this from your recent work and fill it in. Or write a few words below. This page saves your dream; your coding agent creates the cards.</small>
           </header>
           <textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} placeholder="What do you want to achieve? What should your agent pay attention to?" />
@@ -760,7 +819,9 @@ export function Agency() {
   return (
     <main className="radar-shell">
       <header className="radar-header">
-        <div className="radar-bar-left" aria-hidden="true" />
+        <div className="radar-bar-left">
+          <ProjectSwitcher projects={data.projects} projectId={projectId} onSelect={switchProject} />
+        </div>
         <nav aria-label="Agency queue">
             <button aria-label={`New, ${laneCounts.new} tickets`} className={view === "new" ? "is-active" : ""} onClick={() => selectView("new")}>New <b>{laneCounts.new}</b></button>
             <button aria-label={`Working, ${laneCounts.working} tickets`} className={view === "working" ? "is-active" : ""} onClick={() => selectView("working")}>Working <b>{laneCounts.working}</b></button>
@@ -773,7 +834,7 @@ export function Agency() {
               <span><b>{formatDuration(active.decisionEstimateMs)}</b><i>effort</i></span>
             </span>
           )}
-          <Link className="radar-scores" href="/stats" title="Points today and all time. Opens stats.">
+          <Link className="radar-scores" href={projectHref("/stats", projectId)} title="Points today and all time. Opens stats.">
             <span className="is-today"><b>{data.completionStats.pointsToday.toLocaleString("en-US")}</b><i>today</i></span>
             <span><b>{data.completionStats.points.toLocaleString("en-US")}</b><i>total</i></span>
           </Link>
@@ -784,7 +845,7 @@ export function Agency() {
       <nav className="radar-clusters" aria-label="Filter by kind of work">
         <div className="radar-side-actions">
           <button className={`radar-tell${composer ? " is-open" : ""}`} disabled={taskSubmitting} onClick={() => (composer ? setComposer(null) : openNewTask())}>New task</button>
-          <Link className="radar-settings-link" href="/settings">Settings</Link>
+          <Link className="radar-settings-link" href={projectHref("/settings", projectId)}>Settings</Link>
         </div>
         <div className="radar-sort" role="group" aria-label="Sort">
           {([["newest", "Newest"], ["score", "Score"], ["effort", "Effort"]] as const).map(([key, label]) => {
@@ -822,12 +883,12 @@ export function Agency() {
           </label>
           {composerError && <p className="radar-task-error" role="alert">{composerError}</p>}
           <footer>
-            <Link className="radar-settings-link" href="/settings">Edit my dream and topics in Settings</Link>
+            <Link className="radar-settings-link" href={projectHref("/settings", projectId)}>Edit my dream and topics in Settings</Link>
             <button className="is-dark" disabled={taskSubmitting || !taskDraft.trim()} onClick={() => void submitTell()}>{taskSubmitting ? "Sending…" : "Send"}</button>
           </footer>
         </section>
       ) : view === "done" ? (
-        <DoneList ideas={visibleIdeas} topics={data.topics} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />
+        <DoneList ideas={visibleIdeas} topics={data.topics} projectId={projectId} onAction={(idea, action) => { if (action.action === "open" && action.url) window.open(new URL(action.url, window.location.origin).toString(), "_blank", "noopener"); }} onInteraction={(idea, action, label) => recordCardInteraction(idea, action, label)} />
       ) : active ? (
         <section className="radar-workspace">
           {jobInFlight && <span className="radar-working" role="status">Agency is working on this card</span>}

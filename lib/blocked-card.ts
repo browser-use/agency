@@ -13,7 +13,7 @@ export function cardIngestMode(html: string, blockedJobId?: number, expectedVers
 // create cards, reopen decisions, overwrite a newer job, or turn blocked into Done.
 export const BLOCKED_CARD_UPDATE_SQL = `
   UPDATE ideas SET headline = ?, card_html = ?, agent_context = ?, version = version + 1
-  WHERE dedupe_key = ? AND version = ? AND status IN ('new', 'working')
+  WHERE dedupe_key = ? AND project_id = ? AND version = ? AND status IN ('new', 'working')
     AND EXISTS (
       SELECT 1 FROM agent_jobs job
       WHERE job.id = ? AND job.idea_id = ideas.id

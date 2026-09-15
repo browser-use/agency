@@ -101,15 +101,16 @@ A cadence written in a profile does not itself run anything.
 | [SKILL.md](skills/agency/SKILL.md) | How Agency learns, delegates, proves results and handles decisions |
 | [LAYOUT.md](skills/agency/LAYOUT.md) | Editable card appearance, graphics, typography and explanation style |
 | [APPROVALS.md](skills/agency/APPROVALS.md) | Editable defaults for what the agent may do and when it asks |
-| `me.md`, private | Your dream, writing style, preferences, sources and constraints |
+| `me.md`, private | Your writing style, preferences and constraints, shared by every project |
+| `projects/<id>/me.md`, private | One project's dream, goals and sources |
 | This README | Setup, profile synchronization, access and the app API |
 
 Keep evidence, exact drafts, one-off approvals and outcomes in local card/job history.
 Keep credentials in your runner's secret store.
 
 For personal approval settings, copy the default to a private location such as checkout-root
-`approvals.local.md` and tell the agent its absolute `APPROVALS_PATH`. That filename and `me.md`
-are Git-ignored. The installer also gives you your own editable policy beside the installed skill.
+`approvals.local.md` and tell the agent its absolute `APPROVALS_PATH`. That filename, `me.md`
+and `projects/` are Git-ignored. The installer also gives you your own editable policy beside the installed skill.
 The agent reads the policy; the app does not enforce it. Current explicit restrictions and runner
 rules take precedence. Do not infer broader permission from past acceptance.
 
@@ -141,20 +142,34 @@ instructions, not automatic file injection, a website setting or a CSS theme eng
 Updating the file alone does not restyle existing cards or update older installed skill copies.
 Themes change presentation, not approvals, evidence, scores or host controls.
 
-#### Synchronize My dream and me.md
+#### Projects
 
-Use `ME_PATH` for your private file and `RADAR_URL` for the running app. The default profile path
-is checkout-root `me.md`. Check both sides before selecting a direction.
+Agency keeps separate projects, for example one per company or product. Each project has its own
+dream, topics, cards, jobs and stats. Your shared `me.md` applies to all of them. Switch projects
+from the menu in the top bar. Add, rename or remove empty projects in Settings.
+
+A new install starts with one project, `default`. On upgrade, existing cards, dreams and topics
+move into it. Tell the agent which project to work in, or set `AGENCY_PROJECT=acme`. Keep each
+project's research in `agent-work/<project>/`.
+
+#### Synchronize a project's dream and me.md
+
+A project's dream in the app and its private `projects/<id>/me.md` are one document. Use
+`--project` (or `AGENCY_PROJECT`) for the project and `RADAR_URL` for the running app. Check both
+sides before selecting a direction.
 
 ```sh
 export RADAR_URL=http://localhost:3100
-export ME_PATH=/absolute/path/to/me.md
-node scripts/sync-me.mjs --check
+node scripts/sync-me.mjs --project acme --check
 ```
 
-- Existing file into a fresh app: `node scripts/sync-me.mjs --file-to-app`.
-- Newly entered app dream into a new file: `node scripts/sync-me.mjs --app-to-file`.
+- Existing file into a fresh app: `node scripts/sync-me.mjs --project acme --file-to-app`.
+- Newly entered app dream into a new file: `node scripts/sync-me.mjs --project acme --app-to-file`.
 - No flag: synchronize whichever side has the newer timestamp.
+
+`PROJECT_ME_PATH` overrides the file for that one project. The shared `me.md` is never synchronized.
+Coming from a single `me.md`, run `node scripts/sync-me.mjs --project default --app-to-file` once,
+then keep only your voice, preferences and constraints in `me.md`.
 
 An empty source cannot overwrite a nonempty profile. Legacy `--pull` (file to app) and `--push`
 (app to file) remain supported. The agent handles this copying; the user need not manage it.
@@ -227,6 +242,17 @@ Use the supplied app root and `RADAR_URL`. Inspect the current routes if this ch
 a cloud worker does not automatically have local app access. Keep the app on loopback.
 Include `x-radar-local-agent: 1` for local agent requests.
 
+#### Projects
+
+Pass the project on every call: reads take `?project=<id>` and writes take `projectId` in the JSON
+body. A missing project means `default`; an unknown project returns 404.
+
+- `GET /api/projects` lists each project's `id`, `label`, `open` (New cards) and `cards`.
+  `POST /api/projects {label}` creates a project with a slug id; `{id,label}` creates or renames.
+  `DELETE /api/projects?id=<id>` removes only an empty project.
+- `GET /api/agent-jobs?project=<id>` narrows the queue to one project. Without it, jobs from every
+  project are listed, each with its `projectId`. The ten concurrent slots are shared.
+
 #### Read, coordinate and claim
 
 - `GET /api/agent-jobs` returns available latest jobs, not an exclusive claim. Read `cardContext`,
@@ -242,7 +268,8 @@ Include `x-radar-local-agent: 1` for local agent requests.
   The API has no exclusive worker token. Coordinate other active agents and recheck live state;
   do not assume a successful running update prevents another worker from acting.
 - Reuse the canonical `dedupeKey`, based on project, subject, problem, outcome and stable anchors.
-  A different title, timestamp or agent is not new work. Enrich existing New/Working cards; revive
+  A different title, timestamp or agent is not new work. Keys are unique across projects,
+  so start them with the project id; a key owned by another project returns 409. Enrich existing New/Working cards; revive
   completed/rejected work only when fresh evidence addresses the prior outcome or rejection.
 
 #### Finish every job explicitly
@@ -271,11 +298,12 @@ Never add an Acknowledge/Keep blocked no-op. Keep actual in-flight checks Workin
 
 Write one HTML file and a metadata JSON file in the configured app. The metadata requires
 `project`, `category`, `headline`, `dedupeKey`, the four `rise` components, and `cardHtmlFile`
-relative to the JSON file. Include `effortSeconds`, `effortReason`, `agentContext`, `sourceLabel`,
+relative to the JSON file. `projectId` (or `AGENCY_PROJECT`) selects the Agency project; `project`
+names the product or repository area within it. Include `effortSeconds`, `effortReason`, `agentContext`, `sourceLabel`,
 `sourceUrl` and `agentName` where useful. Run:
 
 ```sh
-RADAR_URL=http://localhost:3100 npm run card:push -- path/to/card.json
+AGENCY_PROJECT=acme RADAR_URL=http://localhost:3100 npm run card:push -- path/to/card.json
 ```
 
 The script reads the file and POSTs `cardHtml` to `/api/ideas`. HTML must be 80-250,000 characters;
@@ -324,14 +352,14 @@ unchanged; missing estimates show no value. The active-time counter is separate.
 Default UI sorting is displayed score, then stored total, then ID; the user may choose effort or
 newest. Backend result order is not necessarily the user's current order.
 
-`GET /api/topics` returns topic names (`label`) and descriptions (`hint`). Reuse topics; for a
-new lane use `POST /api/topics {label,hint}`. Set the card category to the full topic ID or
+`GET /api/topics?project=<id>` returns that project's topic names (`label`) and descriptions (`hint`).
+Reuse topics; for a new lane use `POST /api/topics {projectId,label,hint}`. Set the card category to the full topic ID or
 name, for example `Support`. The agent chooses it; the app does not match keywords. New
 installs have no preset topics. Existing topics stay editable. Unmatched cards stay in All.
 Do not rename/delete the user's topics without approval.
 
-Authoritative source paths in the configured checkout: `app/api/{agent-jobs,ideas,state,topics}`,
-`lib/job-lifecycle.ts`, `lib/blocked-card.ts`, `lib/rise.ts`, `lib/card-focus.ts` and
+Authoritative source paths in the configured checkout: `app/api/{agent-jobs,ideas,projects,state,topics}`,
+`lib/project.ts`, `lib/job-lifecycle.ts`, `lib/blocked-card.ts`, `lib/rise.ts`, `lib/card-focus.ts` and
 `scripts/{push-card,sync-me}.mjs`. The agent authors each card’s HTML and actions.
 
 
@@ -346,7 +374,7 @@ The local `.openai/hosting.json` declares only local
 bindings; it contains no shared hosting project. The included build helper is required by Vite.
 
 Each checkout has its own database, profile and assets. Keep backups private. Never commit
-`.wrangler`, `me.md`, personal approval settings, environment files, browser state or customer media.
+`.wrangler`, `me.md`, `projects/`, personal approval settings, environment files, browser state or customer media.
 Sharing this source does not share your cards or credentials.
 The private `.agents/skills/design/` bundle and local migration state are ignored too; do not force-add
 them. Shared defaults belong in the tracked Agency instructions, without personal ticket examples.

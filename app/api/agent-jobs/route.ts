@@ -1,5 +1,7 @@
 import { env } from "cloudflare:workers";
 import { ensureDatabase } from "../../../db";
+import { invalidProject } from "../../../db/projects";
+import { parseProjectId } from "../../../lib/project";
 import { canUpdateJob, ideaStatusForOutcome, jobLeaseWindow, MAX_CONCURRENT_JOBS, resolveTicketOutcome, type StoredJobStatus, type TicketOutcome } from "../../../lib/job-lifecycle";
 
 function canUseQueue(request: Request) {
@@ -14,6 +16,10 @@ function canUseQueue(request: Request) {
 
 export async function GET(request: Request) {
   if (!canUseQueue(request)) return Response.json({ error: "Missing agent key" }, { status: 401 });
+  // `?project=<id>` narrows the queue to one project; without it every project's jobs are listed.
+  const requestedProject = new URL(request.url).searchParams.get("project");
+  const projectId = requestedProject ? parseProjectId(requestedProject) : null;
+  if (requestedProject && !projectId) return invalidProject();
   const db = await ensureDatabase();
   const leaseWindow = jobLeaseWindow();
   const jobs = await db.prepare(`
@@ -30,24 +36,26 @@ export async function GET(request: Request) {
       WHERE status = 'running' AND updated_at > datetime('now', ?)
     )
     SELECT
-      id,
-      idea_id AS ideaId,
-      action,
-      button_label AS buttonLabel,
-      instruction,
-      user_feedback AS userFeedback,
-      card_context AS cardContext,
-      ticket_outcome AS ticketOutcome,
+      j.id,
+      j.idea_id AS ideaId,
+      i.project_id AS projectId,
+      j.action,
+      j.button_label AS buttonLabel,
+      j.instruction,
+      j.user_feedback AS userFeedback,
+      j.card_context AS cardContext,
+      j.ticket_outcome AS ticketOutcome,
       'queued' AS status,
-      status = 'running' AS reclaimed,
-      created_at AS createdAt,
-      updated_at AS updatedAt
-    FROM latest_jobs
-    WHERE status = 'queued'
-      OR (status = 'running' AND updated_at <= datetime('now', ?))
-    ORDER BY status = 'running' ASC, id ASC
+      j.status = 'running' AS reclaimed,
+      j.created_at AS createdAt,
+      j.updated_at AS updatedAt
+    FROM latest_jobs j
+    LEFT JOIN ideas i ON i.id = j.idea_id
+    WHERE (j.status = 'queued' OR (j.status = 'running' AND j.updated_at <= datetime('now', ?)))
+      AND (? IS NULL OR i.project_id = ?)
+    ORDER BY j.status = 'running' ASC, j.id ASC
     LIMIT (SELECT slots FROM capacity)
-  `).bind(MAX_CONCURRENT_JOBS, leaseWindow, leaseWindow).all<{ id: number; ideaId: number } & Record<string, unknown>>();
+  `).bind(MAX_CONCURRENT_JOBS, leaseWindow, leaseWindow, projectId, projectId).all<{ id: number; ideaId: number } & Record<string, unknown>>();
   // Include earlier feedback and results so the agent can continue from context.
   const history = await Promise.all(jobs.results.map(async (job) => {
     const rows = await db.prepare(`
