@@ -1,14 +1,32 @@
 import { sql } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  position: integer("position").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const contexts = sqliteTable("contexts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: text("project_id").notNull().default("default"),
   text: text("text").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const topics = sqliteTable("topics", {
+  projectId: text("project_id").notNull().default("default"),
+  id: text("id").notNull(),
+  label: text("label").notNull(),
+  hint: text("hint").notNull().default(""),
+  position: integer("position").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [primaryKey({ columns: [table.projectId, table.id] })]);
+
 export const ideas = sqliteTable("ideas", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: text("project_id").notNull().default("default"),
   project: text("project").notNull().default(""),
   category: text("category").notNull().default(""),
   headline: text("headline").notNull(),

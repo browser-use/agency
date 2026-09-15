@@ -1,4 +1,6 @@
 import { ensureDatabase } from "../../../db";
+import { findProject, invalidProject, unknownProject } from "../../../db/projects";
+import { requestProjectId } from "../../../lib/project";
 import { clusterForCard, parseTopicRow, type Topic } from "../../../lib/card-cluster";
 import { impactPoints } from "../../../lib/rise";
 import { PARKED_DECISION_MS } from "../../../lib/decision-metrics";
@@ -33,8 +35,12 @@ function emptyBucket() {
 }
 
 export async function GET(request: Request) {
+  const projectId = requestProjectId(request);
+  if (!projectId) return invalidProject();
   const db = await ensureDatabase();
-  const topicRows = await db.prepare("SELECT id, label, hint FROM topics ORDER BY position, created_at").all<{ id: string; label: string; hint: string }>();
+  const project = await findProject(db, projectId);
+  if (!project) return unknownProject(projectId);
+  const topicRows = await db.prepare("SELECT id, label, hint FROM topics WHERE project_id = ? ORDER BY position, created_at").bind(projectId).all<{ id: string; label: string; hint: string }>();
   const topics: Topic[] = topicRows.results.map(parseTopicRow);
   const days = Math.max(1, Math.min(365, Number(new URL(request.url).searchParams.get("days")) || 30));
   const since = `-${days} days`;
@@ -42,9 +48,9 @@ export async function GET(request: Request) {
     SELECT a.idea_id AS ideaId, i.category, i.project, i.headline, a.decision_action AS decisionAction, a.decision_label AS decisionLabel,
            a.active_ms AS activeMs, a.wall_ms AS wallMs, a.decided_at AS decidedAt, i.score
     FROM card_attention a JOIN ideas i ON i.id = a.idea_id
-    WHERE a.decision_source = 'user' AND a.decision_action IN ('do','change','no') AND a.decided_at >= datetime('now', ?)
+    WHERE a.decision_source = 'user' AND a.decision_action IN ('do','change','no') AND a.decided_at >= datetime('now', ?) AND i.project_id = ?
     ORDER BY a.decided_at DESC
-  `).bind(since).all<DecisionRow>();
+  `).bind(since, projectId).all<DecisionRow>();
   const cards = await db.prepare(`
     WITH latest_jobs AS (
       SELECT job.* FROM agent_jobs job
@@ -52,8 +58,8 @@ export async function GET(request: Request) {
     )
     SELECT i.id, i.category, i.project, i.headline, i.status, i.score, i.rise_impact AS riseImpact, latest_jobs.ticket_outcome AS outcome, i.created_at AS createdAt
     FROM ideas i LEFT JOIN latest_jobs ON latest_jobs.idea_id = i.id
-    WHERE i.card_html != '' AND i.status IN ('new','working','done','rejected')
-  `).all<CardRow>();
+    WHERE i.card_html != '' AND i.status IN ('new','working','done','rejected') AND i.project_id = ?
+  `).bind(projectId).all<CardRow>();
 
   type ClusterBucket = ReturnType<typeof emptyBucket> & { open: number; done: number; rejected: number; donePoints: number };
   const byCluster: Record<string, ClusterBucket> = {};
@@ -112,6 +118,7 @@ export async function GET(request: Request) {
     .toSorted((a, b) => b.doRate - a.doRate || b.decided - a.decided);
   const recent = decisions.results.slice(0, 40).map((r) => ({ ideaId: r.ideaId, headline: r.headline, action: r.decisionAction, activeMs: r.activeMs, decidedAt: r.decidedAt, cluster: clusterForCard(r, topics) }));
   return Response.json({
+    project: { id: project.id, label: project.label },
     days,
     total: { ...finish(total), likedPoints: total.likedPoints, donePoints, points: donePoints },
     clusters,

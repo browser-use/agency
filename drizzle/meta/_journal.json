@@ -50,6 +50,13 @@
       "when": 1788136734618,
       "tag": "0006_fluffy_shiver_man",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789447251601,
+      "tag": "0007_projects",
+      "breakpoints": true
     }
   ]
 }
