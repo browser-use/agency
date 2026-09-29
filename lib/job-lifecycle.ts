@@ -22,9 +22,10 @@ export function visibleJobStatus(
 
 export function canUpdateJob(
   current: StoredJobStatus,
-  next: Exclude<StoredJobStatus, "queued">,
+  next: StoredJobStatus,
 ) {
   if (next === "running") return current === "queued" || current === "running";
+  // Only a leased job can be finished or handed back to the queue.
   return current === "running";
 }
 

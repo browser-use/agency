@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- launchd agent: check for queued Agency jobs every minute.
+     Install: replace /Users/YOU, check the agent command and PATH, copy to ~/Library/LaunchAgents/,
+     then `launchctl load ~/Library/LaunchAgents/com.browser-use.agency.jobs.plist`.
+     The agent command gets only the permissions it names; add the tools your cards' actions need.
+     launchd does not read your shell profile: PATH must contain the directories
+     `command -v node claude` prints in your shell (nvm, fnm and similar install per version). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.browser-use.agency.jobs</string>
+  <key>WorkingDirectory</key>
+  <string>/Users/YOU/agency</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>node</string>
+    <string>scripts/run-jobs.mjs</string>
+    <string>--once</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>AGENCY_AGENT_CMD</key>
+    <string>claude -p --permission-mode acceptEdits --allowedTools 'Bash(node scripts/push-card.mjs *)'</string>
+    <key>RADAR_URL</key>
+    <string>http://localhost:3100</string>
+    <key>PATH</key>
+    <string>/Users/YOU/.local/bin:/Users/YOU/.npm-global/bin:/Users/YOU/.volta/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StartInterval</key>
+  <integer>60</integer>
+  <key>StandardOutPath</key>
+  <string>/tmp/agency-jobs.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/agency-jobs.log</string>
+</dict>
+</plist>

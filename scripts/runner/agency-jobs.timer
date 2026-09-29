@@ -1,0 +1,11 @@
+# systemd user timer: check for queued Agency jobs every minute.
+[Unit]
+Description=Agency: check for queued card jobs every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

@@ -67,8 +67,9 @@ laptop's localhost, files or signed-in browser.
 The coding agent starts by reading [the skill](skills/agency/SKILL.md), infers a short editable profile
 from relevant context, and creates the first cards. The website also lets you enter a dream.
 **Save dream saves that brief; it does not launch an agent.**
-There is no installed background worker, automatic thread injection or built-in connector wizard.
-The active coding agent reads jobs, assigns workers and verifies their results.
+There is no automatic thread injection or built-in connector wizard. The active coding agent reads
+jobs, assigns workers and verifies their results. To have clicks executed while no session is open,
+use the optional [job runner](#run-queued-jobs-automatically).
 
 The agent reads your brief, relevant Codex or Claude prompts, feedback and past work to learn your
 goals, role and everyday tools. It learns your words from your prompts and sent messages, keeping a
@@ -93,6 +94,36 @@ If ongoing work is useful, agree to a four-hour cadence or choose another. The a
 runner's scheduler, reuses any matching schedule and records the real checkout, app URL, profile
 and approval-policy/layout paths. It reports a meaningful result or blocker, not empty periodic updates.
 A cadence written in a profile does not itself run anything.
+
+### Run queued jobs automatically
+
+A click only queues a job. `scripts/run-jobs.mjs` is an optional poller that executes those jobs with a
+headless coding agent, so a click works without an open session. It claims each queued job, hands the
+job, its card context and the approval policy to the agent, and posts the agent's result back to the
+card. It runs one job at a time and renews the job's lease while the agent works. Stopping the runner
+stops the agent and puts its job back in the queue, marked as reclaimed.
+
+```bash
+AGENCY_AGENT_CMD="claude -p --permission-mode acceptEdits --allowedTools 'Bash(node scripts/push-card.mjs *)'" node scripts/run-jobs.mjs --once
+AGENCY_AGENT_CMD='codex exec --full-auto -' node scripts/run-jobs.mjs --interval 60
+```
+
+The prompt goes to the agent on stdin, or to `{promptFile}` if the command contains that placeholder.
+The agent ends by writing a result file whose first line is `OUTCOME: completed`, `review` or
+`blocked`. Prompts, results and agent logs stay in `.agent-output/jobs/<id>/`. Optional settings are
+`AGENCY_JOB_TIMEOUT_MIN`, `AGENCY_NOTIFY_CMD` (called as `<cmd> <title> <body>`), `APPROVALS_PATH`
+and `ME_PATH`; the script header lists all of them.
+
+To check every minute, use the templates in `scripts/runner/`: `agency-jobs.service` and
+`agency-jobs.timer` for systemd on Linux, `com.browser-use.agency.jobs.plist` for launchd on macOS.
+Set the checkout path, agent command and `PATH` in them first.
+
+The runner acts on your clicks without asking again, so the agent command is the only hard limit on
+what a job can do. The Claude example allows file edits in the checkout and pushing card updates;
+add `--allowedTools` entries for the actions your cards need, such as a mail or GitHub CLI.
+`--permission-mode bypassPermissions` gives every job every tool; use it only if you accept that.
+The runner gives the agent the approval policy and tells it to follow it, but the app does not
+enforce the policy.
 
 ### Profile, layout and approval settings
 
@@ -239,6 +270,7 @@ Include `x-radar-local-agent: 1` for local agent requests.
 - One coordinator assigns each job. `POST /api/agent-jobs` with
   `{"id":123,"status":"running"}` starts work; repeated running updates renew its six-hour lease.
   GET may return expired running work as `reclaimed: true`, subject to ten concurrent slots.
+  `{"id":123,"status":"queued"}` hands running work back at once; GET then returns it as reclaimed.
   The API has no exclusive worker token. Coordinate other active agents and recheck live state;
   do not assume a successful running update prevents another worker from acting.
 - Reuse the canonical `dedupeKey`, based on project, subject, problem, outcome and stable anchors.

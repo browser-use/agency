@@ -1,0 +1,16 @@
+# systemd user service: run queued Agency jobs once.
+# Install: copy both files to ~/.config/systemd/user/, set WorkingDirectory, PATH and AGENCY_AGENT_CMD
+# below, then `systemctl --user daemon-reload && systemctl --user enable --now agency-jobs.timer`.
+# The agent command gets only the permissions it names; add the tools your cards' actions need.
+# PATH must contain node and the agent CLI: add the directories `command -v node claude` prints.
+[Unit]
+Description=Agency: execute queued card jobs with a headless coding agent
+
+[Service]
+Type=oneshot
+Environment="AGENCY_AGENT_CMD=claude -p --permission-mode acceptEdits --allowedTools 'Bash(node scripts/push-card.mjs *)'"
+Environment=PATH=%h/.local/bin:%h/.npm-global/bin:%h/.volta/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin
+Environment=RADAR_URL=http://localhost:3100
+WorkingDirectory=%h/agency
+ExecStart=/usr/bin/env node scripts/run-jobs.mjs --once
+TimeoutStartSec=6h

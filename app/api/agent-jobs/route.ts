@@ -62,8 +62,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   if (!canUseQueue(request)) return Response.json({ error: "Missing agent key" }, { status: 401 });
-  const payload = (await request.json()) as { id?: number; status?: "running" | "done" | "failed"; result?: string; ticketOutcome?: TicketOutcome };
-  if (!payload.id || !["running", "done", "failed"].includes(payload.status ?? "")) return Response.json({ error: "Invalid job update" }, { status: 400 });
+  const payload = (await request.json()) as { id?: number; status?: StoredJobStatus; result?: string; ticketOutcome?: TicketOutcome };
+  if (!payload.id || !["queued", "running", "done", "failed"].includes(payload.status ?? "")) return Response.json({ error: "Invalid job update" }, { status: 400 });
   if (payload.ticketOutcome && !["completed", "review", "blocked"].includes(payload.ticketOutcome)) return Response.json({ error: "Invalid ticket outcome" }, { status: 400 });
   if (payload.status === "done" && payload.ticketOutcome === "blocked") return Response.json({ error: "A done job cannot be blocked" }, { status: 400 });
   if (payload.status === "failed" && payload.ticketOutcome && payload.ticketOutcome !== "blocked") return Response.json({ error: "A failed job must be blocked" }, { status: 400 });
@@ -75,6 +75,14 @@ export async function POST(request: Request) {
   }
   if (!canUpdateJob(job.status, payload.status!)) {
     return Response.json({ error: `Job is already ${job.status}` }, { status: 409 });
+  }
+  if (payload.status === "queued") {
+    // Hand the job back by expiring its lease now. It stays running, so the next GET returns it as
+    // reclaimed and the next worker knows an earlier run may already have acted.
+    await db.prepare("UPDATE agent_jobs SET result = ?, updated_at = datetime('now', ?) WHERE id = ? AND status = 'running'")
+      .bind(payload.result?.slice(0, 20_000) ?? "", jobLeaseWindow(), payload.id)
+      .run();
+    return Response.json({ ok: true });
   }
   const ticketOutcome = resolveTicketOutcome(payload.status!, payload.ticketOutcome);
   const updates = [
