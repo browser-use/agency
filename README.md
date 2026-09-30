@@ -232,6 +232,10 @@ Include `x-radar-local-agent: 1` for local agent requests.
 - `GET /api/agent-jobs` returns available latest jobs, not an exclusive claim. Read `cardContext`,
   `userFeedback`, `buttonLabel`, `instruction` and ordered `history`. History results are truncated
   to 600 characters; use full local history read-only when a missing detail matters.
+- Optional wake-up: set `AGENCY_JOB_HOOK_URL` (for example in `.dev.vars`) and the app sends an
+  empty `POST` there right after a click or New task queues a job, so a local worker can start at
+  once instead of polling. The hook carries no job data and failures are ignored; read the queue
+  as above.
 - `GET /api/state` exposes current context, cards and decisions with view/light-dependent coverage.
   Inspect its response and route before treating it as the complete archive. Search all statuses,
   versions, feedback, jobs and source anchors for duplicates; fall back to bounded read-only local

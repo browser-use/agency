@@ -1,4 +1,5 @@
 import { ensureDatabase } from "../../../db";
+import { announceQueuedJob } from "../../../lib/job-hook";
 import { MAX_CONTEXT_LENGTH, MAX_TASK_LENGTH } from "../../../lib/task-submission";
 
 function isSameOrigin(request: Request) {
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
   const job = await db.prepare("INSERT INTO agent_jobs (idea_id, action, button_label, instruction, user_feedback, card_context) VALUES (?, 'task', 'New Task', ?, '', ?) RETURNING id")
     .bind(idea.id, task, cardContext).first();
   if (!job?.id) return Response.json({ error: "Task could not be queued." }, { status: 500 });
+  await announceQueuedJob();
 
   return Response.json({ ok: true, ideaId: idea.id, jobId: job.id }, { status: 201 });
 }
